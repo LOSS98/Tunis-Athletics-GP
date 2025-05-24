@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Admin - World Para Athletics{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .gradient-text {
+            background: linear-gradient(135deg, #AE191B 0%, #DA191D 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="flex h-screen">
+        <aside class="w-64 bg-gray-900 text-white">
+            <div class="p-4">
+                <h1 class="text-2xl font-bold gradient-text">Admin Panel</h1>
+                <p class="text-sm text-gray-400">World Para Athletics</p>
+            </div>
+            <nav class="mt-8">
+                <a href="/admin" class="block px-4 py-2 hover:bg-gray-800 {% if request.endpoint == 'admin.dashboard' %}bg-gray-800{% endif %}">
+                    <i class="fas fa-dashboard mr-2"></i> Dashboard
+                </a>
+                <a href="/admin/games" class="block px-4 py-2 hover:bg-gray-800 {% if 'games' in request.endpoint %}bg-gray-800{% endif %}">
+                    <i class="fas fa-calendar mr-2"></i> Games
+                </a>
+                <a href="/admin/athletes" class="block px-4 py-2 hover:bg-gray-800 {% if 'athletes' in request.endpoint %}bg-gray-800{% endif %}">
+                    <i class="fas fa-users mr-2"></i> Athletes
+                </a>
+                <a href="/admin/records" class="block px-4 py-2 hover:bg-gray-800 {% if 'records' in request.endpoint %}bg-gray-800{% endif %}">
+                    <i class="fas fa-trophy mr-2"></i> Records
+                </a>
+                <a href="/" class="block px-4 py-2 hover:bg-gray-800">
+                    <i class="fas fa-globe mr-2"></i> Public Site
+                </a>
+                <a href="/admin/logout" class="block px-4 py-2 hover:bg-gray-800 mt-8 border-t border-gray-700 pt-4">
+                    <i class="fas fa-sign-out-alt mr-2"></i> Logout
+                </a>
+            </nav>
+        </aside>
+
+        <main class="flex-1 overflow-y-auto">
+            <header class="bg-white shadow-sm px-6 py-4">
+                <h2 class="text-2xl font-bold text-gray-800">{% block page_title %}Dashboard{% endblock %}</h2>
+            </header>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="px-6 pt-4">
+                        {% for category, message in messages %}
+                            <div class="bg-{{ 'green' if category == 'success' else 'red' if category == 'danger' else 'yellow' }}-100 border border-{{ 'green' if category == 'success' else 'red' if category == 'danger' else 'yellow' }}-400 text-{{ 'green' if category == 'success' else 'red' if category == 'danger' else 'yellow' }}-700 px-4 py-3 rounded mb-4">
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            <div class="p-6">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

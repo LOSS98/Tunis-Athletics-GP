@@ -9,9 +9,10 @@ class Config:
 
     DATABASE_URL = os.getenv('DATABASE_URL')
     DB_HOST = DATABASE_URL.split('@')[1].split('/')[0].split(':')[0] if DATABASE_URL else 'localhost'
-    DB_USER = DATABASE_URL.split('://')[1].split(':')[0] if DATABASE_URL else 'root'
-    DB_PASSWORD = DATABASE_URL.split('://')[1].split(':')[1].split('@')[0] if DATABASE_URL else 'root'
-    DB_NAME = DATABASE_URL.split('/')[-1] if DATABASE_URL else 'npc_tunisia_db'
+    DB_USER = DATABASE_URL.split('://')[1].split(':')[0] if DATABASE_URL else 'khalil'
+    DB_PASSWORD = DATABASE_URL.split('://')[1].split(':')[1].split('@')[0] if DATABASE_URL else 'Kh4lddil9870720406*'
+    DB_NAME = DATABASE_URL.split('/')[-1] if DATABASE_URL else 'npctunis_db'
+    print(f"Database configuration: {DB_HOST}, {DB_USER}, {DB_PASSWORD}, {DB_NAME}")
 
     UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', 'static/uploads')
     MAX_CONTENT_LENGTH = int(os.getenv('MAX_CONTENT_LENGTH', 16 * 1024 * 1024))

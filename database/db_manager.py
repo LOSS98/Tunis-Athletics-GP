@@ -1,17 +1,17 @@
-import pymysql
-from pymysql.cursors import DictCursor
+import psycopg2
+from psycopg2.extras import RealDictCursor
 from config import Config
 from contextlib import contextmanager
 
 
 @contextmanager
 def get_db_connection():
-    connection = pymysql.connect(
+    connection = psycopg2.connect(
         host=Config.DB_HOST,
         user=Config.DB_USER,
         password=Config.DB_PASSWORD,
         database=Config.DB_NAME,
-        cursorclass=DictCursor
+        cursor_factory=RealDictCursor
     )
     try:
         yield connection
@@ -26,7 +26,9 @@ def execute_query(query, params=None, fetch=False):
             if fetch:
                 return cursor.fetchall()
             conn.commit()
-            return cursor.lastrowid
+            if query.strip().upper().startswith('INSERT'):
+                return cursor.lastrowid if hasattr(cursor, 'lastrowid') else None
+            return None
 
 
 def execute_one(query, params=None):
@@ -39,15 +41,15 @@ def execute_one(query, params=None):
 def init_db():
     queries = [
         """CREATE TABLE IF NOT EXISTS users (
-            id INT PRIMARY KEY AUTO_INCREMENT,
+            id SERIAL PRIMARY KEY,
             username VARCHAR(50) UNIQUE NOT NULL,
             password_hash VARCHAR(255) NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )""",
 
         """CREATE TABLE IF NOT EXISTS athletes (
-            id INT PRIMARY KEY AUTO_INCREMENT,
-            bib INT UNIQUE NOT NULL,
+            id SERIAL PRIMARY KEY,
+            bib INTEGER UNIQUE NOT NULL,
             firstname VARCHAR(100) NOT NULL,
             lastname VARCHAR(100) NOT NULL,
             country VARCHAR(3) NOT NULL,
@@ -58,16 +60,16 @@ def init_db():
         )""",
 
         """CREATE TABLE IF NOT EXISTS games (
-            id INT PRIMARY KEY AUTO_INCREMENT,
+            id SERIAL PRIMARY KEY,
             event VARCHAR(100) NOT NULL,
             gender VARCHAR(10) NOT NULL,
             classes VARCHAR(50) NOT NULL,
             phase VARCHAR(50),
             area VARCHAR(50),
-            day INT NOT NULL,
+            day INTEGER NOT NULL,
             time TIME NOT NULL,
-            duration INT DEFAULT 60,
-            nb_athletes INT DEFAULT 8,
+            duration INTEGER DEFAULT 60,
+            nb_athletes INTEGER DEFAULT 8,
             status VARCHAR(20) DEFAULT 'scheduled',
             start_file VARCHAR(255),
             result_file VARCHAR(255),
@@ -75,15 +77,15 @@ def init_db():
         )""",
 
         """CREATE TABLE IF NOT EXISTS results (
-            id INT PRIMARY KEY AUTO_INCREMENT,
-            game_id INT NOT NULL,
-            athlete_bib INT NOT NULL,
+            id SERIAL PRIMARY KEY,
+            game_id INTEGER NOT NULL,
+            athlete_bib INTEGER NOT NULL,
             rank VARCHAR(10),
             value VARCHAR(20) NOT NULL,
             record VARCHAR(10),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE,
-            UNIQUE KEY unique_game_athlete (game_id, athlete_bib)
+            UNIQUE (game_id, athlete_bib)
         )"""
     ]
 

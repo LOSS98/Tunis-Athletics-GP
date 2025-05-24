@@ -1,0 +1,60 @@
+{% extends "admin/base_admin.html" %}
+
+{% block page_title %}Create New Athlete{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="bg-white rounded-lg shadow p-6">
+        <form method="POST" enctype="multipart/form-data">
+            {{ form.hidden_tag() }}
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">BIB Number</label>
+                    {{ form.bib(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Country Code</label>
+                    {{ form.country(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500", placeholder="e.g., TUN") }}
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">First Name</label>
+                    {{ form.firstname(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Last Name</label>
+                    {{ form.lastname(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Gender</label>
+                    {{ form.gender(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
+                </div>
+
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Class</label>
+                    {{ form.athlete_class(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2">Photo</label>
+                {{ form.photo(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
+                <p class="text-sm text-gray-600 mt-1">Accepted formats: JPG, JPEG, PNG, GIF</p>
+            </div>
+
+            <div class="flex justify-between">
+                <a href="{{ url_for('admin.athletes_list') }}" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">
+                    Cancel
+                </a>
+                <button type="submit" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">
+                    Create Athlete
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -210,7 +210,7 @@ class Result:
                     query += f" AND r.{key} = %s"
                     params.append(value)
 
-        query += " ORDER BY CAST(r.rank AS UNSIGNED)"
+        query += " ORDER BY CAST(r.rank AS INTEGER)"
         return execute_query(query, params, fetch=True)
 
     @staticmethod

@@ -1,0 +1,72 @@
+{% extends "admin/base_admin.html" %}
+
+{% block page_title %}Athletes Management{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex justify-between items-center">
+    <div class="flex-1 mr-4">
+        <form method="GET" class="flex">
+            <input type="text" name="search" value="{{ search }}" placeholder="Search athletes..."
+                   class="flex-1 px-4 py-2 border rounded-l-lg focus:outline-none focus:border-red-500">
+            <button type="submit" class="bg-gray-500 text-white px-4 py-2 rounded-r-lg hover:bg-gray-600">
+                <i class="fas fa-search"></i>
+            </button>
+        </form>
+    </div>
+    <a href="{{ url_for('admin.athlete_create') }}" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">
+        <i class="fas fa-plus mr-2"></i>New Athlete
+    </a>
+</div>
+
+<div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Photo</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">BIB</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Country</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gender</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for athlete in athletes %}
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if athlete.photo %}
+                            <img src="/static/images/athletes/{{ athlete.photo }}" alt="{{ athlete.firstname }}" class="w-10 h-10 rounded-full object-cover">
+                        {% else %}
+                            <div class="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center">
+                                <i class="fas fa-user text-gray-600"></i>
+                            </div>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap font-semibold">{{ athlete.bib }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">{{ athlete.lastname }} {{ athlete.firstname }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <img src="/static/images/flags/{{ athlete.country }}.svg" alt="{{ athlete.country }}" class="inline w-6 h-4 mr-1">
+                        {{ athlete.country }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">{{ athlete.gender }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">{{ athlete.class }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <a href="{{ url_for('admin.athlete_edit', id=athlete.id) }}" class="text-indigo-600 hover:text-indigo-900 mr-2">
+                            <i class="fas fa-edit"></i>
+                        </a>
+                        <form method="POST" action="{{ url_for('admin.athlete_delete', id=athlete.id) }}" class="inline"
+                              onsubmit="return confirm('Are you sure you want to delete this athlete?');">
+                            <button type="submit" class="text-red-600 hover:text-red-900">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
