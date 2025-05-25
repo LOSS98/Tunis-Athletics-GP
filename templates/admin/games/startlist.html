@@ -1,0 +1,159 @@
+{% extends "admin/base_admin.html" %}
+
+{% block page_title %}Start List - {{ game.event }}{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <div class="bg-white rounded-lg shadow p-4">
+        <h3 class="text-lg font-bold">Game Information</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3 text-sm">
+            <div><span class="font-semibold">Event:</span> {{ game.event }}</div>
+            <div><span class="font-semibold">Gender:</span> {{ game.gender }}</div>
+            <div><span class="font-semibold">Classes:</span> {{ game.classes }}</div>
+            <div><span class="font-semibold">Day {{ game.day }}</span> - {{ game.time }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="mb-6">
+    <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-lg font-bold mb-4">Add Athlete to Start List</h3>
+        <form method="POST" action="{{ url_for('admin.startlist_add', game_id=game.id) }}">
+            {{ form.hidden_tag() }}
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Athlete</label>
+                    <div class="relative">
+                        <input type="text" id="athleteSearch" placeholder="Search by BIB, name, country..."
+                               class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500">
+                        <div id="athleteResults" class="absolute z-10 w-full bg-white border rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto"></div>
+                    </div>
+                    <input type="hidden" name="athlete_bib" id="selectedBib" required>
+                    <div id="selectedAthlete" class="mt-2 text-sm text-gray-600"></div>
+                </div>
+
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Lane/Order (optional)</label>
+                    {{ form.lane_order(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
+                </div>
+
+                <div class="flex items-end">
+                    <button type="submit" class="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600">
+                        Add to Start List
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="bg-white rounded-lg shadow">
+    <div class="p-6 border-b">
+        <h3 class="text-lg font-bold">Current Start List ({{ startlist|length }} athletes)</h3>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lane/Order</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">BIB</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Country</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for entry in startlist %}
+                <tr>
+                    <td class="px-6 py-4 whitespace-nowrap">{{ entry.lane_order or '-' }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap font-semibold">{{ entry.athlete_bib }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">{{ entry.lastname }} {{ entry.firstname }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <img src="/static/images/flags/{{ entry.country }}.svg" alt="{{ entry.country }}" class="inline w-6 h-4 mr-1">
+                        {{ entry.country }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">{{ entry.class }}</span>
+                        {% if entry.class not in game.classes %}
+                            <span class="text-red-500 ml-1" title="Class not in event"><i class="fas fa-exclamation-triangle"></i></span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <form method="POST" action="{{ url_for('admin.startlist_delete', game_id=game.id, athlete_bib=entry.athlete_bib) }}" class="inline"
+                              onsubmit="return confirm('Remove this athlete from start list?');">
+                            <button type="submit" class="text-red-600 hover:text-red-900">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="mt-4">
+    <a href="{{ url_for('admin.games_list') }}" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">
+        Back to Games
+    </a>
+</div>
+
+<script>
+let searchTimeout;
+const athleteSearch = document.getElementById('athleteSearch');
+const athleteResults = document.getElementById('athleteResults');
+const selectedBib = document.getElementById('selectedBib');
+const selectedAthlete = document.getElementById('selectedAthlete');
+
+athleteSearch.addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    const query = this.value.trim();
+
+    if (query.length < 2) {
+        athleteResults.classList.add('hidden');
+        return;
+    }
+
+    searchTimeout = setTimeout(() => {
+        fetch(`/admin/athletes/search?q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(athletes => {
+                athleteResults.innerHTML = '';
+                if (athletes.length === 0) {
+                    athleteResults.innerHTML = '<div class="p-2 text-gray-500">No athletes found</div>';
+                } else {
+                    athletes.forEach(athlete => {
+                        const div = document.createElement('div');
+                        div.className = 'p-2 hover:bg-gray-100 cursor-pointer';
+                        div.innerHTML = `<strong>${athlete.bib}</strong> - ${athlete.name} (${athlete.country}) - ${athlete.class}`;
+                        div.onclick = () => selectAthlete(athlete);
+                        athleteResults.appendChild(div);
+                    });
+                }
+                athleteResults.classList.remove('hidden');
+            });
+    }, 300);
+});
+
+function selectAthlete(athlete) {
+    selectedBib.value = athlete.bib;
+    selectedAthlete.innerHTML = `Selected: <strong>${athlete.bib}</strong> - ${athlete.name} (${athlete.country})`;
+    athleteSearch.value = '';
+    athleteResults.classList.add('hidden');
+
+    const gameClasses = '{{ game.classes }}'.split(',').map(c => c.trim());
+    if (!gameClasses.includes(athlete.class)) {
+        selectedAthlete.innerHTML += ` <span class="text-red-500"><i class="fas fa-exclamation-triangle"></i> Warning: Athlete class ${athlete.class} not in game classes</span>`;
+    }
+}
+
+document.addEventListener('click', function(e) {
+    if (!athleteSearch.contains(e.target) && !athleteResults.contains(e.target)) {
+        athleteResults.classList.add('hidden');
+    }
+});
+</script>
+{% endblock %}

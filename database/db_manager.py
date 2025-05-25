@@ -26,8 +26,8 @@ def execute_query(query, params=None, fetch=False):
             if fetch:
                 return cursor.fetchall()
             conn.commit()
-            if query.strip().upper().startswith('INSERT'):
-                return cursor.lastrowid if hasattr(cursor, 'lastrowid') else None
+            if query.strip().upper().startswith('INSERT') and 'RETURNING' in query.upper():
+                return cursor.fetchone()
             return None
 
 
@@ -44,6 +44,7 @@ def init_db():
             id SERIAL PRIMARY KEY,
             username VARCHAR(50) UNIQUE NOT NULL,
             password_hash VARCHAR(255) NOT NULL,
+            admin_type VARCHAR(20) DEFAULT 'volunteer',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )""",
 
@@ -63,14 +64,14 @@ def init_db():
             id SERIAL PRIMARY KEY,
             event VARCHAR(100) NOT NULL,
             gender VARCHAR(10) NOT NULL,
-            classes VARCHAR(50) NOT NULL,
+            classes VARCHAR(200) NOT NULL,
             phase VARCHAR(50),
             area VARCHAR(50),
             day INTEGER NOT NULL,
             time TIME NOT NULL,
-            duration INTEGER DEFAULT 60,
             nb_athletes INTEGER DEFAULT 8,
             status VARCHAR(20) DEFAULT 'scheduled',
+            published BOOLEAN DEFAULT FALSE,
             start_file VARCHAR(255),
             result_file VARCHAR(255),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -86,6 +87,26 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE,
             UNIQUE (game_id, athlete_bib)
+        )""",
+
+        """CREATE TABLE IF NOT EXISTS startlist (
+            id SERIAL PRIMARY KEY,
+            game_id INTEGER NOT NULL,
+            athlete_bib INTEGER NOT NULL,
+            lane_order INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE,
+            UNIQUE (game_id, athlete_bib)
+        )""",
+
+        """CREATE TABLE IF NOT EXISTS attempts (
+            id SERIAL PRIMARY KEY,
+            result_id INTEGER NOT NULL,
+            attempt_number INTEGER NOT NULL,
+            value VARCHAR(20),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (result_id) REFERENCES results(id) ON DELETE CASCADE,
+            UNIQUE (result_id, attempt_number)
         )"""
     ]
 
