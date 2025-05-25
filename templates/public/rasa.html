@@ -1,0 +1,277 @@
+{% extends "base.html" %}
+
+{% block title %}RASA Score System - World Para Athletics Grand Prix{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <h1 class="text-3xl font-bold mb-4">RASA Point Score System</h1>
+    <p class="text-gray-600">Understanding Paralympic Performance Comparison</p>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+    <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-2xl font-bold mb-4">What is RASA?</h2>
+        <p class="mb-4">The RASA (Revised Athletics Scoring Approach) point score system is the official method used by World Para Athletics to compare performances across different disability classes in athletics competitions.</p>
+        <p class="mb-4">Named after mathematician Purshottam Rasa, the system uses a mathematical formula to convert performances into points, allowing fair competition between athletes with different disabilities.</p>
+        <div class="bg-blue-50 p-4 rounded-lg">
+            <h3 class="font-bold mb-2">The Gompertz Function:</h3>
+            <code class="text-lg">Points = a × exp(-b - c × performance)</code>
+            <p class="text-sm mt-2">Where a, b, and c are class-specific constants</p>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-2xl font-bold mb-4">How It Works</h2>
+        <ul class="space-y-3">
+            <li class="flex items-start">
+                <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
+                <div>
+                    <strong>Equal Opportunity:</strong> Athletes from different classes can compete fairly against each other
+                </div>
+            </li>
+            <li class="flex items-start">
+                <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
+                <div>
+                    <strong>1000 Points Standard:</strong> World record performances typically score around 1000 points
+                </div>
+            </li>
+            <li class="flex items-start">
+                <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
+                <div>
+                    <strong>Higher is Better:</strong> The athlete with the highest RASA score wins, regardless of their class
+                </div>
+            </li>
+            <li class="flex items-start">
+                <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
+                <div>
+                    <strong>Updated Regularly:</strong> Constants are updated based on world record progressions
+                </div>
+            </li>
+        </ul>
+    </div>
+</div>
+
+<div class="bg-white rounded-lg shadow p-6 mb-8">
+    <h2 class="text-2xl font-bold mb-4">RASA Score Calculator</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+            <h3 class="text-lg font-semibold mb-3">Performance to RASA Score</h3>
+            <div class="space-y-3">
+                <select id="gender" class="w-full px-3 py-2 border rounded-lg">
+                    <option value="">Select Gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                </select>
+                <select id="event" class="w-full px-3 py-2 border rounded-lg">
+                    <option value="">Select Event</option>
+                </select>
+                <select id="class" class="w-full px-3 py-2 border rounded-lg">
+                    <option value="">Select Class</option>
+                </select>
+                <input type="text" id="performance" placeholder="Enter performance" class="w-full px-3 py-2 border rounded-lg">
+                <button onclick="calculateRASA()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 w-full">
+                    Calculate RASA Score
+                </button>
+            </div>
+        </div>
+
+        <div>
+            <h3 class="text-lg font-semibold mb-3">RASA Score to Performance</h3>
+            <div class="space-y-3">
+                <select id="gender2" class="w-full px-3 py-2 border rounded-lg">
+                    <option value="">Select Gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                </select>
+                <select id="event2" class="w-full px-3 py-2 border rounded-lg">
+                    <option value="">Select Event</option>
+                </select>
+                <select id="class2" class="w-full px-3 py-2 border rounded-lg">
+                    <option value="">Select Class</option>
+                </select>
+                <input type="number" id="rasaScore" placeholder="Enter RASA score" class="w-full px-3 py-2 border rounded-lg">
+                <button onclick="calculatePerformance()" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 w-full">
+                    Calculate Performance
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="result" class="mt-6 p-4 bg-gray-100 rounded-lg hidden">
+        <h4 class="font-bold mb-2">Result:</h4>
+        <p id="resultText" class="text-lg"></p>
+    </div>
+</div>
+
+<div class="bg-white rounded-lg shadow p-6">
+    <h2 class="text-2xl font-bold mb-4">Official Documents</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <a href="https://www.paralympic.org/sites/default/files/2025-02/2025%20-%202026%20World%20Para%20Athletics%20Raza%20Point%20Scores%20Field%20Events.pdf"
+           target="_blank" class="border rounded-lg p-4 hover:bg-gray-50 flex items-center">
+            <i class="fas fa-file-pdf text-red-500 text-3xl mr-4"></i>
+            <div>
+                <h3 class="font-semibold">Field Events RASA Scores</h3>
+                <p class="text-sm text-gray-600">2025-2026 Official IPC Document</p>
+            </div>
+        </a>
+        <a href="https://www.paralympic.org/sites/default/files/2025-02/2025%20-%202026%20World%20Para%20Athletics%20Raza%20Point%20Scores%20Track%20Events.pdf"
+           target="_blank" class="border rounded-lg p-4 hover:bg-gray-50 flex items-center">
+            <i class="fas fa-file-pdf text-red-500 text-3xl mr-4"></i>
+            <div>
+                <h3 class="font-semibold">Track Events RASA Scores</h3>
+                <p class="text-sm text-gray-600">2025-2026 Official IPC Document</p>
+            </div>
+        </a>
+    </div>
+</div>
+
+<script>
+let rasaData = [];
+
+async function loadRasaData() {
+    try {
+        const response = await fetch('/api/rasa-data');
+        rasaData = await response.json();
+        populateEvents();
+    } catch (error) {
+        console.error('Error loading RASA data:', error);
+    }
+}
+
+function populateEvents() {
+    const genderSelects = ['gender', 'gender2'];
+    genderSelects.forEach(id => {
+        const select = document.getElementById(id);
+        select.addEventListener('change', function() {
+            updateEventOptions(this.id);
+        });
+    });
+}
+
+function updateEventOptions(genderId) {
+    const gender = document.getElementById(genderId).value;
+    const eventId = genderId === 'gender' ? 'event' : 'event2';
+    const classId = genderId === 'gender' ? 'class' : 'class2';
+    const eventSelect = document.getElementById(eventId);
+    const classSelect = document.getElementById(classId);
+
+    eventSelect.innerHTML = '<option value="">Select Event</option>';
+    classSelect.innerHTML = '<option value="">Select Class</option>';
+
+    if (!gender) return;
+
+    const events = [...new Set(rasaData.filter(d => d.Gender === gender).map(d => d.Event))];
+    events.forEach(event => {
+        const option = document.createElement('option');
+        option.value = event;
+        option.textContent = event;
+        eventSelect.appendChild(option);
+    });
+
+    eventSelect.addEventListener('change', function() {
+        updateClassOptions(genderId);
+    });
+}
+
+function updateClassOptions(genderId) {
+    const gender = document.getElementById(genderId).value;
+    const eventId = genderId === 'gender' ? 'event' : 'event2';
+    const classId = genderId === 'gender' ? 'class' : 'class2';
+    const event = document.getElementById(eventId).value;
+    const classSelect = document.getElementById(classId);
+
+    classSelect.innerHTML = '<option value="">Select Class</option>';
+
+    if (!gender || !event) return;
+
+    const classes = rasaData
+        .filter(d => d.Gender === gender && d.Event === event)
+        .map(d => d.Class);
+
+    classes.forEach(cls => {
+        const option = document.createElement('option');
+        option.value = cls;
+        option.textContent = cls;
+        classSelect.appendChild(option);
+    });
+}
+
+function parsePerformance(performance, eventType) {
+    if (eventType === 'Field') {
+        return parseFloat(performance);
+    } else {
+        const parts = performance.split(':');
+        if (parts.length === 2) {
+            const [minutes, seconds] = parts;
+            return parseFloat(minutes) * 60 + parseFloat(seconds);
+        } else {
+            return parseFloat(performance);
+        }
+    }
+}
+
+function formatPerformance(value, eventType) {
+    if (eventType === 'Field') {
+        return value.toFixed(2) + ' m';
+    } else {
+        const minutes = Math.floor(value / 60);
+        const seconds = (value % 60).toFixed(2);
+        if (minutes > 0) {
+            return `${minutes}:${seconds.padStart(5, '0')}`;
+        } else {
+            return seconds;
+        }
+    }
+}
+
+function calculateRASA() {
+    const gender = document.getElementById('gender').value;
+    const event = document.getElementById('event').value;
+    const cls = document.getElementById('class').value;
+    const performance = document.getElementById('performance').value;
+
+    if (!gender || !event || !cls || !performance) {
+        alert('Please fill all fields');
+        return;
+    }
+
+    const data = rasaData.find(d => d.Gender === gender && d.Event === event && d.Class === cls);
+    if (!data) {
+        alert('No data found for this combination');
+        return;
+    }
+
+    const perfValue = parsePerformance(performance, data.Type);
+    const rasaScore = data.a * Math.exp(-data.b - data.c * perfValue);
+
+    document.getElementById('result').classList.remove('hidden');
+    document.getElementById('resultText').textContent = `RASA Score: ${Math.round(rasaScore)} points`;
+}
+
+function calculatePerformance() {
+    const gender = document.getElementById('gender2').value;
+    const event = document.getElementById('event2').value;
+    const cls = document.getElementById('class2').value;
+    const rasaScore = parseFloat(document.getElementById('rasaScore').value);
+
+    if (!gender || !event || !cls || !rasaScore) {
+        alert('Please fill all fields');
+        return;
+    }
+
+    const data = rasaData.find(d => d.Gender === gender && d.Event === event && d.Class === cls);
+    if (!data) {
+        alert('No data found for this combination');
+        return;
+    }
+
+    const performance = (-Math.log(rasaScore / data.a) - data.b) / data.c;
+
+    document.getElementById('result').classList.remove('hidden');
+    document.getElementById('resultText').textContent =
+        `Performance needed: ${formatPerformance(performance, data.Type)}`;
+}
+
+document.addEventListener('DOMContentLoaded', loadRasaData);
+</script>
+{% endblock %}
