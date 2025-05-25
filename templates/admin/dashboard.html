@@ -3,34 +3,35 @@
 {% block page_title %}Dashboard{% endblock %}
 
 {% block content %}
-<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-    <div class="bg-white rounded-lg shadow p-6">
-        <div class="flex items-center justify-between">
+<div class="relative mb-8">
+    <img src="/static/images/dashboard-bg.jpg" alt="Background" class="w-full h-64 object-cover rounded-lg">
+    <div class="absolute inset-0 bg-black bg-opacity-50 rounded-lg flex items-center justify-center">
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-8 text-white text-center">
             <div>
-                <p class="text-gray-600 text-sm">Total Games</p>
-                <p class="text-3xl font-bold">{{ games|length }}</p>
+                <i class="fas fa-globe text-4xl mb-2"></i>
+                <p class="text-3xl font-bold">{{ stats.countries }}</p>
+                <p class="text-sm">Countries</p>
             </div>
-            <i class="fas fa-calendar text-4xl text-blue-500"></i>
-        </div>
-    </div>
-
-    <div class="bg-white rounded-lg shadow p-6">
-        <div class="flex items-center justify-between">
             <div>
-                <p class="text-gray-600 text-sm">Total Athletes</p>
-                <p class="text-3xl font-bold">{{ athlete_count }}</p>
+                <i class="fas fa-running text-4xl mb-2"></i>
+                <p class="text-3xl font-bold">{{ stats.athletes }}</p>
+                <p class="text-sm">Athletes</p>
             </div>
-            <i class="fas fa-users text-4xl text-green-500"></i>
-        </div>
-    </div>
-
-    <div class="bg-white rounded-lg shadow p-6">
-        <div class="flex items-center justify-between">
             <div>
-                <p class="text-gray-600 text-sm">Records Set</p>
-                <p class="text-3xl font-bold">{{ record_count }}</p>
+                <i class="fas fa-hands-helping text-4xl mb-2"></i>
+                <p class="text-3xl font-bold">{{ stats.volunteers }}</p>
+                <p class="text-sm">Volunteers</p>
             </div>
-            <i class="fas fa-trophy text-4xl text-yellow-500"></i>
+            <div>
+                <i class="fas fa-users-cog text-4xl mb-2"></i>
+                <p class="text-3xl font-bold">{{ stats.loc }}</p>
+                <p class="text-sm">LOC Members</p>
+            </div>
+            <div>
+                <i class="fas fa-user-tie text-4xl mb-2"></i>
+                <p class="text-3xl font-bold">{{ stats.officials }}</p>
+                <p class="text-sm">Officials</p>
+            </div>
         </div>
     </div>
 </div>
@@ -45,9 +46,11 @@
                 <tr>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gender</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Classes</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Day</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Time</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Published</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Results</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
@@ -57,26 +60,38 @@
                 <tr>
                     <td class="px-6 py-4 whitespace-nowrap">{{ game.event }}</td>
                     <td class="px-6 py-4 whitespace-nowrap">{{ game.gender }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">{{ game.classes }}</td>
                     <td class="px-6 py-4 whitespace-nowrap">Day {{ game.day }}</td>
                     <td class="px-6 py-4 whitespace-nowrap">{{ game.time }}</td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
                             {% if game.status == 'finished' %}bg-green-100 text-green-800
                             {% elif game.status == 'in_progress' %}bg-yellow-100 text-yellow-800
+                            {% elif game.status == 'started' %}bg-blue-100 text-blue-800
                             {% elif game.status == 'cancelled' %}bg-red-100 text-red-800
                             {% else %}bg-gray-100 text-gray-800{% endif %}">
                             {{ game.status.replace('_', ' ').title() }}
                         </span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
+                        {% if game.is_published %}
+                            <span class="text-green-600"><i class="fas fa-check-circle"></i></span>
+                        {% else %}
+                            <span class="text-gray-400"><i class="fas fa-times-circle"></i></span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
                         {{ game.result_count }}/{{ game.nb_athletes }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm">
-                        <a href="{{ url_for('admin.game_results', id=game.id) }}" class="text-blue-600 hover:text-blue-900 mr-3">
-                            <i class="fas fa-list-check"></i> Results
+                        <a href="{{ url_for('admin.game_startlist', id=game.id) }}" class="text-green-600 hover:text-green-900 mr-2" title="Start List">
+                            <i class="fas fa-list"></i>
                         </a>
-                        <a href="{{ url_for('admin.game_edit', id=game.id) }}" class="text-indigo-600 hover:text-indigo-900">
-                            <i class="fas fa-edit"></i> Edit
+                        <a href="{{ url_for('admin.game_results', id=game.id) }}" class="text-blue-600 hover:text-blue-900 mr-2" title="Results">
+                            <i class="fas fa-list-check"></i>
+                        </a>
+                        <a href="{{ url_for('admin.game_edit', id=game.id) }}" class="text-indigo-600 hover:text-indigo-900" title="Edit">
+                            <i class="fas fa-edit"></i>
                         </a>
                     </td>
                 </tr>

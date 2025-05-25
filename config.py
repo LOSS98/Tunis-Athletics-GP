@@ -9,10 +9,9 @@ class Config:
 
     DATABASE_URL = os.getenv('DATABASE_URL')
     DB_HOST = DATABASE_URL.split('@')[1].split('/')[0].split(':')[0] if DATABASE_URL else 'localhost'
-    DB_USER = DATABASE_URL.split('://')[1].split(':')[0] if DATABASE_URL else 'khalil'
-    DB_PASSWORD = DATABASE_URL.split('://')[1].split(':')[1].split('@')[0] if DATABASE_URL else 'Kh4lddil9870720406*'
-    DB_NAME = DATABASE_URL.split('/')[-1] if DATABASE_URL else 'npctunis_db'
-    print(f"Database configuration: {DB_HOST}, {DB_USER}, {DB_PASSWORD}, {DB_NAME}")
+    DB_USER = DATABASE_URL.split('://')[1].split(':')[0] if DATABASE_URL else 'root'
+    DB_PASSWORD = DATABASE_URL.split('://')[1].split(':')[1].split('@')[0] if DATABASE_URL else 'root'
+    DB_NAME = DATABASE_URL.split('/')[-1] if DATABASE_URL else 'npc_tunisia_db'
 
     UPLOAD_FOLDER = os.getenv('UPLOAD_FOLDER', 'static/uploads')
     MAX_CONTENT_LENGTH = int(os.getenv('MAX_CONTENT_LENGTH', 16 * 1024 * 1024))
@@ -25,5 +24,13 @@ class Config:
 
     CURRENT_DAY = int(os.getenv('CURRENT_DAY', 1))
 
-    ADMIN_USERNAME = os.getenv('ADMIN_USERNAME', 'admin')
-    ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'admin2025')
+    FIELD_EVENTS = os.getenv('FIELD_EVENTS', '').split(',')
+    TRACK_EVENTS = os.getenv('TRACK_EVENTS', '').split(',')
+
+    COUNTRIES_COUNT = int(os.getenv('COUNTRIES_COUNT', 61))
+    ATHLETES_COUNT = int(os.getenv('ATHLETES_COUNT', 529))
+    VOLUNTEERS_COUNT = int(os.getenv('VOLUNTEERS_COUNT', 50))
+    LOC_COUNT = int(os.getenv('LOC_COUNT', 10))
+    OFFICIALS_COUNT = int(os.getenv('OFFICIALS_COUNT', 80))
+
+    RASA_TABLE_PATH = os.path.join('static', 'rasa_table.xlsx')
