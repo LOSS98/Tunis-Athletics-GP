@@ -426,6 +426,8 @@ def game_results(id):
                            is_field_event=game['event'] in Config.get_field_events())
 
 
+@admin_bp.route('/games/<int:game_id>/results/add', methods=['POST'])
+@admin_required
 def result_add(game_id):
     game = Game.get_by_id(game_id)
     if not game:
@@ -456,9 +458,9 @@ def result_add(game_id):
     # Validation performance
     if not value:
         errors.append('Performance value is required')
-    elif value not in Config.RESULT_SPECIAL_VALUES:
+    elif value not in Config.get_result_special_values():
         # Validation du format selon le type d'événement
-        if game['event'] in Config.FIELD_EVENTS:
+        if game['event'] in Config.get_field_events():
             # Field events: XX.XX format
             if not re.match(r'^\d+(\.\d{1,2})?$', value):
                 errors.append('Invalid performance format for field events. Use XX.XX (e.g., 15.67)')
@@ -478,7 +480,7 @@ def result_add(game_id):
     performance_value = value
     attempts_data = []
 
-    if game['event'] in Config.FIELD_EVENTS:
+    if game['event'] in Config.get_field_events():
         # Collecter les tentatives
         for i in range(1, 7):
             attempt_value = request.form.get(f'attempt_{i}', '').strip()
@@ -535,7 +537,7 @@ def result_add(game_id):
             return redirect(url_for('admin.game_results', id=game_id))
 
         # Sauvegarder les tentatives pour les field events
-        if game['event'] in Config.FIELD_EVENTS and attempts_data:
+        if game['event'] in Config.get_field_events() and attempts_data:
             for attempt in attempts_data:
                 try:
                     Attempt.create(result_id, attempt['number'], attempt['value'])
