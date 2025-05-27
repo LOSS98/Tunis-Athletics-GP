@@ -119,8 +119,12 @@ def user_delete(id):
 @admin_bp.route('/athletes')
 @admin_required
 def athletes_list():
-    athletes = Athlete.get_all()
-    return render_template('admin/athletes/list.html', athletes=athletes)
+    search = request.args.get('search', '')
+    if search:
+        athletes = Athlete.search(search)
+    else:
+        athletes = Athlete.get_all()
+    return render_template('admin/athletes/list.html', athletes=athletes, search=search)
 
 
 @admin_bp.route('/athletes/search')
@@ -238,8 +242,17 @@ def athlete_delete(id):
 @admin_bp.route('/games')
 @admin_required
 def games_list():
+    search = request.args.get('search', '')
     games = Game.get_with_status()
-    return render_template('admin/games/list.html', games=games)
+
+    if search:
+        games = [g for g in games if
+                 search.lower() in g['event'].lower() or
+                 search.lower() in g['gender'].lower() or
+                 search.lower() in g['classes'].lower() or
+                 str(g['day']) in search]
+
+    return render_template('admin/games/list.html', games=games, search=search)
 
 
 @admin_bp.route('/games/create', methods=['GET', 'POST'])
@@ -348,88 +361,50 @@ def game_delete(id):
     return redirect(url_for('admin.games_list'))
 
 
-@admin_bp.route('/games/<int:id>/toggle-publish', methods=['POST'])
+@admin_bp.route('/games/<int:id>/status', methods=['POST'])
+@admin_required
+def game_update_status(id):
+    status = request.form.get('status')
+    valid_statuses = ['scheduled', 'started', 'in_progress', 'finished', 'cancelled']
+
+    if status not in valid_statuses:
+        return jsonify({'error': 'Invalid status'}), 400
+
+    try:
+        Game.update_status(id, status)
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/games/<int:id>/auto-rank', methods=['POST'])
+@admin_required
+def game_auto_rank(id):
+    try:
+        game = Game.get_by_id(id)
+        if not game:
+            return jsonify({'error': 'Game not found'}), 404
+
+        results = Result.get_all(game_id=id)
+
+        # Update ranks in database
+        for result in results:
+            if result.get('auto_rank'):
+                Result.update(result['id'], rank=result['auto_rank'])
+
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@admin_bp.route('/games/<int:id>/publish', methods=['POST'])
 @loc_required
 def game_toggle_publish(id):
     try:
         new_status = Game.toggle_publish(id)
-        flash(f'Game {"published" if new_status else "unpublished"} successfully', 'success')
+        return jsonify({'published': new_status})
     except Exception as e:
-        flash(f'Error toggling publish status: {str(e)}', 'danger')
-
-    return redirect(url_for('admin.games_list'))
-
-
-@admin_bp.route('/games/<int:id>/update-status', methods=['POST'])
-@admin_required
-def game_update_status(id):
-    status = request.form.get('status')
-    if status in ['scheduled', 'started', 'in_progress', 'finished', 'cancelled']:
-        try:
-            Game.update_status(id, status)
-            flash('Game status updated successfully', 'success')
-        except Exception as e:
-            flash(f'Error updating status: {str(e)}', 'danger')
-    else:
-        flash('Invalid status', 'danger')
-
-    return redirect(request.referrer or url_for('admin.games_list'))
-
-
-# Start List Management
-@admin_bp.route('/games/<int:id>/startlist')
-@admin_required
-def game_startlist(id):
-    game = Game.get_by_id(id)
-    if not game:
-        flash('Game not found', 'danger')
-        return redirect(url_for('admin.games_list'))
-
-    startlist = StartList.get_by_game(id)
-    form = StartListForm()
-
-    return render_template('admin/games/startlist.html',
-                           game=game,
-                           startlist=startlist,
-                           form=form)
-
-
-@admin_bp.route('/games/<int:game_id>/startlist/add', methods=['POST'])
-@admin_required
-def startlist_add(game_id):
-    form = StartListForm()
-    if form.validate_on_submit():
-        game = Game.get_by_id(game_id)
-        athlete = Athlete.get_by_bib(form.athlete_bib.data)
-
-        if not athlete:
-            flash('Athlete not found', 'danger')
-        else:
-            # Check if athlete class matches game classes
-            game_classes = [c.strip() for c in game['classes'].split(',')]
-            if athlete['class'] not in game_classes:
-                flash(f"Warning: Athlete class {athlete['class']} not in game classes {', '.join(game_classes)}",
-                      'warning')
-
-            try:
-                StartList.create(game_id, form.athlete_bib.data, form.lane_order.data)
-                flash('Athlete added to start list', 'success')
-            except Exception as e:
-                flash(f'Error adding to start list: {str(e)}', 'danger')
-
-    return redirect(url_for('admin.game_startlist', id=game_id))
-
-
-@admin_bp.route('/games/<int:game_id>/startlist/<int:athlete_bib>/delete', methods=['POST'])
-@admin_required
-def startlist_delete(game_id, athlete_bib):
-    try:
-        StartList.delete(game_id, athlete_bib)
-        flash('Athlete removed from start list', 'success')
-    except Exception as e:
-        flash(f'Error removing from start list: {str(e)}', 'danger')
-
-    return redirect(url_for('admin.game_startlist', id=game_id))
+        return jsonify({'error': str(e)}), 500
 
 
 # Results Management
@@ -506,7 +481,7 @@ def result_add(game_id):
 
 @admin_bp.route('/results/<int:id>/delete', methods=['POST'])
 @admin_required
-def result_delete(id):
+def result_delete_action(id):
     result = Result.get_by_id(id)
     if result:
         try:
@@ -526,6 +501,62 @@ def result_delete(id):
 def records_list():
     records = Result.get_records()
     return render_template('admin/records/list.html', records=records)
+
+
+# Start List Management
+@admin_bp.route('/games/<int:id>/startlist')
+@admin_required
+def game_startlist(id):
+    game = Game.get_by_id(id)
+    if not game:
+        flash('Game not found', 'danger')
+        return redirect(url_for('admin.games_list'))
+
+    startlist = StartList.get_by_game(id)
+    form = StartListForm()
+
+    return render_template('admin/games/startlist.html',
+                           game=game,
+                           startlist=startlist,
+                           form=form)
+
+
+@admin_bp.route('/games/<int:game_id>/startlist/add', methods=['POST'])
+@admin_required
+def startlist_add(game_id):
+    form = StartListForm()
+    if form.validate_on_submit():
+        game = Game.get_by_id(game_id)
+        athlete = Athlete.get_by_bib(form.athlete_bib.data)
+
+        if not athlete:
+            flash('Athlete not found', 'danger')
+        else:
+            # Check if athlete class matches game classes
+            game_classes = [c.strip() for c in game['classes'].split(',')]
+            if athlete['class'] not in game_classes:
+                flash(f"Warning: Athlete class {athlete['class']} not in game classes {', '.join(game_classes)}",
+                      'warning')
+
+            try:
+                StartList.create(game_id, form.athlete_bib.data, form.lane_order.data)
+                flash('Athlete added to start list', 'success')
+            except Exception as e:
+                flash(f'Error adding to start list: {str(e)}', 'danger')
+
+    return redirect(url_for('admin.game_startlist', id=game_id))
+
+
+@admin_bp.route('/games/<int:game_id>/startlist/<int:athlete_bib>/delete', methods=['POST'])
+@admin_required
+def startlist_delete(game_id, athlete_bib):
+    try:
+        StartList.delete(game_id, athlete_bib)
+        flash('Athlete removed from start list', 'success')
+    except Exception as e:
+        flash(f'Error removing from start list: {str(e)}', 'danger')
+
+    return redirect(url_for('admin.game_startlist', id=game_id))
 
 
 @admin_bp.route('/setup', methods=['GET'])

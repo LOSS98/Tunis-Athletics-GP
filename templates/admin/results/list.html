@@ -1,0 +1,517 @@
+{% extends "admin/base_admin.html" %}
+
+{% block title %}Results - {{ game.event }} {{ game.gender }}{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <div>
+        <h1 class="text-3xl font-bold">{{ game.event }} - {{ game.gender }}</h1>
+        <p class="text-gray-600">Day {{ game.day }} - {{ game.time }} - {{ game.classes }}</p>
+        {% if game.classes_list|length > 1 %}
+        <div class="flex items-center mt-2">
+            <span class="text-sm text-blue-600">
+                <i class="fas fa-info-circle"></i> Multi-class event - RASA scores calculated for comparison
+            </span>
+            <span class="ml-4 text-sm text-purple-600">
+                <i class="fas fa-calculator"></i> Auto-ranking available
+            </span>
+        </div>
+        {% endif %}
+    </div>
+    <div class="flex space-x-2">
+        {% if current_user.is_loc() %}
+        <button onclick="togglePublish({{ game.id }})"
+                class="px-4 py-2 rounded {{ 'bg-green-500 hover:bg-green-600' if game.published else 'bg-gray-500 hover:bg-gray-600' }} text-white">
+            <i class="fas fa-{{ 'eye' if game.published else 'eye-slash' }}"></i>
+            {{ 'Published' if game.published else 'Unpublished' }}
+        </button>
+        {% endif %}
+        <div class="relative">
+            <select onchange="updateStatus({{ game.id }}, this.value)"
+                    class="px-4 py-2 border rounded-lg bg-white">
+                <option value="scheduled" {{ 'selected' if game.status == 'scheduled' else '' }}>Scheduled</option>
+                <option value="started" {{ 'selected' if game.status == 'started' else '' }}>Started</option>
+                <option value="in_progress" {{ 'selected' if game.status == 'in_progress' else '' }}>In Progress</option>
+                <option value="finished" {{ 'selected' if game.status == 'finished' else '' }}>Finished</option>
+                <option value="cancelled" {{ 'selected' if game.status == 'cancelled' else '' }}>Cancelled</option>
+            </select>
+        </div>
+        <button onclick="autoRankResults({{ game.id }})"
+                class="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600" title="Auto-rank by performance/RASA">
+            <i class="fas fa-sort-numeric-down"></i> Auto Rank
+        </button>
+        <a href="{{ url_for('admin.result_add', game_id=game.id) }}"
+           class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+            <i class="fas fa-plus"></i> Add Result
+        </a>
+        <a href="{{ url_for('admin.games_list') }}"
+           class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+            <i class="fas fa-arrow-left"></i> Back
+        </a>
+    </div>
+</div>
+
+<!-- Game Stats -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-lg shadow p-4 text-center">
+        <div class="text-2xl font-bold text-blue-600">{{ results|length }}</div>
+        <div class="text-sm text-gray-600">Total Results</div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4 text-center">
+        <div class="text-2xl font-bold text-green-600">{{ game.nb_athletes }}</div>
+        <div class="text-sm text-gray-600">Expected Athletes</div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4 text-center">
+        <div class="text-2xl font-bold text-purple-600">{{ game.classes_list|length }}</div>
+        <div class="text-sm text-gray-600">Classes</div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4 text-center">
+        <div class="text-2xl font-bold {{ 'text-green-600' if game.is_complete else 'text-orange-600' }}">
+            {{ '100%' if game.is_complete else ((results|length / game.nb_athletes * 100)|round(1)|string + '%') }}
+        </div>
+        <div class="text-sm text-gray-600">Completion</div>
+    </div>
+</div>
+
+<!-- Results Table -->
+<div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="min-w-full">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <div class="flex items-center">
+                            Rank
+                            <i class="fas fa-medal text-yellow-500 ml-1"></i>
+                        </div>
+                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">BIB</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Athlete</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Country</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <div class="flex items-center">
+                            Performance
+                            {% if game.event in config.FIELD_EVENTS %}
+                            <i class="fas fa-ruler text-blue-500 ml-1"></i>
+                            {% else %}
+                            <i class="fas fa-stopwatch text-green-500 ml-1"></i>
+                            {% endif %}
+                        </div>
+                    </th>
+                    {% if game.event in config.FIELD_EVENTS %}
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <div class="flex items-center">
+                            Best Attempt
+                            <i class="fas fa-bullseye text-green-500 ml-1"></i>
+                        </div>
+                    </th>
+                    {% endif %}
+                    {% if game.classes_list|length > 1 %}
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        <div class="flex items-center">
+                            RASA Score
+                            <i class="fas fa-calculator text-purple-500 ml-1"></i>
+                        </div>
+                    </th>
+                    {% endif %}
+                    {% if game.event in config.FIELD_EVENTS %}
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Attempts</th>
+                    {% endif %}
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Record</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+                {% for result in results %}
+                <tr class="hover:bg-gray-50 transition-colors duration-200" id="result-{{ result.id }}">
+                    <!-- Rank -->
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <span class="font-bold text-lg mr-2
+                                {{ 'text-yellow-600' if result.auto_rank == '1' or result.rank == '1' else
+                                   'text-gray-600' if result.auto_rank == '2' or result.rank == '2' else
+                                   'text-orange-600' if result.auto_rank == '3' or result.rank == '3' else
+                                   'text-gray-900' }}">
+                                {{ result.auto_rank or result.rank or '-' }}
+                            </span>
+                            {% if result.auto_rank == '1' or result.rank == '1' %}
+                                <span class="text-2xl">🥇</span>
+                            {% elif result.auto_rank == '2' or result.rank == '2' %}
+                                <span class="text-2xl">🥈</span>
+                            {% elif result.auto_rank == '3' or result.rank == '3' %}
+                                <span class="text-2xl">🥉</span>
+                            {% endif %}
+                        </div>
+                    </td>
+
+                    <!-- BIB -->
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                            {{ result.athlete_bib }}
+                        </span>
+                    </td>
+
+                    <!-- Athlete Name -->
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div>
+                                <div class="text-sm font-medium text-gray-900">
+                                    {{ result.firstname }} {{ result.lastname }}
+                                </div>
+                                <div class="text-sm text-gray-500">{{ result.athlete_gender }}</div>
+                            </div>
+                        </div>
+                    </td>
+
+                    <!-- Country -->
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <img src="/static/images/flags/{{ result.country }}.svg"
+                                 alt="{{ result.country }}"
+                                 class="w-6 h-4 mr-2"
+                                 onerror="this.style.display='none'">
+                            <span class="text-sm font-medium text-gray-900">{{ result.country }}</span>
+                        </div>
+                    </td>
+
+                    <!-- Class -->
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                            {{ 'bg-blue-100 text-blue-800' if result.athlete_class in game.classes_list else 'bg-red-100 text-red-800' }}">
+                            {{ result.athlete_class }}
+                        </span>
+                        {% if result.athlete_class not in game.classes_list %}
+                            <div class="text-xs text-red-500 mt-1">
+                                <i class="fas fa-exclamation-triangle"></i> Not in event classes
+                            </div>
+                        {% endif %}
+                    </td>
+
+                    <!-- Performance -->
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-lg font-bold text-gray-900">
+                            {% if result.value in config.RESULT_SPECIAL_VALUES %}
+                                <span class="text-red-600">{{ result.value }}</span>
+                            {% else %}
+                                {{ result.auto_performance or result.value }}
+                                {% if game.event in config.FIELD_EVENTS and result.value not in config.RESULT_SPECIAL_VALUES %}
+                                    <span class="text-sm text-gray-500">m</span>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                    </td>
+
+                    <!-- Best Attempt (Field Events) -->
+                    {% if game.event in config.FIELD_EVENTS %}
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if result.best_attempt %}
+                        <div class="text-sm font-bold text-green-600 bg-green-50 px-2 py-1 rounded">
+                            {{ result.best_attempt }} m
+                        </div>
+                        {% else %}
+                        <span class="text-sm text-gray-400">-</span>
+                        {% endif %}
+                    </td>
+                    {% endif %}
+
+                    <!-- RASA Score (Multi-class) -->
+                    {% if game.classes_list|length > 1 %}
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if result.rasa_score %}
+                        <div class="text-lg font-bold text-purple-600 bg-purple-50 px-2 py-1 rounded text-center">
+                            {{ result.rasa_score }}
+                        </div>
+                        {% else %}
+                        <span class="text-sm text-gray-400">-</span>
+                        {% endif %}
+                    </td>
+                    {% endif %}
+
+                    <!-- Attempts (Field Events) -->
+                    {% if game.event in config.FIELD_EVENTS %}
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <button onclick="toggleAttempts({{ result.id }})"
+                                class="text-blue-600 hover:text-blue-800 transition-colors">
+                            <i class="fas fa-plus-circle" id="attempts-icon-{{ result.id }}"></i>
+                            <span class="ml-1 text-sm">View</span>
+                        </button>
+                        <div id="attempts-{{ result.id }}" class="hidden mt-2">
+                            {% if result.attempts %}
+                                <div class="grid grid-cols-3 gap-1 text-xs">
+                                    {% for attempt in result.attempts %}
+                                        <div class="text-center border rounded px-1 py-1
+                                            {{ 'bg-green-100 border-green-300 font-bold' if attempt.value == result.best_attempt else 'bg-gray-50' }}">
+                                            <div class="text-gray-500">{{ loop.index }}</div>
+                                            <div>{{ attempt.value or '-' }}</div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </td>
+                    {% endif %}
+
+                    <!-- Record -->
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if result.record %}
+                        <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                            <i class="fas fa-trophy mr-1"></i>
+                            {{ result.record }}
+                        </span>
+                        {% else %}
+                        <span class="text-gray-400">-</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Actions -->
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div class="flex items-center justify-end space-x-2">
+                            <a href="{{ url_for('admin.result_edit', id=result.id) }}"
+                               class="text-indigo-600 hover:text-indigo-900 transition-colors" title="Edit Result">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <button onclick="deleteResult({{ result.id }})"
+                                    class="text-red-600 hover:text-red-900 transition-colors" title="Delete Result">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Empty State -->
+{% if not results %}
+<div class="text-center py-12">
+    <div class="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+        <i class="fas fa-medal text-4xl text-gray-300"></i>
+    </div>
+    <h3 class="text-lg font-medium text-gray-900 mb-2">No results yet</h3>
+    <p class="text-gray-500 mb-6">Start adding results for this {{ game.event }} event.</p>
+    <a href="{{ url_for('admin.result_add', game_id=game.id) }}"
+       class="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors">
+        <i class="fas fa-plus mr-2"></i>Add First Result
+    </a>
+</div>
+{% endif %}
+
+<!-- Legend -->
+<div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+    <h4 class="font-bold text-blue-900 mb-3">
+        <i class="fas fa-info-circle mr-2"></i>Legend & Information
+    </h4>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+            <h5 class="font-medium text-blue-800 mb-2">Performance Values:</h5>
+            <div class="text-sm text-blue-700 space-y-1">
+                <div><span class="font-semibold">DNS:</span> Did not start</div>
+                <div><span class="font-semibold">DNF:</span> Did not finish</div>
+                <div><span class="font-semibold">DSQ:</span> Disqualified</div>
+                <div><span class="font-semibold">NM:</span> No mark</div>
+                {% if game.event in config.FIELD_EVENTS %}
+                <div><span class="font-semibold">O:</span> Clearance</div>
+                <div><span class="font-semibold">X:</span> Failure</div>
+                <div><span class="font-semibold">-:</span> Pass</div>
+                {% endif %}
+            </div>
+        </div>
+        <div>
+            <h5 class="font-medium text-blue-800 mb-2">Record Types:</h5>
+            <div class="text-sm text-blue-700 space-y-1">
+                {% for record in config.RECORD_TYPES %}
+                <div><span class="font-semibold">{{ record }}:</span>
+                    {% if record == 'WR' %}World Record
+                    {% elif record == 'AR' %}Area Record
+                    {% elif record == 'CR' %}Championship Record
+                    {% elif record == 'NR' %}National Record
+                    {% elif record == 'PB' %}Personal Best
+                    {% elif record == 'SB' %}Season Best
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% if game.classes_list|length > 1 %}
+    <div class="mt-4 p-3 bg-purple-50 rounded border border-purple-200">
+        <div class="flex items-center">
+            <i class="fas fa-calculator text-purple-600 mr-2"></i>
+            <span class="font-medium text-purple-800">Multi-Class Event:</span>
+        </div>
+        <p class="text-sm text-purple-700 mt-1">
+            RASA scores are calculated to enable fair comparison between different disability classes.
+            Higher RASA scores indicate better performances relative to each class's capabilities.
+        </p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- JavaScript -->
+<script>
+// Status Update
+function updateStatus(gameId, status) {
+    fetch(`/admin/games/${gameId}/status`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `status=${status}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert('Error updating status: ' + data.error);
+        } else {
+            // Show success feedback
+            showNotification('Status updated successfully', 'success');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error updating status');
+    });
+}
+
+// Publish Toggle (LOC only)
+{% if current_user.is_loc() %}
+function togglePublish(gameId) {
+    fetch(`/admin/games/${gameId}/publish`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.error) {
+            alert('Error: ' + data.error);
+        } else {
+            location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error updating publish status');
+    });
+}
+{% endif %}
+
+// Auto Ranking
+function autoRankResults(gameId) {
+    if (confirm('Auto-rank all results based on performance/RASA scores? This will overwrite existing ranks.')) {
+        const button = event.target.closest('button');
+        const originalText = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ranking...';
+        button.disabled = true;
+
+        fetch(`/admin/games/${gameId}/auto-rank`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('Results auto-ranked successfully!', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                alert('Error: ' + (data.error || 'Unknown error'));
+                button.innerHTML = originalText;
+                button.disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error auto-ranking results');
+            button.innerHTML = originalText;
+            button.disabled = false;
+        });
+    }
+}
+
+// Delete Result
+function deleteResult(resultId) {
+    if (confirm('Are you sure you want to delete this result? This action cannot be undone.')) {
+        fetch(`/admin/results/${resultId}/delete`, {
+            method: 'POST'
+        })
+        .then(response => {
+            if (response.ok) {
+                const row = document.getElementById(`result-${resultId}`);
+                row.style.transition = 'all 0.3s ease';
+                row.style.opacity = '0';
+                row.style.transform = 'translateX(-100%)';
+                setTimeout(() => row.remove(), 300);
+                showNotification('Result deleted successfully', 'success');
+            } else {
+                alert('Error deleting result');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error deleting result');
+        });
+    }
+}
+
+// Toggle Attempts (Field Events)
+{% if game.event in config.FIELD_EVENTS %}
+function toggleAttempts(resultId) {
+    const attemptsDiv = document.getElementById(`attempts-${resultId}`);
+    const icon = document.getElementById(`attempts-icon-${resultId}`);
+
+    if (attemptsDiv.classList.contains('hidden')) {
+        attemptsDiv.classList.remove('hidden');
+        icon.classList.remove('fa-plus-circle');
+        icon.classList.add('fa-minus-circle');
+    } else {
+        attemptsDiv.classList.add('hidden');
+        icon.classList.remove('fa-minus-circle');
+        icon.classList.add('fa-plus-circle');
+    }
+}
+{% endif %}
+
+// Notification System
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 z-50 px-4 py-2 rounded-lg text-white transition-all duration-300 ${
+        type === 'success' ? 'bg-green-500' :
+        type === 'error' ? 'bg-red-500' :
+        'bg-blue-500'
+    }`;
+    notification.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'} mr-2"></i>
+            ${message}
+        </div>
+    `;
+
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        notification.style.transform = 'translateX(100%)';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+
+// Auto-refresh for live results (optional)
+let autoRefresh = false;
+function toggleAutoRefresh() {
+    autoRefresh = !autoRefresh;
+    if (autoRefresh) {
+        setInterval(() => {
+            if (autoRefresh) {
+                location.reload();
+            }
+        }, 30000); // Refresh every 30 seconds
+    }
+}
+</script>
+{% endblock %}

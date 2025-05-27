@@ -59,8 +59,8 @@
             <div class="space-y-3">
                 <select id="gender" class="w-full px-3 py-2 border rounded-lg">
                     <option value="">Select Gender</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
+                    <option value="Men">Male</option>
+                    <option value="Women">Female</option>
                 </select>
                 <select id="event" class="w-full px-3 py-2 border rounded-lg">
                     <option value="">Select Event</option>
@@ -80,8 +80,8 @@
             <div class="space-y-3">
                 <select id="gender2" class="w-full px-3 py-2 border rounded-lg">
                     <option value="">Select Gender</option>
-                    <option value="Male">Male</option>
-                    <option value="Female">Female</option>
+                    <option value="Men">Male</option>
+                    <option value="Women">Female</option>
                 </select>
                 <select id="event2" class="w-full px-3 py-2 border rounded-lg">
                     <option value="">Select Event</option>
@@ -132,35 +132,59 @@ async function loadRasaData() {
     try {
         const response = await fetch('/api/rasa-data');
         rasaData = await response.json();
-        populateEvents();
+        console.log('RASA data loaded:', rasaData.length, 'entries');
+
+        if (rasaData.length > 0) {
+            console.log('Sample data:', rasaData[0]);
+            populateInitialOptions();
+        } else {
+            console.error('No RASA data loaded');
+        }
     } catch (error) {
         console.error('Error loading RASA data:', error);
     }
 }
 
-function populateEvents() {
-    const genderSelects = ['gender', 'gender2'];
-    genderSelects.forEach(id => {
-        const select = document.getElementById(id);
-        select.addEventListener('change', function() {
-            updateEventOptions(this.id);
+function populateInitialOptions() {
+    // Setup event listeners for gender selects
+    const gender1 = document.getElementById('gender');
+    const gender2 = document.getElementById('gender2');
+
+    if (gender1) {
+        gender1.addEventListener('change', function() {
+            updateEventOptions('gender', 'event', 'class');
         });
-    });
+    }
+
+    if (gender2) {
+        gender2.addEventListener('change', function() {
+            updateEventOptions('gender2', 'event2', 'class2');
+        });
+    }
 }
 
-function updateEventOptions(genderId) {
+function updateEventOptions(genderId, eventId, classId) {
     const gender = document.getElementById(genderId).value;
-    const eventId = genderId === 'gender' ? 'event' : 'event2';
-    const classId = genderId === 'gender' ? 'class' : 'class2';
     const eventSelect = document.getElementById(eventId);
     const classSelect = document.getElementById(classId);
 
+    // Clear existing options
     eventSelect.innerHTML = '<option value="">Select Event</option>';
     classSelect.innerHTML = '<option value="">Select Class</option>';
 
-    if (!gender) return;
+    if (!gender || rasaData.length === 0) {
+        console.log('No gender selected or no data available');
+        return;
+    }
 
-    const events = [...new Set(rasaData.filter(d => d.Gender === gender).map(d => d.Event))];
+    // Get unique events for selected gender
+    const events = [...new Set(rasaData
+        .filter(d => d.Gender === gender)
+        .map(d => d.Event)
+    )].sort();
+
+    console.log(`Events for ${gender}:`, events);
+
     events.forEach(event => {
         const option = document.createElement('option');
         option.value = event;
@@ -168,25 +192,31 @@ function updateEventOptions(genderId) {
         eventSelect.appendChild(option);
     });
 
+    // Setup event listener for event select
     eventSelect.addEventListener('change', function() {
-        updateClassOptions(genderId);
+        updateClassOptions(genderId, eventId, classId);
     });
 }
 
-function updateClassOptions(genderId) {
+function updateClassOptions(genderId, eventId, classId) {
     const gender = document.getElementById(genderId).value;
-    const eventId = genderId === 'gender' ? 'event' : 'event2';
-    const classId = genderId === 'gender' ? 'class' : 'class2';
     const event = document.getElementById(eventId).value;
     const classSelect = document.getElementById(classId);
 
     classSelect.innerHTML = '<option value="">Select Class</option>';
 
-    if (!gender || !event) return;
+    if (!gender || !event || rasaData.length === 0) {
+        console.log('Missing gender/event or no data');
+        return;
+    }
 
-    const classes = rasaData
+    // Get unique classes for selected gender and event
+    const classes = [...new Set(rasaData
         .filter(d => d.Gender === gender && d.Event === event)
-        .map(d => d.Class);
+        .map(d => d.Class)
+    )].sort();
+
+    console.log(`Classes for ${gender} ${event}:`, classes);
 
     classes.forEach(cls => {
         const option = document.createElement('option');
@@ -224,7 +254,7 @@ function formatPerformance(value, eventType) {
     }
 }
 
-function calculateRASA() {
+async function calculateRASA() {
     const gender = document.getElementById('gender').value;
     const event = document.getElementById('event').value;
     const cls = document.getElementById('class').value;
@@ -237,18 +267,25 @@ function calculateRASA() {
 
     const data = rasaData.find(d => d.Gender === gender && d.Event === event && d.Class === cls);
     if (!data) {
-        alert('No data found for this combination');
+        alert('No RASA data found for this combination');
+        console.log('Looking for:', {gender, event, cls});
+        console.log('Available combinations:', rasaData.map(d => `${d.Gender}-${d.Event}-${d.Class}`));
         return;
     }
 
-    const perfValue = parsePerformance(performance, data.Type);
-    const rasaScore = data.a * Math.exp(-data.b - data.c * perfValue);
+    try {
+        const perfValue = parsePerformance(performance, data.Type);
+        const rasaScore = data.a * Math.exp(-data.b - data.c * perfValue);
 
-    document.getElementById('result').classList.remove('hidden');
-    document.getElementById('resultText').textContent = `RASA Score: ${Math.round(rasaScore)} points`;
+        document.getElementById('result').classList.remove('hidden');
+        document.getElementById('resultText').textContent = `RASA Score: ${Math.round(rasaScore)} points`;
+    } catch (error) {
+        alert('Invalid performance format');
+        console.error('Calculation error:', error);
+    }
 }
 
-function calculatePerformance() {
+async function calculatePerformance() {
     const gender = document.getElementById('gender2').value;
     const event = document.getElementById('event2').value;
     const cls = document.getElementById('class2').value;
@@ -261,17 +298,26 @@ function calculatePerformance() {
 
     const data = rasaData.find(d => d.Gender === gender && d.Event === event && d.Class === cls);
     if (!data) {
-        alert('No data found for this combination');
+        alert('No RASA data found for this combination');
         return;
     }
 
-    const performance = (-Math.log(rasaScore / data.a) - data.b) / data.c;
+    try {
+        const performance = (-Math.log(rasaScore / data.a) - data.b) / data.c;
 
-    document.getElementById('result').classList.remove('hidden');
-    document.getElementById('resultText').textContent =
-        `Performance needed: ${formatPerformance(performance, data.Type)}`;
+        document.getElementById('result').classList.remove('hidden');
+        document.getElementById('resultText').textContent =
+            `Performance needed: ${formatPerformance(performance, data.Type)}`;
+    } catch (error) {
+        alert('Error calculating performance');
+        console.error('Calculation error:', error);
+    }
 }
 
-document.addEventListener('DOMContentLoaded', loadRasaData);
+// Load data when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Page loaded, loading RASA data...');
+    loadRasaData();
+});
 </script>
 {% endblock %}

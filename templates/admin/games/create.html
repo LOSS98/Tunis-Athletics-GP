@@ -21,7 +21,19 @@
 
                 <div class="mb-4">
                     <label class="block text-gray-700 text-sm font-bold mb-2">Classes</label>
-                    {{ form.classes(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500", placeholder="e.g., T11-T13") }}
+                    {{ form.classes(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500", placeholder="e.g., T54,T53,T52 or F32,F33,F34") }}
+                    <p class="text-sm text-gray-600 mt-1">Enter multiple classes separated by commas for multi-class events</p>
+                    <div class="mt-2">
+                        <p class="text-xs text-gray-500">Available classes:</p>
+                        <div class="flex flex-wrap gap-1 mt-1">
+                            {% for class in config.CLASSES %}
+                            <button type="button" onclick="addClassToInput('{{ class }}')"
+                                    class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">
+                                {{ class }}
+                            </button>
+                            {% endfor %}
+                        </div>
+                    </div>
                 </div>
 
                 <div class="mb-4">
@@ -42,11 +54,6 @@
                 <div class="mb-4">
                     <label class="block text-gray-700 text-sm font-bold mb-2">Time</label>
                     {{ form.time(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
-                </div>
-
-                <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2">Duration (minutes)</label>
-                    {{ form.duration(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
                 </div>
 
                 <div class="mb-4">
@@ -72,6 +79,11 @@
                 <p class="text-sm text-gray-600 mt-1">Accepted formats: PDF, TXT</p>
             </div>
 
+            <div class="mb-4">
+                {{ form.published() }}
+                <label for="published" class="ml-2 text-gray-700 text-sm">Published</label>
+            </div>
+
             <div class="flex justify-between">
                 <a href="{{ url_for('admin.games_list') }}" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">
                     Cancel
@@ -83,4 +95,44 @@
         </form>
     </div>
 </div>
+
+<script>
+function addClassToInput(className) {
+    const classInput = document.getElementById('classes');
+    const currentValue = classInput.value.trim();
+
+    if (currentValue === '') {
+        classInput.value = className;
+    } else {
+        const classes = currentValue.split(',').map(c => c.trim());
+        if (!classes.includes(className)) {
+            classes.push(className);
+            classInput.value = classes.join(',');
+        }
+    }
+}
+
+// Auto-complete for events based on field/track
+document.getElementById('event').addEventListener('change', function() {
+    const event = this.value;
+    const classInput = document.getElementById('classes');
+
+    if (event) {
+        const fieldEvents = {{ config.FIELD_EVENTS | tojson }};
+        const trackEvents = {{ config.TRACK_EVENTS | tojson }};
+
+        if (fieldEvents.includes(event)) {
+            // Suggest field classes
+            if (classInput.value.trim() === '') {
+                classInput.placeholder = "e.g., F32,F33,F34 or F54,F55,F56";
+            }
+        } else if (trackEvents.includes(event)) {
+            // Suggest track classes
+            if (classInput.value.trim() === '') {
+                classInput.placeholder = "e.g., T54,T53,T52 or T11,T12,T13";
+            }
+        }
+    }
+});
+</script>
 {% endblock %}

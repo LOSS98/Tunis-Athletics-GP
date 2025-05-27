@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from config import Config
 import re
 import pandas as pd
+import numpy as np
 import os
 
 
@@ -111,7 +112,7 @@ class Athlete:
             WHERE LOWER(firstname) LIKE LOWER(%s)
             OR LOWER(lastname) LIKE LOWER(%s)
             OR LOWER(country) LIKE LOWER(%s)
-            OR CAST(bib AS CHAR) LIKE %s
+            OR bib::text LIKE %s
             ORDER BY bib
         """
         search_term = f"%{query}%"
@@ -199,7 +200,7 @@ class Game:
                 game['computed_status'] = game['status']
 
             game['has_results'] = Game.has_results(game['id'])
-            game['has_startlist'] = bool(game['start_file'])
+            game['has_startlist'] = bool(game.get('start_file')) or StartList.has_startlist(game['id'])
             game['is_published'] = game.get('published', False)
 
             result_count = Result.count_by_game(game['id'])
@@ -212,8 +213,7 @@ class Game:
     @staticmethod
     def has_results(game_id):
         count = execute_one("SELECT COUNT(*) as count FROM results WHERE game_id = %s", (game_id,))
-        game = execute_one("SELECT nb_athletes FROM games WHERE id = %s", (game_id,))
-        return count['count'] >= game['nb_athletes'] if game else False
+        return count['count'] > 0 if count else False
 
 
 class Result:
@@ -233,23 +233,121 @@ class Result:
                     query += f" AND r.{key} = %s"
                     params.append(value)
 
-        query += " ORDER BY CASE WHEN r.rank ~ '^[0-9]+$' THEN CAST(r.rank AS INTEGER) ELSE 999 END, r.rank"
         results = execute_query(query, params, fetch=True)
 
         if results and filters.get('game_id'):
             game = Game.get_by_id(filters['game_id'])
-            if game and len(game['classes_list']) > 1:
-                results = Result.calculate_rasa_scores(results, game)
+            if game:
+                # Add attempts for field events
+                if game['event'] in Config.FIELD_EVENTS:
+                    for result in results:
+                        result['attempts'] = Attempt.get_by_result(result['id'])
+                        # Auto-select best attempt
+                        result = Result._select_best_attempt(result, game)
+
+                # Calculate RASA scores if multi-class event
+                if len(game['classes_list']) > 1:
+                    results = Result.calculate_rasa_scores(results, game)
+
+                # Auto-rank results
+                results = Result._auto_rank_results(results, game)
 
         return results
 
     @staticmethod
+    def _select_best_attempt(result, game):
+        """Automatically select best attempt as performance for field events"""
+        if not result.get('attempts') or result['value'] in Config.RESULT_SPECIAL_VALUES:
+            return result
+
+        valid_attempts = []
+        for attempt in result['attempts']:
+            if attempt['value'] and attempt['value'] not in ['X', '-', 'O', '']:
+                try:
+                    value = float(attempt['value'])
+                    valid_attempts.append(value)
+                except ValueError:
+                    continue
+
+        if valid_attempts:
+            best_attempt = max(valid_attempts)
+            result['best_attempt'] = f"{best_attempt:.2f}"
+            # Update performance value if not already set correctly
+            if result['value'] != result['best_attempt']:
+                result['auto_performance'] = result['best_attempt']
+
+        return result
+
+    @staticmethod
+    def _auto_rank_results(results, game):
+        """Automatically rank results based on performance or RASA score"""
+        valid_results = []
+        invalid_results = []
+
+        for result in results:
+            if result['value'] in Config.RESULT_SPECIAL_VALUES:
+                invalid_results.append(result)
+            else:
+                valid_results.append(result)
+
+        # Sort valid results
+        if len(game['classes_list']) > 1 and any(r.get('rasa_score') for r in valid_results):
+            # Multi-class event: sort by RASA score (highest first)
+            valid_results.sort(key=lambda x: x.get('rasa_score', 0), reverse=True)
+        else:
+            # Single class: sort by performance
+            if game['event'] in Config.FIELD_EVENTS:
+                # Field events: higher is better
+                valid_results.sort(key=lambda x: float(x.get('auto_performance', x['value']) or 0), reverse=True)
+            else:
+                # Track events: lower time is better
+                def parse_time(time_str):
+                    try:
+                        if ':' in time_str:
+                            parts = time_str.split(':')
+                            return float(parts[0]) * 60 + float(parts[1])
+                        return float(time_str)
+                    except:
+                        return float('inf')
+
+                valid_results.sort(key=lambda x: parse_time(x.get('auto_performance', x['value']) or '999:99.99'))
+
+        # Assign ranks
+        for i, result in enumerate(valid_results):
+            result['auto_rank'] = str(i + 1)
+
+        # Add invalid results at the end
+        for result in invalid_results:
+            result['auto_rank'] = result['value']  # DNS, DNF, etc.
+
+        return valid_results + invalid_results
+
+    @staticmethod
     def calculate_rasa_scores(results, game):
+        """Calculate RASA scores using the Excel table"""
         if not os.path.exists(Config.RASA_TABLE_PATH):
             return results
 
         try:
             df = pd.read_excel(Config.RASA_TABLE_PATH)
+
+            # Map event names from config to RASA table
+            event_mapping = {
+                'Javelin': 'Javelin Throw',
+                'Shot Put': 'Shot Put',
+                'Discus Throw': 'Discus Throw',
+                'Club Throw': 'Club Throw',
+                'Long Jump': 'Long Jump',
+                'High Jump': 'High Jump',
+                '100m': '100 m',
+                '200m': '200 m',
+                '400m': '400 m',
+                '800m': '800 m',
+                '1500m': '1500 m',
+                '5000m': '5000 m',
+                '4x100m': '4x100 m',
+                'Universal Relay': 'Universal Relay'
+            }
 
             for result in results:
                 if result['value'] in Config.RESULT_SPECIAL_VALUES:
@@ -257,9 +355,11 @@ class Result:
                     continue
 
                 try:
+                    # Parse performance value
                     if game['event'] in Config.FIELD_EVENTS:
                         performance = float(result['value'])
                     else:
+                        # Handle time format: M:SS.CS or SS.CS
                         time_parts = result['value'].split(':')
                         if len(time_parts) == 2:
                             minutes, seconds = time_parts
@@ -267,29 +367,34 @@ class Result:
                         else:
                             performance = float(result['value'])
 
+                    # Get RASA constants
                     athlete_class = result['athlete_class']
-                    event_name = game['event']
-                    gender = result['athlete_gender']
+                    event_name = event_mapping.get(game['event'], game['event'])
+                    gender = 'Men' if result['athlete_gender'] == 'Male' else 'Women'
 
-                    mask = (df['Event'] == event_name) & (df['Class'] == athlete_class) & (df['Gender'] == gender)
+                    # Find matching row in RASA table
+                    mask = (df['Event'] == event_name) & \
+                           (df['Class'] == athlete_class) & \
+                           (df['Gender'] == gender)
+
                     rasa_row = df[mask]
 
                     if not rasa_row.empty:
                         rasa_row = rasa_row.iloc[0]
+                        a = float(rasa_row['a'])
+                        b = float(rasa_row['b'])
+                        c = float(rasa_row['c'])
 
-                        if game['event'] in Config.FIELD_EVENTS:
-                            score = int((performance / rasa_row['Reference']) * 1000)
-                        else:
-                            score = int((rasa_row['Reference'] / performance) * 1000)
-
+                        # Calculate RASA score using Gompertz function: a * exp(-b - c * performance)
+                        score = int(a * np.exp(-b - c * performance))
                         result['rasa_score'] = score
                     else:
                         result['rasa_score'] = None
 
-                except:
+                except Exception as e:
                     result['rasa_score'] = None
 
-        except:
+        except Exception as e:
             pass
 
         return results
@@ -344,12 +449,15 @@ class Result:
 
     @staticmethod
     def validate_performance(value, event_type):
+        """Validate performance format"""
         if value in Config.RESULT_SPECIAL_VALUES:
             return True
 
         if event_type in Config.FIELD_EVENTS:
+            # Field events: XX.XX format (meters)
             pattern = r'^\d+(\.\d{1,2})?$'
         else:
+            # Track events: M:SS.CS or SS.CS format
             pattern = r'^(\d{1,2}:)?\d{1,2}\.\d{2}$'
 
         return bool(re.match(pattern, value))
@@ -380,6 +488,11 @@ class StartList:
             "DELETE FROM startlist WHERE game_id = %s AND athlete_bib = %s",
             (game_id, athlete_bib)
         )
+
+    @staticmethod
+    def has_startlist(game_id):
+        count = execute_one("SELECT COUNT(*) as count FROM startlist WHERE game_id = %s", (game_id,))
+        return count['count'] > 0 if count else False
 
 
 class Attempt:

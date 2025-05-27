@@ -1,7 +1,10 @@
-from flask import render_template, request
+from flask import render_template, request, jsonify
 from . import public_bp
-from database.models import Game, Result, Athlete
+from database.models import Game, Result, Athlete, StartList
 from config import Config
+import pandas as pd
+import os
+import numpy as np
 
 
 @public_bp.route('/')
@@ -50,7 +53,7 @@ def game_detail(id):
 
     results = Result.get_all(game_id=id)
     game['has_results'] = len(results) > 0
-    game['has_startlist'] = bool(game['start_file'])
+    game['has_startlist'] = bool(game.get('start_file')) or len(StartList.get_by_game(id)) > 0
 
     return render_template('public/game_detail.html', game=game, results=results)
 
@@ -97,3 +100,109 @@ def athletes():
                            country_filter=country_filter,
                            countries=countries,
                            genders=Config.GENDERS)
+
+
+@public_bp.route('/rasa')
+def rasa():
+    return render_template('public/rasa.html')
+
+
+@public_bp.route('/api/rasa-data')
+def get_rasa_data():
+    """API endpoint to get RASA table data for JavaScript"""
+    try:
+        if not os.path.exists(Config.RASA_TABLE_PATH):
+            return jsonify([])
+
+        df = pd.read_excel(Config.RASA_TABLE_PATH)
+
+        # Convert to list of dictionaries
+        data = df.to_dict('records')
+
+        # Clean up data types for JSON serialization
+        for row in data:
+            for key, value in row.items():
+                if pd.isna(value):
+                    row[key] = None
+                elif isinstance(value, np.integer):
+                    row[key] = int(value)
+                elif isinstance(value, np.floating):
+                    row[key] = float(value)
+
+        return jsonify(data)
+    except Exception as e:
+        return jsonify([])
+
+
+@public_bp.route('/api/calculate-rasa', methods=['POST'])
+def calculate_rasa():
+    """API endpoint to calculate RASA score"""
+    try:
+        data = request.get_json()
+        gender = data.get('gender')
+        event = data.get('event')
+        athlete_class = data.get('class')
+        performance = float(data.get('performance'))
+
+        if not os.path.exists(Config.RASA_TABLE_PATH):
+            return jsonify({'error': 'RASA table not found'})
+
+        df = pd.read_excel(Config.RASA_TABLE_PATH)
+
+        # Find matching row
+        mask = (df['Event'] == event) & (df['Class'] == athlete_class) & (df['Gender'] == gender)
+        rasa_row = df[mask]
+
+        if rasa_row.empty:
+            return jsonify({'error': 'No RASA data found for this combination'})
+
+        rasa_row = rasa_row.iloc[0]
+        a = rasa_row['a']
+        b = rasa_row['b']
+        c = rasa_row['c']
+
+        # Calculate RASA score using Gompertz function
+        score = int(a * np.exp(-b - c * performance))
+
+        return jsonify({'rasa_score': score})
+
+    except Exception as e:
+        return jsonify({'error': str(e)})
+
+
+@public_bp.route('/api/calculate-performance', methods=['POST'])
+def calculate_performance():
+    """API endpoint to calculate performance from RASA score"""
+    try:
+        data = request.get_json()
+        gender = data.get('gender')
+        event = data.get('event')
+        athlete_class = data.get('class')
+        rasa_score = float(data.get('rasa_score'))
+
+        if not os.path.exists(Config.RASA_TABLE_PATH):
+            return jsonify({'error': 'RASA table not found'})
+
+        df = pd.read_excel(Config.RASA_TABLE_PATH)
+
+        # Find matching row
+        mask = (df['Event'] == event) & (df['Class'] == athlete_class) & (df['Gender'] == gender)
+        rasa_row = df[mask]
+
+        if rasa_row.empty:
+            return jsonify({'error': 'No RASA data found for this combination'})
+
+        rasa_row = rasa_row.iloc[0]
+        a = rasa_row['a']
+        b = rasa_row['b']
+        c = rasa_row['c']
+
+        # Reverse calculate performance from RASA score
+        # rasa_score = a * exp(-b - c * performance)
+        # performance = (-ln(rasa_score/a) - b) / c
+        performance = (-np.log(rasa_score / a) - b) / c
+
+        return jsonify({'performance': performance})
+
+    except Exception as e:
+        return jsonify({'error': str(e)})
