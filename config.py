@@ -23,7 +23,7 @@ class Config:
     MAX_CONTENT_LENGTH = int(os.getenv('MAX_CONTENT_LENGTH', 16 * 1024 * 1024))
     ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
 
-    # Athletics Configuration
+
     CLASSES = ['T11', 'T12', 'T13', 'T20', 'T33', 'T34', 'T35', 'T36', 'T37', 'T38', 'T40', 'T41', 'T42', 'T43', 'T44',
                'T45', 'T46', 'T47', 'T51', 'T52', 'T53', 'T54', 'T61', 'T62', 'T63', 'T64', 'F11', 'F12', 'F13', 'F20',
                'F31', 'F32', 'F33', 'F34', 'F35', 'F36', 'F37', 'F38', 'F40', 'F41', 'F42', 'F43', 'F44', 'F45', 'F46',
@@ -35,22 +35,22 @@ class Config:
 
     CURRENT_DAY = int(os.getenv('CURRENT_DAY', 1))
 
-    # Field Events (6 attempts, results in meters)
+
     FIELD_EVENTS = ['Javelin', 'Shot Put', 'Discus Throw', 'Club Throw', 'Long Jump', 'High Jump']
 
-    # Track Events (time-based results)
+
     TRACK_EVENTS = ['100m', '200m', '400m', '800m', '1500m', '5000m', '4x100m', 'Universal Relay']
 
-    # Statistics
+
     COUNTRIES_COUNT = int(os.getenv('COUNTRIES_COUNT', 61))
     ATHLETES_COUNT = int(os.getenv('ATHLETES_COUNT', 529))
     VOLUNTEERS_COUNT = int(os.getenv('VOLUNTEERS_COUNT', 50))
     LOC_COUNT = int(os.getenv('LOC_COUNT', 15))
     OFFICIALS_COUNT = int(os.getenv('OFFICIALS_COUNT', 80))
 
-    # Admin Configuration
+
     ADMIN_USERNAME = os.getenv('ADMIN_USERNAME', 'admin')
     ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'admin2025')
 
-    # RAZA Table Path
+
     RAZA_TABLE_PATH = os.path.join('static', 'raza_table_tunis_gp_25.xlsx')

@@ -18,15 +18,21 @@
         <div class="mt-2 p-2 bg-purple-50 border border-purple-200 rounded">
             <i class="fas fa-calculator text-purple-600 mr-2"></i>
             <span class="text-purple-800 font-medium">Multi-Class Event:</span>
-            <span class="text-purple-700 text-sm">RAZA scores will be calculated for fair comparison</span>
+            <span class="text-purple-700 text-sm">RASA scores will be calculated for fair comparison</span>
         </div>
         {% endif %}
 
         <div class="mt-4 flex gap-2 flex-wrap">
-            <!-- Status Update -->
+            <!-- Status Update Form -->
             <form method="POST" action="{{ url_for('admin.game_update_status', id=game.id) }}" class="inline">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                <select name="status" class="px-3 py-1 border rounded text-sm" onchange="this.form.submit()">
+                <!-- CSRF Token via form.hidden_tag() ou manual -->
+                {% if form %}
+                    {{ form.hidden_tag() }}
+                {% else %}
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
+                {% endif %}
+
+                <select name="status" class="px-3 py-1 border rounded" onchange="this.form.submit()">
                     <option value="scheduled" {% if game.status == 'scheduled' %}selected{% endif %}>Scheduled</option>
                     <option value="started" {% if game.status == 'started' %}selected{% endif %}>Started</option>
                     <option value="in_progress" {% if game.status == 'in_progress' %}selected{% endif %}>In Progress</option>
@@ -35,23 +41,19 @@
                 </select>
             </form>
 
-            <!-- Publish Button (LOC only) -->
+            <!-- Publish Button -->
             {% if current_user.is_loc() %}
-            <button onclick="togglePublish({{ game.id }}, event)" id="publishBtn"
-                    class="px-4 py-1 rounded text-white text-sm {% if game.get('published', False) %}bg-red-500 hover:bg-red-600{% else %}bg-green-500 hover:bg-green-600{% endif %}">
-                {% if game.get('published', False) %}
-                    <i class="fas fa-eye-slash mr-1"></i>Unpublish
-                {% else %}
-                    <i class="fas fa-eye mr-1"></i>Publish
-                {% endif %}
+            <button onclick="togglePublish({{ game.id }}, event)"
+                    class="px-4 py-1 rounded text-white {% if game.get('published', False) %}bg-red-500 hover:bg-red-600{% else %}bg-green-500 hover:bg-green-600{% endif %}">
+                {% if game.get('published', False) %}Unpublish{% else %}Publish{% endif %}
             </button>
             {% endif %}
 
             <!-- Auto Rank Button -->
-            <button onclick="autoRankResults({{ game.id }}, event)" id="autoRankBtn"
-                    class="bg-purple-500 text-white px-4 py-1 rounded hover:bg-purple-600 text-sm"
-                    title="Auto-rank by performance or RAZA score">
-                <i class="fas fa-sort-numeric-down mr-1"></i>Auto Rank
+            <button onclick="autoRankResults({{ game.id }}, event)"
+                    class="bg-purple-500 text-white px-4 py-1 rounded hover:bg-purple-600"
+                    title="Auto-rank by performance or RASA score">
+                <i class="fas fa-sort-numeric-down"></i> Auto Rank
             </button>
         </div>
     </div>
@@ -76,19 +78,21 @@
         </div>
 
         <form method="POST" action="{{ url_for('admin.result_add', game_id=game.id) }}" id="resultForm">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <!-- CSRF Protection unifié -->
+            {% if form %}
+                {{ form.hidden_tag() }}
+            {% else %}
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
+            {% endif %}
 
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <!-- Athlete Selection -->
                 <div>
-                    <label class="block text-gray-700 text-sm font-bold mb-2">
-                        Athlete <span class="text-red-500">*</span>
-                    </label>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Athlete *</label>
                     <div class="relative">
                         <input type="text" id="athleteSearch" placeholder="Search by BIB, name, country..."
-                               class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500"
-                               autocomplete="off">
-                        <div id="athleteResults" class="absolute z-50 w-full bg-white border rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto"></div>
+                               class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500">
+                        <div id="athleteResults" class="absolute z-10 w-full bg-white border rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto"></div>
                     </div>
                     <input type="hidden" name="athlete_bib" id="selectedBib" required>
                     <div id="selectedAthlete" class="mt-2 text-sm text-gray-600" data-game-classes="{{ game.classes }}"></div>
@@ -97,29 +101,33 @@
                 <!-- Rank -->
                 <div>
                     <label class="block text-gray-700 text-sm font-bold mb-2">Rank</label>
-                    <input type="text" name="rank" id="rankInput"
-                           class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500"
-                           placeholder="1, 2, 3...">
+                    {% if form and form.rank %}
+                        {{ form.rank(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500", placeholder="1, 2, 3...") }}
+                    {% else %}
+                        <input type="text" name="rank" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500" placeholder="1, 2, 3...">
+                    {% endif %}
                 </div>
 
                 <!-- Performance Value -->
                 <div>
                     <label class="block text-gray-700 text-sm font-bold mb-2">
-                        Performance Value <span class="text-red-500">*</span>
+                        Performance Value *
                         {% if is_field_event %}
-                        <small class="text-gray-500 font-normal">(auto-filled from best attempt)</small>
+                        <small class="text-gray-500">(auto-filled from best attempt)</small>
                         {% endif %}
                     </label>
+
                     {% if is_field_event %}
                         <input type="text" name="value" id="performanceValue"
                                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500"
-                               placeholder="15.67 (meters)">
+                               placeholder="XX.XX m (auto-filled)">
                     {% else %}
                         <input type="text" name="value" id="performanceValue"
                                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500"
-                               placeholder="1:23.45 or 23.45" required>
+                               placeholder="MM:SS.CS or SS.CS" required>
                     {% endif %}
-                    <select id="specialValueSelect" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500 mt-1"
+
+                    <select class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500 mt-1"
                             onchange="selectSpecialValue(this.value)">
                         <option value="">Or select special value</option>
                         {% for val in config.RESULT_SPECIAL_VALUES %}
@@ -131,40 +139,39 @@
                 <!-- Record -->
                 <div>
                     <label class="block text-gray-700 text-sm font-bold mb-2">Record</label>
-                    <select name="record" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500">
-                        <option value="">None</option>
-                        {% for record in config.RECORD_TYPES %}
-                            <option value="{{ record }}">{{ record }}</option>
-                        {% endfor %}
-                    </select>
+                    {% if form and form.record %}
+                        {{ form.record(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
+                    {% else %}
+                        <select name="record" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500">
+                            <option value="">None</option>
+                            {% for record in config.RECORD_TYPES %}
+                                <option value="{{ record }}">{{ record }}</option>
+                            {% endfor %}
+                        </select>
+                    {% endif %}
                 </div>
             </div>
 
-            <!-- Attempts Section (Field Events Only) -->
+            <!-- Attempts Section for Field Events -->
             {% if is_field_event %}
-            <div class="mt-6" id="attemptsSection">
-                <h4 class="font-bold mb-3 text-gray-700">
-                    <i class="fas fa-bullseye mr-2"></i>Attempts (performance will be auto-filled from best attempt)
-                </h4>
-                <div class="grid grid-cols-2 md:grid-cols-6 gap-3">
-                    {% for i in range(1, 7) %}
-                    <div class="bg-gray-50 p-3 rounded-lg">
-                        <label class="text-sm font-medium text-gray-600 block mb-1">Attempt {{ i }}</label>
-                        <input type="text" name="attempt_{{ i }}" id="attempt{{ i }}"
-                               class="w-full px-2 py-2 border rounded focus:outline-none focus:border-red-500"
-                               placeholder="15.67" onchange="updateBestAttempt()">
+            <div class="mt-4" id="attemptsSection">
+                <h4 class="font-bold mb-2">Attempts (performance will be auto-filled from best attempt)</h4>
+                <div class="grid grid-cols-2 md:grid-cols-6 gap-2">
+                    {% for i in range(6) %}
+                    <div>
+                        <label class="text-sm text-gray-600">Attempt {{ i + 1 }}</label>
+                        <input type="text" name="attempts-{{ i }}-value" id="attempt{{ i }}"
+                               class="w-full px-2 py-1 border rounded focus:outline-none focus:border-red-500"
+                               placeholder="XX.XX" onchange="updateBestAttempt()">
                     </div>
                     {% endfor %}
                 </div>
-                <div class="mt-2 text-xs text-gray-500">
-                    <strong>Valid values:</strong> Numbers (15.67), X (failure), O (clearance), - (pass)
-                </div>
+                <p class="text-xs text-gray-500 mt-2">Valid values: numbers (15.67), X (failure), O (clearance), - (pass)</p>
             </div>
             {% endif %}
 
-            <!-- Submit Button -->
-            <div class="mt-6">
-                <button type="submit" id="submitBtn" class="bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition-colors">
+            <div class="mt-4">
+                <button type="submit" class="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600">
                     <i class="fas fa-plus mr-2"></i>Add Result
                 </button>
             </div>
@@ -176,21 +183,14 @@
 {% if startlist %}
 <div class="mb-6">
     <div class="bg-white rounded-lg shadow p-4">
-        <h3 class="text-lg font-bold mb-3 flex items-center">
-            <i class="fas fa-list mr-2 text-blue-600"></i>Quick Select from Start List
-        </h3>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+        <h3 class="text-lg font-bold mb-3">Quick Select from Start List</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
             {% for entry in startlist %}
-            <div class="border rounded-lg p-3 text-sm cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-colors"
-                 onclick="selectFromStartList('{{ entry.athlete_bib }}', '{{ entry.firstname|e }} {{ entry.lastname|e }}', '{{ entry.country|e }}', '{{ entry.class|e }}')">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <span class="font-semibold text-blue-600">{{ entry.athlete_bib }}</span> -
-                        <span class="font-medium">{{ entry.firstname }} {{ entry.lastname }}</span>
-                        <div class="text-xs text-gray-500 mt-1">{{ entry.country }}</div>
-                    </div>
-                    <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">{{ entry.class }}</span>
-                </div>
+            <div class="border rounded p-2 text-sm cursor-pointer hover:bg-gray-50"
+                 onclick="selectFromStartList('{{ entry.athlete_bib }}', '{{ entry.firstname|e }} {{ entry.lastname|e }}')">
+                <span class="font-semibold">{{ entry.athlete_bib }}</span> -
+                {{ entry.firstname }} {{ entry.lastname }} ({{ entry.country }})
+                <span class="text-xs bg-blue-100 text-blue-800 px-1 rounded">{{ entry.class }}</span>
             </div>
             {% endfor %}
         </div>
@@ -198,23 +198,16 @@
 </div>
 {% endif %}
 
-<!-- Current Results -->
+<!-- Current Results Table -->
 <div class="bg-white rounded-lg shadow">
     <div class="p-6 border-b">
         <div class="flex justify-between items-center">
-            <h3 class="text-xl font-bold flex items-center">
-                <i class="fas fa-trophy mr-2 text-yellow-500"></i>
-                Current Results ({{ results|length }}/{{ game.nb_athletes }})
-            </h3>
-            <div class="text-sm">
+            <h3 class="text-lg font-bold">Current Results ({{ results|length }}/{{ game.nb_athletes }})</h3>
+            <div class="text-sm text-gray-600">
                 {% if game.classes_list|length > 1 %}
-                    <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs font-medium">
-                        <i class="fas fa-calculator mr-1"></i>Multi-Class Event
-                    </span>
+                    <span class="bg-purple-100 text-purple-800 px-2 py-1 rounded">Multi-Class Event</span>
                 {% else %}
-                    <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-xs font-medium">
-                        Single Class
-                    </span>
+                    <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded">Single Class</span>
                 {% endif %}
             </div>
         </div>
@@ -225,86 +218,60 @@
         <table class="w-full">
             <thead class="bg-gray-50">
                 <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        <i class="fas fa-medal mr-1"></i>Rank
-                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rank 🏆</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">BIB</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Country</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        <i class="fas fa-{% if is_field_event %}ruler{% else %}stopwatch{% endif %} mr-1"></i>Performance
+                        Performance {% if is_field_event %}📏{% else %}⏱️{% endif %}
                     </th>
                     {% if game.classes_list|length > 1 %}
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        <i class="fas fa-calculator mr-1"></i>RAZA Score
-                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">RASA Score 🧮</th>
                     {% endif %}
                     {% if is_field_event %}
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        <i class="fas fa-bullseye mr-1"></i>Attempts
-                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Attempts</th>
                     {% endif %}
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        <i class="fas fa-trophy mr-1"></i>Record
-                    </th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Record</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
                 {% for result in results %}
-                <tr class="hover:bg-gray-50 transition-colors">
+                <tr class="hover:bg-gray-50">
                     <!-- Rank with Medal -->
                     <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="flex items-center">
-                            {% set rank = result.auto_rank or result.rank %}
-                            {% if rank == '1' %}
-                                <span class="text-2xl mr-2">🥇</span>
-                                <span class="font-bold text-yellow-600 text-lg">{{ rank }}</span>
-                            {% elif rank == '2' %}
-                                <span class="text-2xl mr-2">🥈</span>
-                                <span class="font-bold text-gray-600 text-lg">{{ rank }}</span>
-                            {% elif rank == '3' %}
-                                <span class="text-2xl mr-2">🥉</span>
-                                <span class="font-bold text-orange-600 text-lg">{{ rank }}</span>
-                            {% else %}
-                                <span class="font-bold text-gray-900 text-lg">{{ rank or '-' }}</span>
-                            {% endif %}
-                        </div>
+                        {% set rank = result.auto_rank or result.rank %}
+                        {% if rank == '1' %}
+                            <span class="text-2xl mr-2">🥇</span><span class="font-bold text-yellow-600">{{ rank }}</span>
+                        {% elif rank == '2' %}
+                            <span class="text-2xl mr-2">🥈</span><span class="font-bold text-gray-600">{{ rank }}</span>
+                        {% elif rank == '3' %}
+                            <span class="text-2xl mr-2">🥉</span><span class="font-bold text-orange-600">{{ rank }}</span>
+                        {% else %}
+                            <span class="font-bold text-gray-900">{{ rank or '-' }}</span>
+                        {% endif %}
                     </td>
 
                     <!-- BIB -->
                     <td class="px-6 py-4 whitespace-nowrap">
-                        <span class="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm font-semibold">
-                            {{ result.athlete_bib }}
-                        </span>
+                        <span class="bg-indigo-100 text-indigo-800 px-2 py-1 rounded text-sm font-semibold">{{ result.athlete_bib }}</span>
                     </td>
 
                     <!-- Name -->
-                    <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="font-medium text-gray-900">{{ result.lastname }} {{ result.firstname }}</div>
-                        <div class="text-sm text-gray-500">{{ result.athlete_gender }}</div>
-                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">{{ result.lastname }} {{ result.firstname }}</td>
 
                     <!-- Country -->
                     <td class="px-6 py-4 whitespace-nowrap">
-                        <div class="flex items-center">
-                            <img src="/static/images/flags/{{ result.country }}.svg" alt="{{ result.country }}"
-                                 class="w-6 h-4 mr-2" onerror="this.style.display='none'">
-                            <span class="font-medium">{{ result.country }}</span>
-                        </div>
+                        <img src="/static/images/flags/{{ result.country }}.svg" alt="{{ result.country }}" class="inline w-6 h-4 mr-1" onerror="this.style.display='none'">
+                        {{ result.country }}
                     </td>
 
                     <!-- Class -->
                     <td class="px-6 py-4 whitespace-nowrap">
-                        <span class="px-2 py-1 text-xs font-medium rounded-full
-                            {% if result.athlete_class in game.classes_list %}bg-blue-100 text-blue-800{% else %}bg-red-100 text-red-800{% endif %}">
-                            {{ result.athlete_class }}
-                        </span>
+                        <span class="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">{{ result.athlete_class }}</span>
                         {% if result.athlete_class not in game.classes_list %}
-                            <div class="text-xs text-red-500 mt-1">
-                                <i class="fas fa-exclamation-triangle"></i> Not in event classes
-                            </div>
+                            <span class="text-red-500 ml-1" title="Class not in event"><i class="fas fa-exclamation-triangle"></i></span>
                         {% endif %}
                     </td>
 
@@ -312,51 +279,44 @@
                     <td class="px-6 py-4 whitespace-nowrap">
                         <div class="font-semibold text-lg">
                             {% if result.value in config.RESULT_SPECIAL_VALUES %}
-                                <span class="text-red-600 bg-red-50 px-2 py-1 rounded">{{ result.value }}</span>
+                                <span class="text-red-600">{{ result.value }}</span>
                             {% else %}
-                                <span class="text-gray-900">{{ result.auto_performance or result.value }}</span>
+                                {{ result.auto_performance or result.value }}
                                 {% if is_field_event and result.value not in config.RESULT_SPECIAL_VALUES %}
-                                    <span class="text-sm text-gray-500 ml-1">m</span>
+                                    <span class="text-sm text-gray-500">m</span>
                                 {% endif %}
                             {% endif %}
                         </div>
                     </td>
 
-                    <!-- RAZA Score (Multi-class only) -->
+                    <!-- RASA Score -->
                     {% if game.classes_list|length > 1 %}
                     <td class="px-6 py-4 whitespace-nowrap">
-                        {% if result.raza_score %}
-                            <div class="text-lg font-bold text-purple-600 bg-purple-50 px-3 py-2 rounded-lg text-center">
-                                {{ result.raza_score }}
-                            </div>
+                        {% if result.rasa_score %}
+                            <div class="text-lg font-bold text-purple-600 bg-purple-50 px-2 py-1 rounded text-center">{{ result.rasa_score }}</div>
                         {% else %}
                             <span class="text-gray-400">-</span>
                         {% endif %}
                     </td>
                     {% endif %}
 
-                    <!-- Attempts (Field Events only) -->
+                    <!-- Attempts -->
                     {% if is_field_event %}
                     <td class="px-6 py-4 whitespace-nowrap">
                         {% if result.attempts %}
-                            <button onclick="toggleAttempts({{ result.id }})"
-                                    class="text-blue-600 hover:text-blue-800 transition-colors">
-                                <i class="fas fa-eye" id="attempts-icon-{{ result.id }}"></i>
-                                <span class="ml-1 text-sm">View</span>
+                            <button onclick="toggleAttempts({{ result.id }})" class="text-blue-600 hover:text-blue-800">
+                                <i class="fas fa-eye" id="attempts-icon-{{ result.id }}"></i> View
                             </button>
-                            <div id="attempts-{{ result.id }}" class="hidden mt-3">
+                            <div id="attempts-{{ result.id }}" class="hidden mt-2 text-xs">
                                 <div class="grid grid-cols-3 gap-1">
                                     {% for attempt in result.attempts %}
-                                        <div class="text-center border rounded-lg px-2 py-1 text-xs
-                                            {% if attempt.value == result.best_attempt %}bg-green-100 border-green-300 font-bold text-green-800{% else %}bg-gray-50 text-gray-600{% endif %}">
-                                            <div class="text-xs text-gray-500">{{ loop.index }}</div>
-                                            <div class="font-medium">{{ attempt.value or '-' }}</div>
+                                        <div class="text-center border rounded px-1 py-1 {% if attempt.value == result.best_attempt %}bg-green-100 border-green-300 font-bold{% else %}bg-gray-50{% endif %}">
+                                            <div class="text-gray-500">{{ loop.index }}</div>
+                                            <div>{{ attempt.value or '-' }}</div>
                                         </div>
                                     {% endfor %}
                                 </div>
                             </div>
-                        {% else %}
-                            <span class="text-gray-400">-</span>
                         {% endif %}
                     </td>
                     {% endif %}
@@ -364,19 +324,15 @@
                     <!-- Record -->
                     <td class="px-6 py-4 whitespace-nowrap">
                         {% if result.record %}
-                            <span class="px-2 py-1 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
                                 <i class="fas fa-trophy mr-1"></i>{{ result.record }}
                             </span>
-                        {% else %}
-                            <span class="text-gray-400">-</span>
                         {% endif %}
                     </td>
 
                     <!-- Actions -->
                     <td class="px-6 py-4 whitespace-nowrap">
-                        <button onclick="deleteResult({{ result.id }})"
-                                class="text-red-600 hover:text-red-800 transition-colors"
-                                title="Delete Result">
+                        <button onclick="deleteResult({{ result.id }})" class="text-red-600 hover:text-red-900" title="Delete Result">
                             <i class="fas fa-trash"></i>
                         </button>
                     </td>
@@ -386,7 +342,6 @@
         </table>
     </div>
     {% else %}
-    <!-- Empty State -->
     <div class="text-center py-12">
         <div class="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
             <i class="fas fa-medal text-4xl text-gray-300"></i>
@@ -397,65 +352,24 @@
     {% endif %}
 </div>
 
-<!-- Legend and Information -->
+<!-- Legend -->
 <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-    <h4 class="font-bold text-blue-900 mb-3 flex items-center">
-        <i class="fas fa-info-circle mr-2"></i>Performance Format Guidelines & Legend
-    </h4>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <!-- Format Guidelines -->
-        <div>
-            <h5 class="font-semibold text-blue-800 mb-2">Format Guidelines:</h5>
-            <div class="space-y-2 text-sm text-blue-700">
-                {% if is_field_event %}
-                <div class="flex items-start">
-                    <i class="fas fa-ruler text-blue-600 mt-0.5 mr-2"></i>
-                    <div>
-                        <strong>Field Events:</strong> Use XX.XX format (e.g., 15.67 meters)
-                        <div class="text-xs mt-1">X = failure, O = clearance, - = pass</div>
-                    </div>
-                </div>
-                {% else %}
-                <div class="flex items-start">
-                    <i class="fas fa-stopwatch text-blue-600 mt-0.5 mr-2"></i>
-                    <div>
-                        <strong>Track Events:</strong> Use MM:SS.CS or SS.CS format
-                        <div class="text-xs mt-1">Examples: 1:23.45 or 23.45</div>
-                    </div>
-                </div>
-                {% endif %}
-            </div>
-        </div>
-
-        <!-- Legend -->
-        <div>
-            <h5 class="font-semibold text-blue-800 mb-2">Special Values:</h5>
-            <div class="grid grid-cols-2 gap-2 text-sm text-blue-700">
-                <div><strong>DNS:</strong> Did not start</div>
-                <div><strong>DNF:</strong> Did not finish</div>
-                <div><strong>DSQ:</strong> Disqualified</div>
-                <div><strong>NM:</strong> No mark</div>
-            </div>
-
-            <h5 class="font-semibold text-blue-800 mb-2 mt-3">Record Types:</h5>
-            <div class="flex flex-wrap gap-2 text-xs">
-                {% for record in config.RECORD_TYPES %}
-                    <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded">{{ record }}</span>
-                {% endfor %}
-            </div>
-        </div>
+    <h4 class="font-bold text-blue-900 mb-2">Legend:</h4>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm text-blue-800">
+        <div><span class="font-semibold">DNS:</span> Did not start</div>
+        <div><span class="font-semibold">DNF:</span> Did not finish</div>
+        <div><span class="font-semibold">DSQ:</span> Disqualified</div>
+        <div><span class="font-semibold">NM:</span> No mark</div>
+        {% if is_field_event %}
+        <div><span class="font-semibold">O:</span> Clearance</div>
+        <div><span class="font-semibold">X:</span> Failure</div>
+        <div><span class="font-semibold">-:</span> Pass</div>
+        {% endif %}
     </div>
-
     {% if game.classes_list|length > 1 %}
-    <div class="mt-4 p-3 bg-purple-50 rounded-lg border border-purple-200">
-        <div class="flex items-center">
-            <i class="fas fa-calculator text-purple-600 mr-2"></i>
-            <span class="font-semibold text-purple-800">Multi-Class Event RAZA Scoring:</span>
-        </div>
-        <p class="text-sm text-purple-700 mt-1">
-            RAZA scores enable fair comparison between different disability classes. Higher scores indicate better relative performance within each athlete's classification.
-        </p>
+    <div class="mt-3 p-2 bg-purple-50 rounded">
+        <span class="font-semibold text-purple-800">RASA Scoring:</span>
+        <span class="text-purple-700 text-sm">Multi-class events use RASA scores for fair comparison between different disability classes.</span>
     </div>
     {% endif %}
 </div>
@@ -464,69 +378,19 @@
 // Global variables
 const isFieldEvent = {{ 'true' if is_field_event else 'false' }};
 const specialValues = {{ config.RESULT_SPECIAL_VALUES|tojson }};
-const gameClasses = {{ game.classes_list|tojson }};
 
-// Utility function for XSS protection
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-// Form validation
-document.getElementById('resultForm').addEventListener('submit', function(e) {
-    const athleteBib = document.getElementById('selectedBib').value;
-    const performance = document.getElementById('performanceValue').value.trim();
-
-    let errors = [];
-
-    if (!athleteBib) {
-        errors.push('Please select an athlete');
-    }
-
-    if (!performance) {
-        errors.push('Please enter a performance value');
-    } else if (!specialValues.includes(performance)) {
-        // Format validation
-        if (isFieldEvent) {
-            if (!/^\d+(\.\d{1,2})?$/.test(performance)) {
-                errors.push('Invalid format for field events. Use XX.XX (e.g., 15.67)');
-            }
-        } else {
-            if (!/^(\d{1,2}:)?\d{1,2}\.\d{2}$/.test(performance)) {
-                errors.push('Invalid format for track events. Use MM:SS.CS or SS.CS (e.g., 1:23.45)');
-            }
-        }
-    }
-
-    if (errors.length > 0) {
-        e.preventDefault();
-        showErrors(errors);
-        return false;
-    }
-});
-
-// Show errors function
-function showErrors(errors) {
-    const errorDiv = document.getElementById('errorMessages');
-    const errorList = document.getElementById('errorList');
-
-    errorList.innerHTML = errors.map(error => `<li>${escapeHtml(error)}</li>`).join('');
-    errorDiv.classList.remove('hidden');
-    errorDiv.scrollIntoView({ behavior: 'smooth' });
-}
-
-// Hide errors
-function hideErrors() {
-    document.getElementById('errorMessages').classList.add('hidden');
+// Function to get CSRF token
+function getCSRFToken() {
+    const csrfInput = document.querySelector('input[name="csrf_token"]');
+    return csrfInput ? csrfInput.value : '';
 }
 
 // Special value selection
 function selectSpecialValue(value) {
     if (value) {
         document.getElementById('performanceValue').value = value;
-        document.getElementById('specialValueSelect').value = '';
-        hideErrors();
+        // Reset select
+        event.target.value = '';
     }
 }
 
@@ -538,7 +402,7 @@ function updateBestAttempt() {
     let bestValue = 0;
     let bestAttempt = '';
 
-    for (let i = 1; i <= 6; i++) {
+    for (let i = 0; i < 6; i++) {
         const attemptInput = document.getElementById(`attempt${i}`);
         if (!attemptInput) continue;
 
@@ -553,9 +417,8 @@ function updateBestAttempt() {
         }
     }
 
-    if (bestAttempt && !performanceInput.value) {
+    if (bestAttempt) {
         performanceInput.value = bestAttempt;
-        hideErrors();
     }
 }
 
@@ -581,19 +444,15 @@ athleteSearch.addEventListener('input', function() {
             .then(athletes => {
                 athleteResults.innerHTML = '';
                 if (athletes.length === 0) {
-                    athleteResults.innerHTML = '<div class="p-3 text-gray-500">No athletes found</div>';
+                    athleteResults.innerHTML = '<div class="p-2 text-gray-500">No athletes found</div>';
                 } else {
                     athletes.forEach(athlete => {
                         const div = document.createElement('div');
-                        div.className = 'p-3 hover:bg-gray-100 cursor-pointer border-b last:border-b-0';
+                        div.className = 'p-2 hover:bg-gray-100 cursor-pointer border-b';
                         div.innerHTML = `
                             <div class="flex justify-between items-center">
-                                <div>
-                                    <strong class="text-blue-600">${escapeHtml(athlete.bib)}</strong> -
-                                    <span class="font-medium">${escapeHtml(athlete.name)}</span>
-                                    <span class="text-gray-500">(${escapeHtml(athlete.country)})</span>
-                                </div>
-                                <span class="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">${escapeHtml(athlete.class)}</span>
+                                <div><strong>${athlete.bib}</strong> - ${athlete.name} (${athlete.country})</div>
+                                <span class="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">${athlete.class}</span>
                             </div>
                         `;
                         div.onclick = () => selectAthlete(athlete);
@@ -604,46 +463,32 @@ athleteSearch.addEventListener('input', function() {
             })
             .catch(error => {
                 console.error('Search error:', error);
-                athleteResults.innerHTML = '<div class="p-3 text-red-500">Search failed</div>';
+                athleteResults.innerHTML = '<div class="p-2 text-red-500">Search failed</div>';
                 athleteResults.classList.remove('hidden');
             });
     }, 300);
 });
 
-// Select athlete function
 function selectAthlete(athlete) {
     selectedBib.value = athlete.bib;
-    selectedAthlete.innerHTML = `Selected: <strong>${escapeHtml(athlete.bib)}</strong> - ${escapeHtml(athlete.name)} (${escapeHtml(athlete.country)})`;
+    selectedAthlete.innerHTML = `Selected: <strong>${athlete.bib}</strong> - ${athlete.name} (${athlete.country})`;
     athleteSearch.value = '';
     athleteResults.classList.add('hidden');
 
     // Check class compatibility
-    const gameClassesStr = selectedAthlete.dataset.gameClasses;
-    if (gameClassesStr) {
-        const gameClassesList = gameClassesStr.split(',').map(c => c.trim());
-        if (!gameClassesList.includes(athlete.class)) {
-            selectedAthlete.innerHTML += `
-                <div class="mt-1 text-red-600 text-xs">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    Warning: Athlete class ${escapeHtml(athlete.class)} not in game classes: ${escapeHtml(gameClassesList.join(', '))}
-                </div>
-            `;
-        }
+    const gameClasses = selectedAthlete.dataset.gameClasses.split(',').map(c => c.trim());
+    if (!gameClasses.includes(athlete.class)) {
+        selectedAthlete.innerHTML += ` <span class="text-red-500"><i class="fas fa-exclamation-triangle"></i> Warning: Athlete class ${athlete.class} not in game classes</span>`;
     }
-
-    hideErrors();
 }
 
-// Select from start list
-function selectFromStartList(bib, name, country, athleteClass) {
+function selectFromStartList(bib, name) {
     selectedBib.value = bib;
-    selectedAthlete.innerHTML = `Selected: <strong>${escapeHtml(bib)}</strong> - ${escapeHtml(name)} (${escapeHtml(country)})`;
+    selectedAthlete.innerHTML = `Selected: <strong>${bib}</strong> - ${name}`;
     athleteSearch.value = '';
     athleteResults.classList.add('hidden');
-    hideErrors();
 }
 
-// Toggle attempts display
 function toggleAttempts(resultId) {
     const attemptsDiv = document.getElementById(`attempts-${resultId}`);
     const icon = document.getElementById(`attempts-icon-${resultId}`);
@@ -659,9 +504,9 @@ function toggleAttempts(resultId) {
     }
 }
 
-// Delete result
 function deleteResult(resultId) {
     if (confirm('Are you sure you want to delete this result?')) {
+        // Create and submit form
         const form = document.createElement('form');
         form.method = 'POST';
         form.action = `/admin/results/${resultId}/delete`;
@@ -669,7 +514,7 @@ function deleteResult(resultId) {
         const csrfToken = document.createElement('input');
         csrfToken.type = 'hidden';
         csrfToken.name = 'csrf_token';
-        csrfToken.value = document.querySelector('input[name="csrf_token"]').value;
+        csrfToken.value = getCSRFToken();
 
         form.appendChild(csrfToken);
         document.body.appendChild(form);
@@ -677,7 +522,6 @@ function deleteResult(resultId) {
     }
 }
 
-// Toggle publish status
 function togglePublish(gameId, event) {
     const button = event.target.closest('button');
     const originalText = button.innerHTML;
@@ -688,7 +532,7 @@ function togglePublish(gameId, event) {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+            'X-CSRFToken': getCSRFToken()
         }
     })
     .then(response => response.json())
@@ -709,9 +553,8 @@ function togglePublish(gameId, event) {
     });
 }
 
-// Auto rank results
 function autoRankResults(gameId, event) {
-    if (confirm('Auto-rank all results based on performance/RAZA scores? This will update existing ranks.')) {
+    if (confirm('Auto-rank all results based on performance/RASA scores? This will update ranks automatically.')) {
         const button = event.target.closest('button');
         const originalText = button.innerHTML;
         button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ranking...';
@@ -721,7 +564,7 @@ function autoRankResults(gameId, event) {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('input[name="csrf_token"]').value
+                'X-CSRFToken': getCSRFToken()
             }
         })
         .then(response => response.json())
@@ -744,36 +587,11 @@ function autoRankResults(gameId, event) {
     }
 }
 
-// Close search results when clicking outside
+// Close search when clicking outside
 document.addEventListener('click', function(e) {
     if (!athleteSearch.contains(e.target) && !athleteResults.contains(e.target)) {
         athleteResults.classList.add('hidden');
     }
-});
-
-// Real-time validation for performance input
-document.getElementById('performanceValue').addEventListener('input', function() {
-    const value = this.value.trim();
-
-    // Clear previous styles
-    this.classList.remove('border-red-500', 'border-green-500');
-
-    if (!value) return;
-
-    if (specialValues.includes(value)) {
-        this.classList.add('border-green-500');
-        return;
-    }
-
-    let isValid = false;
-
-    if (isFieldEvent) {
-        isValid = /^\d+(\.\d{1,2})?$/.test(value);
-    } else {
-        isValid = /^(\d{1,2}:)?\d{1,2}\.\d{2}$/.test(value);
-    }
-
-    this.classList.add(isValid ? 'border-green-500' : 'border-red-500');
 });
 </script>
 {% endblock %}

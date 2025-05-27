@@ -183,9 +183,9 @@ def calculate_raza():
 
         # ✅ FORMULE OFFICIELLE CORRIGÉE :
         # Points = PLANCHER(A × e^(-B-C×Performance))
-        score_float = a * np.exp(np.exp(-b - c * performance))
+        score_float = a * np.exp(-np.exp(b - c * performance))
         score = int(np.floor(score_float))  # ← CORRECTION : utiliser floor()
-
+        print(score_float, score)
         return jsonify({'raza_score': score})
 
     except Exception as e:

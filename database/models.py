@@ -238,25 +238,25 @@ class Result:
         if results and filters.get('game_id'):
             game = Game.get_by_id(filters['game_id'])
             if game:
-                # Add attempts for field events
+
                 if game['event'] in Config.FIELD_EVENTS:
                     for result in results:
                         result['attempts'] = Attempt.get_by_result(result['id'])
-                        # Auto-select best attempt
+
                         result = Result._select_best_attempt(result, game)
 
-                # Calculate RAZA scores if multi-class event
+
                 if len(game['classes_list']) > 1:
                     results = Result.calculate_raza_scores(results, game)
 
-                # Auto-rank results
+
                 results = Result._auto_rank_results(results, game)
 
         return results
 
     @staticmethod
     def _select_best_attempt(result, game):
-        """Automatically select best attempt as performance for field events"""
+
         if not result.get('attempts') or result['value'] in Config.RESULT_SPECIAL_VALUES:
             return result
 
@@ -272,7 +272,7 @@ class Result:
         if valid_attempts:
             best_attempt = max(valid_attempts)
             result['best_attempt'] = f"{best_attempt:.2f}"
-            # Update performance value if not already set correctly
+
             if result['value'] != result['best_attempt']:
                 result['auto_performance'] = result['best_attempt']
 
@@ -280,7 +280,7 @@ class Result:
 
     @staticmethod
     def _auto_rank_results(results, game):
-        """Automatically rank results based on performance or RAZA score"""
+
         valid_results = []
         invalid_results = []
 
@@ -290,14 +290,14 @@ class Result:
             else:
                 valid_results.append(result)
 
-        # Sort valid results
+
         if len(game['classes_list']) > 1 and any(r.get('raza_score') for r in valid_results):
-            # Multi-class event: sort by RAZA score (highest first)
+
             valid_results.sort(key=lambda x: x.get('raza_score', 0), reverse=True)
         else:
-            # Single class: sort by performance
+
             if game['event'] in Config.FIELD_EVENTS:
-                # Field events: higher is better
+
                 def get_performance_value(result):
                     try:
                         return float(result.get('auto_performance', result['value']) or 0)
@@ -306,7 +306,7 @@ class Result:
 
                 valid_results.sort(key=get_performance_value, reverse=True)
             else:
-                # Track events: lower time is better
+
                 def parse_time(time_str):
                     try:
                         if ':' in time_str:
@@ -318,26 +318,26 @@ class Result:
 
                 valid_results.sort(key=lambda x: parse_time(x.get('auto_performance', x['value']) or '999:99.99'))
 
-        # Assign ranks
+
         for i, result in enumerate(valid_results):
             result['auto_rank'] = str(i + 1)
 
-        # Add invalid results at the end
+
         for result in invalid_results:
-            result['auto_rank'] = result['value']  # DNS, DNF, etc.
+            result['auto_rank'] = result['value']
 
         return valid_results + invalid_results
 
     @staticmethod
     def calculate_raza_scores(results, game):
-        """Calculate RAZA scores using the Excel table with CORRECT official formula"""
+
         if not os.path.exists(Config.RAZA_TABLE_PATH):
             return results
 
         try:
             df = pd.read_excel(Config.RAZA_TABLE_PATH)
 
-            # Map event names from config to RAZA table
+
             event_mapping = {
                 'Javelin': 'Javelin Throw',
                 'Shot Put': 'Shot Put',
@@ -361,13 +361,13 @@ class Result:
                     continue
 
                 try:
-                    # Parse performance value
+
                     performance_str = result.get('auto_performance', result['value'])
 
                     if game['event'] in Config.FIELD_EVENTS:
                         performance = float(performance_str)
                     else:
-                        # Handle time format: M:SS.CS or SS.CS
+
                         time_parts = performance_str.split(':')
                         if len(time_parts) == 2:
                             minutes, seconds = time_parts
@@ -375,12 +375,12 @@ class Result:
                         else:
                             performance = float(performance_str)
 
-                    # Get RAZA constants
+
                     athlete_class = result['athlete_class']
                     event_name = event_mapping.get(game['event'], game['event'])
                     gender = 'Men' if result['athlete_gender'] == 'Male' else 'Women'
 
-                    # Find matching row in RAZA table
+
                     mask = (df['Event'] == event_name) & \
                            (df['Class'] == athlete_class) & \
                            (df['Gender'] == gender)
@@ -396,7 +396,7 @@ class Result:
                         # ✅ FORMULE OFFICIELLE CORRIGÉE :
                         # Points = PLANCHER(A × e^(-B-C×Performance))
                         # Utilisation de la fonction FLOOR (PLANCHER) comme dans la formule officielle
-                        score_float = a * np.exp(-b - c * performance)
+                        score_float = a * np.exp(-np.exp(b - c * performance))
                         score = int(np.floor(score_float))  # ← CORRECTION : utiliser floor() au lieu de int()
 
                         result['raza_score'] = score

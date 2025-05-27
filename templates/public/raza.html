@@ -11,12 +11,12 @@
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
     <div class="bg-white rounded-lg shadow p-6">
         <h2 class="text-2xl font-bold mb-4">What is RAZA?</h2>
-        <p class="mb-4">The RAZA (Revised Athletics Scoring Approach) point score system is the official method used by World Para Athletics to compare performances across different disability classes in athletics competitions.</p>
+        <p class="mb-4">The RAZA point score system is the official method used by World Para Athletics to compare performances across different disability classes in athletics competitions.</p>
         <p class="mb-4">Named after mathematician Purshottam Raza, the system uses a mathematical formula to convert performances into points, allowing fair competition between athletes with different disabilities.</p>
         <div class="bg-blue-50 p-4 rounded-lg">
             <h3 class="font-bold mb-2">Official Formula (Gompertz):</h3>
             <div class="font-mono text-lg mb-2">
-                Points = <strong>FLOOR</strong>(A × e<sup>(-B-C×Performance)</sup>)
+                Points = <strong>FLOOR</strong>(A × e<sup>(-e<sup>B-C×Performance</sup>)</sup>)
             </div>
             <h3 class="font-bold mb-2">Inverse formula:</h3>
             <div class="font-mono text-lg mb-2">
@@ -271,22 +271,41 @@ async function calculateRAZA() {
         return;
     }
 
-    const data = razaData.find(d => d.Gender === gender && d.Event === event && d.Class === cls);
-    if (!data) {
-        alert('No RAZA data found for this combination');
-        console.log('Looking for:', {gender, event, cls});
-        console.log('Available combinations:', razaData.map(d => `${d.Gender}-${d.Event}-${d.Class}`));
-        return;
-    }
-
     try {
+        // Déterminer le type d'événement pour parser la performance
+        const data = razaData.find(d => d.Gender === gender && d.Event === event && d.Class === cls);
+        if (!data) {
+            alert('No RAZA data found for this combination');
+            return;
+        }
+
         const perfValue = parsePerformance(performance, data.Type);
-        const razaScore = data.a * Math.exp(-data.b - data.c * perfValue);
+
+        const response = await fetch('/api/calculate-raza', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                gender: gender,
+                event: event,
+                class: cls,
+                performance: perfValue
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.error) {
+            alert('Error: ' + result.error);
+            return;
+        }
 
         document.getElementById('result').classList.remove('hidden');
-        document.getElementById('resultText').textContent = `RAZA Score: ${Math.round(razaScore)} points`;
+        document.getElementById('resultText').textContent = `RAZA Score: ${result.raza_score} points`;
+
     } catch (error) {
-        alert('Invalid performance format');
+        alert('Error calculating RAZA score');
         console.error('Calculation error:', error);
     }
 }
@@ -302,23 +321,41 @@ async function calculatePerformance() {
         return;
     }
 
-    const data = razaData.find(d => d.Gender === gender && d.Event === event && d.Class === cls);
-    if (!data) {
-        alert('No RAZA data found for this combination');
-        return;
-    }
-
     try {
-        const performance = (-Math.log(razaScore / data.a) - data.b) / data.c;
+        const response = await fetch('/api/calculate-performance', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                gender: gender,
+                event: event,
+                class: cls,
+                raza_score: razaScore
+            })
+        });
+
+        const result = await response.json();
+
+        if (result.error) {
+            alert('Error: ' + result.error);
+            return;
+        }
+
+        // Déterminer le type d'événement pour formater la performance
+        const data = razaData.find(d => d.Gender === gender && d.Event === event && d.Class === cls);
+        const eventType = data ? data.Type : 'Track'; // Par défaut Track si pas trouvé
 
         document.getElementById('result').classList.remove('hidden');
         document.getElementById('resultText').textContent =
-            `Performance needed: ${formatPerformance(performance, data.Type)}`;
+            `Performance needed: ${formatPerformance(result.performance, eventType)}`;
+
     } catch (error) {
         alert('Error calculating performance');
         console.error('Calculation error:', error);
     }
 }
+
 
 // Load data when page loads
 document.addEventListener('DOMContentLoaded', function() {
