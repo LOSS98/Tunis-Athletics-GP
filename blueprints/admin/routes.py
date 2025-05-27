@@ -4,12 +4,14 @@ from werkzeug.utils import secure_filename
 from . import admin_bp
 from .auth import admin_required, loc_required
 from .forms import LoginForm, UserForm, AthleteForm, GameForm, ResultForm, StartListForm
+from .config_forms import ConfigForm, StatsConfigForm, CompetitionDayForm, CurrentDayForm
 from database.models import User, Athlete, Game, Result, Attempt, StartList
-from database.db_manager import execute_one
+from database.db_manager import execute_one, execute_query
+from database.config_manager import ConfigManager, clear_config_cache
 from utils.helpers import allowed_file, save_uploaded_file
 from config import Config
 import os
-import re  # ← AJOUT DE L'IMPORT RE
+import re
 
 
 @admin_bp.route('/login', methods=['GET', 'POST'])
@@ -40,16 +42,15 @@ def logout():
 def dashboard():
     games = Game.get_with_status()
     stats = {
-        'countries': Config.COUNTRIES_COUNT,
-        'athletes': Config.ATHLETES_COUNT,
-        'volunteers': Config.VOLUNTEERS_COUNT,
-        'loc': Config.LOC_COUNT,
-        'officials': Config.OFFICIALS_COUNT
+        'countries': Config.get_countries_count(),
+        'athletes': Config.get_athletes_count(),
+        'volunteers': Config.get_volunteers_count(),
+        'loc': Config.get_loc_count(),
+        'officials': Config.get_officials_count()
     }
     return render_template('admin/dashboard.html', games=games, stats=stats)
 
 
-# User Management (LOC only)
 @admin_bp.route('/users')
 @loc_required
 def users_list():
@@ -116,7 +117,6 @@ def user_delete(id):
     return redirect(url_for('admin.users_list'))
 
 
-# Athletes Management
 @admin_bp.route('/athletes')
 @admin_required
 def athletes_list():
@@ -239,7 +239,6 @@ def athlete_delete(id):
     return redirect(url_for('admin.athletes_list'))
 
 
-# Games Management
 @admin_bp.route('/games')
 @admin_required
 def games_list():
@@ -386,10 +385,8 @@ def game_auto_rank(id):
         if not game:
             return jsonify({'error': 'Game not found'}), 404
 
-        # Get results with auto-ranking applied
         results = Result.get_all(game_id=id)
 
-        # Update ranks in database
         for result in results:
             if result.get('auto_rank'):
                 Result.update(result['id'], rank=result['auto_rank'])
@@ -409,7 +406,6 @@ def game_toggle_publish(id):
         return jsonify({'error': str(e)}), 500
 
 
-# Results Management
 @admin_bp.route('/games/<int:id>/results')
 @admin_required
 def game_results(id):
@@ -427,11 +423,9 @@ def game_results(id):
                            results=results,
                            startlist=startlist,
                            form=form,
-                           is_field_event=game['event'] in Config.FIELD_EVENTS)
+                           is_field_event=game['event'] in Config.get_field_events())
 
 
-@admin_bp.route('/games/<int:game_id>/results/add', methods=['POST'])
-@admin_required
 def result_add(game_id):
     game = Game.get_by_id(game_id)
     if not game:
@@ -568,9 +562,7 @@ def result_delete(id):
 
         game_id = result['game_id']
 
-        # Supprimer les tentatives d'abord
         Attempt.delete_by_result(id)
-        # Puis supprimer le résultat
         Result.delete(id)
 
         flash('Result deleted successfully', 'success')
@@ -589,7 +581,6 @@ def records_list():
     return render_template('admin/records/list.html', records=records)
 
 
-# Start List Management
 @admin_bp.route('/games/<int:id>/startlist')
 @admin_required
 def game_startlist(id):
@@ -618,7 +609,6 @@ def startlist_add(game_id):
         if not athlete:
             flash('Athlete not found', 'danger')
         else:
-            # Check if athlete class matches game classes
             game_classes = [c.strip() for c in game['classes'].split(',')]
             if athlete['class'] not in game_classes:
                 flash(f"Warning: Athlete class {athlete['class']} not in game classes {', '.join(game_classes)}",
@@ -643,6 +633,201 @@ def startlist_delete(game_id, athlete_bib):
         flash(f'Error removing from start list: {str(e)}', 'danger')
 
     return redirect(url_for('admin.game_startlist', id=game_id))
+
+
+@admin_bp.route('/config')
+@loc_required
+def config_index():
+    configs = ConfigManager.get_all_config()
+    days = ConfigManager.get_competition_days()
+    current_day = ConfigManager.get_current_competition_day()
+
+    return render_template('admin/config/index.html',
+                           configs=configs,
+                           days=days,
+                           current_day=current_day)
+
+
+@admin_bp.route('/config/general', methods=['GET', 'POST'])
+@loc_required
+def config_general():
+    form = ConfigForm()
+
+    if form.validate_on_submit():
+        try:
+            ConfigManager.set_config('classes', form.classes.data, 'list',
+                                     'Available disability classes', current_user.id)
+            ConfigManager.set_config('genders', form.genders.data, 'list',
+                                     'Available genders', current_user.id)
+            ConfigManager.set_config('record_types', form.record_types.data, 'list',
+                                     'Available record types', current_user.id)
+            ConfigManager.set_config('result_special_values', form.result_special_values.data, 'list',
+                                     'Special result values', current_user.id)
+            ConfigManager.set_config('field_events', form.field_events.data, 'list',
+                                     'Field events', current_user.id)
+            ConfigManager.set_config('track_events', form.track_events.data, 'list',
+                                     'Track events', current_user.id)
+
+            clear_config_cache()
+
+            flash('General configuration updated successfully', 'success')
+            return redirect(url_for('admin.config_index'))
+        except Exception as e:
+            flash(f'Error updating configuration: {str(e)}', 'danger')
+
+    elif request.method == 'GET':
+        configs = ConfigManager.get_all_config()
+        form.classes.data = ','.join(configs.get('classes', []))
+        form.genders.data = ','.join(configs.get('genders', []))
+        form.record_types.data = ','.join(configs.get('record_types', []))
+        form.result_special_values.data = ','.join(configs.get('result_special_values', []))
+        form.field_events.data = ','.join(configs.get('field_events', []))
+        form.track_events.data = ','.join(configs.get('track_events', []))
+
+    return render_template('admin/config/general.html', form=form)
+
+
+@admin_bp.route('/config/stats', methods=['GET', 'POST'])
+@loc_required
+def config_stats():
+    form = StatsConfigForm()
+
+    if form.validate_on_submit():
+        try:
+            ConfigManager.set_config('countries_count', form.countries_count.data, 'integer',
+                                     'Number of participating countries', current_user.id)
+            ConfigManager.set_config('athletes_count', form.athletes_count.data, 'integer',
+                                     'Number of registered athletes', current_user.id)
+            ConfigManager.set_config('volunteers_count', form.volunteers_count.data, 'integer',
+                                     'Number of volunteers', current_user.id)
+            ConfigManager.set_config('loc_count', form.loc_count.data, 'integer',
+                                     'Number of LOC members', current_user.id)
+            ConfigManager.set_config('officials_count', form.officials_count.data, 'integer',
+                                     'Number of officials', current_user.id)
+
+            clear_config_cache()
+            flash('Statistics updated successfully', 'success')
+            return redirect(url_for('admin.config_index'))
+        except Exception as e:
+            flash(f'Error updating statistics: {str(e)}', 'danger')
+
+    elif request.method == 'GET':
+        configs = ConfigManager.get_all_config()
+        form.countries_count.data = configs.get('countries_count', 61)
+        form.athletes_count.data = configs.get('athletes_count', 529)
+        form.volunteers_count.data = configs.get('volunteers_count', 50)
+        form.loc_count.data = configs.get('loc_count', 15)
+        form.officials_count.data = configs.get('officials_count', 80)
+
+    return render_template('admin/config/stats.html', form=form)
+
+
+@admin_bp.route('/config/days')
+@loc_required
+def config_days():
+    days = ConfigManager.get_competition_days()
+    current_day = ConfigManager.get_current_competition_day()
+
+    return render_template('admin/config/days.html', days=days, current_day=current_day)
+
+
+@admin_bp.route('/config/days/add', methods=['GET', 'POST'])
+@loc_required
+def config_day_add():
+    form = CompetitionDayForm()
+
+    if form.validate_on_submit():
+        try:
+            ConfigManager.set_competition_day(
+                form.day_number.data,
+                form.date_start.data,
+                form.date_end.data,
+                form.description.data
+            )
+            flash('Competition day added successfully', 'success')
+            return redirect(url_for('admin.config_days'))
+        except Exception as e:
+            flash(f'Error adding competition day: {str(e)}', 'danger')
+
+    return render_template('admin/config/day_form.html', form=form, title='Add Competition Day')
+
+
+@admin_bp.route('/config/days/<int:day_number>/edit', methods=['GET', 'POST'])
+@loc_required
+def config_day_edit(day_number):
+    day = execute_one(
+        "SELECT * FROM competition_days WHERE day_number = %s",
+        (day_number,)
+    )
+
+    if not day:
+        flash('Competition day not found', 'danger')
+        return redirect(url_for('admin.config_days'))
+
+    form = CompetitionDayForm()
+
+    if form.validate_on_submit():
+        try:
+            ConfigManager.set_competition_day(
+                form.day_number.data,
+                form.date_start.data,
+                form.date_end.data,
+                form.description.data
+            )
+            flash('Competition day updated successfully', 'success')
+            return redirect(url_for('admin.config_days'))
+        except Exception as e:
+            flash(f'Error updating competition day: {str(e)}', 'danger')
+
+    elif request.method == 'GET':
+        form.day_number.data = day['day_number']
+        form.date_start.data = day['date_start']
+        form.date_end.data = day['date_end']
+        form.description.data = day['description']
+        form.is_active.data = day.get('is_active', True)
+
+    return render_template('admin/config/day_form.html', form=form, title='Edit Competition Day', day=day)
+
+
+@admin_bp.route('/config/days/<int:day_number>/delete', methods=['POST'])
+@loc_required
+def config_day_delete(day_number):
+    try:
+        ConfigManager.delete_competition_day(day_number)
+        flash('Competition day deleted successfully', 'success')
+    except Exception as e:
+        flash(f'Error deleting competition day: {str(e)}', 'danger')
+
+    return redirect(url_for('admin.config_days'))
+
+
+@admin_bp.route('/config/current-day', methods=['GET', 'POST'])
+@loc_required
+def config_current_day():
+    form = CurrentDayForm()
+
+    if form.validate_on_submit():
+        try:
+            ConfigManager.set_config('current_day', form.current_day.data, 'integer',
+                                     'Manually set current day', current_user.id)
+            clear_config_cache()
+            flash('Current day updated successfully', 'success')
+            return redirect(url_for('admin.config_index'))
+        except Exception as e:
+            flash(f'Error updating current day: {str(e)}', 'danger')
+
+    elif request.method == 'GET':
+        form.current_day.data = ConfigManager.get_config('current_day', 1)
+
+    return render_template('admin/config/current_day.html', form=form)
+
+
+@admin_bp.route('/config/reset-cache', methods=['POST'])
+@loc_required
+def config_reset_cache():
+    clear_config_cache()
+    flash('Configuration cache cleared successfully', 'success')
+    return redirect(url_for('admin.config_index'))
 
 
 @admin_bp.route('/setup', methods=['GET'])

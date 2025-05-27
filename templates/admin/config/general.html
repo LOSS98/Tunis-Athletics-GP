@@ -1,0 +1,134 @@
+{% extends "admin/base_admin.html" %}
+
+{% block page_title %}General Configuration{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="mb-6">
+        <div class="flex items-center justify-between">
+            <h2 class="text-2xl font-bold">General Configuration</h2>
+            <a href="{{ url_for('admin.config_index') }}" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+                <i class="fas fa-arrow-left mr-2"></i>Back to Configuration
+            </a>
+        </div>
+        <p class="text-gray-600 mt-2">Configure events, classes, and competition parameters</p>
+    </div>
+
+    <form method="POST" class="bg-white rounded-lg shadow p-6">
+        {{ form.hidden_tag() }}
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="lg:col-span-2">
+                <label class="block text-gray-700 text-sm font-bold mb-2">
+                    Disability Classes
+                    <span class="text-red-500">*</span>
+                </label>
+                {{ form.classes(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500", rows="4") }}
+                <p class="text-sm text-gray-600 mt-1">{{ form.classes.description }}</p>
+
+                <div class="mt-2">
+                    <p class="text-xs text-gray-500 mb-2">Quick add common classes:</p>
+                    <div class="flex flex-wrap gap-1">
+                        <button type="button" onclick="addToTextarea('classes', 'T11,T12,T13')" class="text-xs bg-blue-100 hover:bg-blue-200 px-2 py-1 rounded">
+                            Vision T11-T13
+                        </button>
+                        <button type="button" onclick="addToTextarea('classes', 'T51,T52,T53,T54')" class="text-xs bg-green-100 hover:bg-green-200 px-2 py-1 rounded">
+                            Wheelchair T51-T54
+                        </button>
+                        <button type="button" onclick="addToTextarea('classes', 'F32,F33,F34')" class="text-xs bg-purple-100 hover:bg-purple-200 px-2 py-1 rounded">
+                            Field F32-F34
+                        </button>
+                        <button type="button" onclick="addToTextarea('classes', 'T42,T43,T44')" class="text-xs bg-orange-100 hover:bg-orange-200 px-2 py-1 rounded">
+                            Amputee T42-T44
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">
+                    Genders
+                    <span class="text-red-500">*</span>
+                </label>
+                {{ form.genders(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
+                <p class="text-sm text-gray-600 mt-1">{{ form.genders.description }}</p>
+            </div>
+
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">
+                    Record Types
+                    <span class="text-red-500">*</span>
+                </label>
+                {{ form.record_types(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
+                <p class="text-sm text-gray-600 mt-1">{{ form.record_types.description }}</p>
+            </div>
+
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">
+                    Special Result Values
+                    <span class="text-red-500">*</span>
+                </label>
+                {{ form.result_special_values(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
+                <p class="text-sm text-gray-600 mt-1">{{ form.result_special_values.description }}</p>
+            </div>
+
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">
+                    Field Events
+                    <span class="text-red-500">*</span>
+                </label>
+                {{ form.field_events(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
+                <p class="text-sm text-gray-600 mt-1">{{ form.field_events.description }}</p>
+            </div>
+
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">
+                    Track Events
+                    <span class="text-red-500">*</span>
+                </label>
+                {{ form.track_events(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
+                <p class="text-sm text-gray-600 mt-1">{{ form.track_events.description }}</p>
+            </div>
+        </div>
+
+        <div class="mt-8 flex justify-end space-x-4">
+            <a href="{{ url_for('admin.config_index') }}" class="bg-gray-500 text-white px-6 py-2 rounded hover:bg-gray-600">
+                Cancel
+            </a>
+            <button type="submit" class="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600">
+                <i class="fas fa-save mr-2"></i>Save Configuration
+            </button>
+        </div>
+    </form>
+
+    <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h4 class="font-bold text-blue-900 mb-2">
+            <i class="fas fa-info-circle mr-2"></i>Configuration Help
+        </h4>
+        <div class="text-sm text-blue-800 space-y-2">
+            <p><strong>Classes:</strong> Use official World Para Athletics classification codes (e.g., T11, T54, F32)</p>
+            <p><strong>Events:</strong> Enter exact event names as they appear in your competition program</p>
+            <p><strong>Record Types:</strong> WR=World Record, AR=Area Record, CR=Championship Record, etc.</p>
+            <p><strong>Special Values:</strong> DNS=Did Not Start, DNF=Did Not Finish, DSQ=Disqualified, etc.</p>
+        </div>
+    </div>
+</div>
+
+<script>
+function addToTextarea(fieldId, values) {
+    const textarea = document.getElementById(fieldId);
+    const currentValue = textarea.value.trim();
+    const newValues = values.split(',');
+
+    let currentClasses = currentValue ? currentValue.split(',').map(c => c.trim()) : [];
+
+    newValues.forEach(newVal => {
+        if (!currentClasses.includes(newVal.trim())) {
+            currentClasses.push(newVal.trim());
+        }
+    });
+
+    textarea.value = currentClasses.join(',');
+}
+</script>
+{% endblock %}

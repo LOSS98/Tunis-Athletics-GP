@@ -1,0 +1,133 @@
+{% extends "admin/base_admin.html" %}
+
+{% block page_title %}Competition Days Management{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h2 class="text-2xl font-bold">Competition Days</h2>
+            <p class="text-gray-600 mt-1">Manage competition schedule and automatic day detection</p>
+        </div>
+        <div class="flex space-x-2">
+            <a href="{{ url_for('admin.config_day_add') }}" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                <i class="fas fa-plus mr-2"></i>Add Day
+            </a>
+            <a href="{{ url_for('admin.config_index') }}" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+                <i class="fas fa-arrow-left mr-2"></i>Back
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+    <div class="flex items-center">
+        <i class="fas fa-calendar-day text-blue-600 text-2xl mr-3"></i>
+        <div>
+            <h3 class="font-bold text-blue-900">Current Competition Day: {{ current_day }}</h3>
+            <p class="text-blue-700 text-sm">
+                Automatically detected based on today's date and competition schedule
+            </p>
+        </div>
+    </div>
+    <div class="mt-2">
+        <a href="{{ url_for('admin.config_current_day') }}" class="text-blue-600 hover:text-blue-800 text-sm">
+            <i class="fas fa-edit mr-1"></i>Manually override current day
+        </a>
+    </div>
+</div>
+
+<div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="p-6 border-b">
+        <h3 class="text-lg font-bold">Competition Schedule</h3>
+    </div>
+
+    {% if days %}
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Day</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date Range</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for day in days %}
+                <tr class="hover:bg-gray-50 {% if day.day_number == current_day %}bg-blue-50{% endif %}">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                {% if day.day_number == current_day %}bg-blue-100 text-blue-800
+                                {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                Day {{ day.day_number }}
+                            </span>
+                            {% if day.day_number == current_day %}
+                                <span class="ml-2 text-blue-600">
+                                    <i class="fas fa-star" title="Current Day"></i>
+                                </span>
+                            {% endif %}
+                        </div>
+                    </td>
+
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm">
+                            <div class="font-medium text-gray-900">{{ day.date_start.strftime('%Y-%m-%d') }}</div>
+                            {% if day.date_end and day.date_end != day.date_start %}
+                                <div class="text-gray-500">to {{ day.date_end.strftime('%Y-%m-%d') }}</div>
+                            {% endif %}
+                        </div>
+                    </td>
+
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-900">{{ day.description or '-' }}</div>
+                    </td>
+
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if day.get('is_active', True) %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                Active
+                            </span>
+                        {% else %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                Inactive
+                            </span>
+                        {% endif %}
+                    </td>
+
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <div class="flex space-x-2">
+                            <a href="{{ url_for('admin.config_day_edit', day_number=day.day_number) }}"
+                               class="text-indigo-600 hover:text-indigo-900" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <form method="POST" action="{{ url_for('admin.config_day_delete', day_number=day.day_number) }}"
+                                  class="inline" onsubmit="return confirm('Are you sure you want to delete Day {{ day.day_number }}?');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="text-red-600 hover:text-red-900" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="p-8 text-center">
+        <div class="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+            <i class="fas fa-calendar-plus text-4xl text-gray-300"></i>
+        </div>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">No Competition Days</h3>
+        <p class="text-gray-500 mb-6">Set up your competition schedule by adding competition days.</p>
+        <a href="{{ url_for('admin.config_day_add') }}" class="bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600">
+            <i class="fas fa-plus mr-2"></i>Add First Day
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,193 @@
+{% extends "admin/base_admin.html" %}
+
+{% block page_title %}Competition Configuration{% endblock %}
+
+{% block content %}
+<div class="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+    <div class="flex items-center">
+        <i class="fas fa-info-circle text-blue-600 mr-2"></i>
+        <span class="font-medium text-blue-800">Configuration Management</span>
+    </div>
+    <p class="text-blue-700 text-sm mt-1">
+        Manage competition settings, classes, events, and competition schedule. Changes take effect immediately.
+    </p>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+    <div class="bg-white rounded-lg shadow p-4 text-center">
+        <div class="text-2xl font-bold text-blue-600">Day {{ current_day }}</div>
+        <div class="text-sm text-gray-600">Current Competition Day</div>
+        <div class="mt-2">
+            <a href="{{ url_for('admin.config_current_day') }}" class="text-xs text-blue-600 hover:text-blue-800">
+                <i class="fas fa-edit"></i> Change
+            </a>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow p-4 text-center">
+        <div class="text-2xl font-bold text-green-600">{{ configs.get('countries_count', 0) }}</div>
+        <div class="text-sm text-gray-600">Countries</div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow p-4 text-center">
+        <div class="text-2xl font-bold text-purple-600">{{ configs.get('athletes_count', 0) }}</div>
+        <div class="text-sm text-gray-600">Athletes</div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow p-4 text-center">
+        <div class="text-2xl font-bold text-orange-600">{{ configs.get('classes', [])|length }}</div>
+        <div class="text-sm text-gray-600">Classes</div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div class="bg-white rounded-lg shadow">
+        <div class="p-6 border-b">
+            <div class="flex items-center">
+                <i class="fas fa-cogs text-blue-600 text-2xl mr-3"></i>
+                <div>
+                    <h3 class="text-lg font-bold">General Settings</h3>
+                    <p class="text-sm text-gray-600">Events, classes, and record types</p>
+                </div>
+            </div>
+        </div>
+        <div class="p-6">
+            <div class="space-y-3">
+                <div class="flex justify-between">
+                    <span class="text-sm text-gray-600">Classes:</span>
+                    <span class="text-sm font-medium">{{ configs.get('classes', [])|length }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-sm text-gray-600">Field Events:</span>
+                    <span class="text-sm font-medium">{{ configs.get('field_events', [])|length }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-sm text-gray-600">Track Events:</span>
+                    <span class="text-sm font-medium">{{ configs.get('track_events', [])|length }}</span>
+                </div>
+            </div>
+            <div class="mt-4">
+                <a href="{{ url_for('admin.config_general') }}" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 text-sm">
+                    <i class="fas fa-edit mr-1"></i> Configure
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow">
+        <div class="p-6 border-b">
+            <div class="flex items-center">
+                <i class="fas fa-chart-bar text-green-600 text-2xl mr-3"></i>
+                <div>
+                    <h3 class="text-lg font-bold">Statistics</h3>
+                    <p class="text-sm text-gray-600">Competition numbers and counts</p>
+                </div>
+            </div>
+        </div>
+        <div class="p-6">
+            <div class="space-y-3">
+                <div class="flex justify-between">
+                    <span class="text-sm text-gray-600">Countries:</span>
+                    <span class="text-sm font-medium">{{ configs.get('countries_count', 0) }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-sm text-gray-600">Athletes:</span>
+                    <span class="text-sm font-medium">{{ configs.get('athletes_count', 0) }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-sm text-gray-600">Officials:</span>
+                    <span class="text-sm font-medium">{{ configs.get('officials_count', 0) }}</span>
+                </div>
+            </div>
+            <div class="mt-4">
+                <a href="{{ url_for('admin.config_stats') }}" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600 text-sm">
+                    <i class="fas fa-edit mr-1"></i> Configure
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow">
+        <div class="p-6 border-b">
+            <div class="flex items-center">
+                <i class="fas fa-calendar-alt text-purple-600 text-2xl mr-3"></i>
+                <div>
+                    <h3 class="text-lg font-bold">Competition Days</h3>
+                    <p class="text-sm text-gray-600">Schedule and dates</p>
+                </div>
+            </div>
+        </div>
+        <div class="p-6">
+            <div class="space-y-3">
+                <div class="flex justify-between">
+                    <span class="text-sm text-gray-600">Total Days:</span>
+                    <span class="text-sm font-medium">{{ days|length }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-sm text-gray-600">Current Day:</span>
+                    <span class="text-sm font-medium">Day {{ current_day }}</span>
+                </div>
+                {% if days %}
+                <div class="flex justify-between">
+                    <span class="text-sm text-gray-600">Date Range:</span>
+                    <span class="text-sm font-medium">{{ days[0].date_start }} - {{ days[-1].date_start }}</span>
+                </div>
+                {% endif %}
+            </div>
+            <div class="mt-4">
+                <a href="{{ url_for('admin.config_days') }}" class="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600 text-sm">
+                    <i class="fas fa-calendar mr-1"></i> Manage
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="mt-8 bg-white rounded-lg shadow p-6">
+    <h3 class="text-lg font-bold mb-4">Quick Actions</h3>
+    <div class="flex flex-wrap gap-4">
+        <form method="POST" action="{{ url_for('admin.config_reset_cache') }}" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="bg-orange-500 text-white px-4 py-2 rounded hover:bg-orange-600 text-sm">
+                <i class="fas fa-sync mr-1"></i> Clear Cache
+            </button>
+        </form>
+
+        <a href="{{ url_for('admin.config_current_day') }}" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 text-sm">
+            <i class="fas fa-clock mr-1"></i> Set Current Day
+        </a>
+
+        <a href="{{ url_for('admin.config_day_add') }}" class="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600 text-sm">
+            <i class="fas fa-plus mr-1"></i> Add Competition Day
+        </a>
+    </div>
+</div>
+
+<div class="mt-8 bg-white rounded-lg shadow p-6">
+    <h3 class="text-lg font-bold mb-4">Current Configuration</h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+            <h4 class="font-medium text-gray-900 mb-2">Classes ({{ configs.get('classes', [])|length }})</h4>
+            <div class="text-sm text-gray-600 bg-gray-50 p-3 rounded max-h-32 overflow-y-auto">
+                {% for class in configs.get('classes', []) %}
+                    <span class="inline-block bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs mr-1 mb-1">{{ class }}</span>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div>
+            <h4 class="font-medium text-gray-900 mb-2">Events</h4>
+            <div class="text-sm text-gray-600 space-y-2">
+                <div>
+                    <span class="font-medium">Field:</span>
+                    {{ configs.get('field_events', [])|join(', ') }}
+                </div>
+                <div>
+                    <span class="font-medium">Track:</span>
+                    {{ configs.get('track_events', [])|join(', ') }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

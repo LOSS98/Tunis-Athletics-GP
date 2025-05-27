@@ -175,11 +175,26 @@ class Game:
     @staticmethod
     def get_with_status():
         games = Game.get_all()
-        current_day = Config.CURRENT_DAY
+        current_day = Config.get_current_day()
         current_time = datetime.now()
+
+        # Ensure current_day is an integer
+        if current_day is None:
+            current_day = 1
+        try:
+            current_day = int(current_day)
+        except (ValueError, TypeError):
+            current_day = 1
 
         for game in games:
             game_day = game['day']
+
+            # Ensure game_day is an integer
+            try:
+                game_day = int(game_day)
+            except (ValueError, TypeError):
+                game_day = 1
+
             game_time = datetime.strptime(str(game['time']), '%H:%M:%S').replace(
                 year=current_time.year,
                 month=current_time.month,
@@ -238,17 +253,15 @@ class Result:
         if results and filters.get('game_id'):
             game = Game.get_by_id(filters['game_id'])
             if game:
+                field_events = Config.get_field_events()
 
-                if game['event'] in Config.FIELD_EVENTS:
+                if game['event'] in field_events:
                     for result in results:
                         result['attempts'] = Attempt.get_by_result(result['id'])
-
                         result = Result._select_best_attempt(result, game)
-
 
                 if len(game['classes_list']) > 1:
                     results = Result.calculate_raza_scores(results, game)
-
 
                 results = Result._auto_rank_results(results, game)
 
@@ -256,8 +269,9 @@ class Result:
 
     @staticmethod
     def _select_best_attempt(result, game):
+        special_values = Config.get_result_special_values()
 
-        if not result.get('attempts') or result['value'] in Config.RESULT_SPECIAL_VALUES:
+        if not result.get('attempts') or result['value'] in special_values:
             return result
 
         valid_attempts = []
@@ -280,24 +294,22 @@ class Result:
 
     @staticmethod
     def _auto_rank_results(results, game):
+        special_values = Config.get_result_special_values()
+        field_events = Config.get_field_events()
 
         valid_results = []
         invalid_results = []
 
         for result in results:
-            if result['value'] in Config.RESULT_SPECIAL_VALUES:
+            if result['value'] in special_values:
                 invalid_results.append(result)
             else:
                 valid_results.append(result)
 
-
         if len(game['classes_list']) > 1 and any(r.get('raza_score') for r in valid_results):
-
             valid_results.sort(key=lambda x: x.get('raza_score', 0), reverse=True)
         else:
-
-            if game['event'] in Config.FIELD_EVENTS:
-
+            if game['event'] in field_events:
                 def get_performance_value(result):
                     try:
                         return float(result.get('auto_performance', result['value']) or 0)
@@ -306,7 +318,6 @@ class Result:
 
                 valid_results.sort(key=get_performance_value, reverse=True)
             else:
-
                 def parse_time(time_str):
                     try:
                         if ':' in time_str:
@@ -318,10 +329,8 @@ class Result:
 
                 valid_results.sort(key=lambda x: parse_time(x.get('auto_performance', x['value']) or '999:99.99'))
 
-
         for i, result in enumerate(valid_results):
             result['auto_rank'] = str(i + 1)
-
 
         for result in invalid_results:
             result['auto_rank'] = result['value']
@@ -330,13 +339,13 @@ class Result:
 
     @staticmethod
     def calculate_raza_scores(results, game):
-
         if not os.path.exists(Config.RAZA_TABLE_PATH):
             return results
 
         try:
             df = pd.read_excel(Config.RAZA_TABLE_PATH)
-
+            special_values = Config.get_result_special_values()
+            field_events = Config.get_field_events()
 
             event_mapping = {
                 'Javelin': 'Javelin Throw',
@@ -356,18 +365,16 @@ class Result:
             }
 
             for result in results:
-                if result['value'] in Config.RESULT_SPECIAL_VALUES:
+                if result['value'] in special_values:
                     result['raza_score'] = None
                     continue
 
                 try:
-
                     performance_str = result.get('auto_performance', result['value'])
 
-                    if game['event'] in Config.FIELD_EVENTS:
+                    if game['event'] in field_events:
                         performance = float(performance_str)
                     else:
-
                         time_parts = performance_str.split(':')
                         if len(time_parts) == 2:
                             minutes, seconds = time_parts
@@ -375,11 +382,9 @@ class Result:
                         else:
                             performance = float(performance_str)
 
-
                     athlete_class = result['athlete_class']
                     event_name = event_mapping.get(game['event'], game['event'])
                     gender = 'Men' if result['athlete_gender'] == 'Male' else 'Women'
-
 
                     mask = (df['Event'] == event_name) & \
                            (df['Class'] == athlete_class) & \
@@ -393,11 +398,8 @@ class Result:
                         b = float(raza_row['b'])
                         c = float(raza_row['c'])
 
-                        # ✅ FORMULE OFFICIELLE CORRIGÉE :
-                        # Points = PLANCHER(A × e^(-B-C×Performance))
-                        # Utilisation de la fonction FLOOR (PLANCHER) comme dans la formule officielle
                         score_float = a * np.exp(-np.exp(b - c * performance))
-                        score = int(np.floor(score_float))  # ← CORRECTION : utiliser floor() au lieu de int()
+                        score = int(np.floor(score_float))
 
                         result['raza_score'] = score
                     else:
@@ -462,15 +464,15 @@ class Result:
 
     @staticmethod
     def validate_performance(value, event_type):
-        """Validate performance format"""
-        if value in Config.RESULT_SPECIAL_VALUES:
+        special_values = Config.get_result_special_values()
+        field_events = Config.get_field_events()
+
+        if value in special_values:
             return True
 
-        if event_type in Config.FIELD_EVENTS:
-            # Field events: XX.XX format (meters)
+        if event_type in field_events:
             pattern = r'^\d+(\.\d{1,2})?$'
         else:
-            # Track events: M:SS.CS or SS.CS format
             pattern = r'^(\d{1,2}:)?\d{1,2}\.\d{2}$'
 
         return bool(re.match(pattern, value))

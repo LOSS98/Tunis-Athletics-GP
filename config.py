@@ -23,34 +23,171 @@ class Config:
     MAX_CONTENT_LENGTH = int(os.getenv('MAX_CONTENT_LENGTH', 16 * 1024 * 1024))
     ALLOWED_EXTENSIONS = {'txt', 'pdf', 'png', 'jpg', 'jpeg', 'gif'}
 
-
-    CLASSES = ['T11', 'T12', 'T13', 'T20', 'T33', 'T34', 'T35', 'T36', 'T37', 'T38', 'T40', 'T41', 'T42', 'T43', 'T44',
-               'T45', 'T46', 'T47', 'T51', 'T52', 'T53', 'T54', 'T61', 'T62', 'T63', 'T64', 'F11', 'F12', 'F13', 'F20',
-               'F31', 'F32', 'F33', 'F34', 'F35', 'F36', 'F37', 'F38', 'F40', 'F41', 'F42', 'F43', 'F44', 'F45', 'F46',
-               'F51', 'F52', 'F53', 'F54', 'F55', 'F56', 'F57', 'F61', 'F62', 'F63', 'F64']
-
-    GENDERS = ['Male', 'Female']
-    RECORD_TYPES = ['WR', 'AR', 'CR', 'NR', 'PB', 'SB']
-    RESULT_SPECIAL_VALUES = ['DNS', 'DNF', 'DSQ', 'NM', 'O', 'X', '-']
-
-    CURRENT_DAY = int(os.getenv('CURRENT_DAY', 1))
-
-
-    FIELD_EVENTS = ['Javelin', 'Shot Put', 'Discus Throw', 'Club Throw', 'Long Jump', 'High Jump']
-
-
-    TRACK_EVENTS = ['100m', '200m', '400m', '800m', '1500m', '5000m', '4x100m', 'Universal Relay']
-
-
-    COUNTRIES_COUNT = int(os.getenv('COUNTRIES_COUNT', 61))
-    ATHLETES_COUNT = int(os.getenv('ATHLETES_COUNT', 529))
-    VOLUNTEERS_COUNT = int(os.getenv('VOLUNTEERS_COUNT', 50))
-    LOC_COUNT = int(os.getenv('LOC_COUNT', 15))
-    OFFICIALS_COUNT = int(os.getenv('OFFICIALS_COUNT', 80))
-
-
     ADMIN_USERNAME = os.getenv('ADMIN_USERNAME', 'admin')
     ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'admin2025')
 
-
     RAZA_TABLE_PATH = os.path.join('static', 'raza_table_tunis_gp_25.xlsx')
+
+    @staticmethod
+    def get_classes():
+        try:
+            from database.config_manager import get_cached_config
+            return get_cached_config('classes', [
+                'T11', 'T12', 'T13', 'T20', 'T33', 'T34', 'T35', 'T36', 'T37', 'T38', 'T40', 'T41', 'T42', 'T43', 'T44',
+                'T45', 'T46', 'T47', 'T51', 'T52', 'T53', 'T54', 'T61', 'T62', 'T63', 'T64', 'F11', 'F12', 'F13', 'F20',
+                'F31', 'F32', 'F33', 'F34', 'F35', 'F36', 'F37', 'F38', 'F40', 'F41', 'F42', 'F43', 'F44', 'F45', 'F46',
+                'F51', 'F52', 'F53', 'F54', 'F55', 'F56', 'F57', 'F61', 'F62', 'F63', 'F64'
+            ])
+        except (ImportError, Exception):
+            return ['T11', 'T12', 'T13', 'T20', 'T33', 'T34', 'T35', 'T36', 'T37', 'T38', 'T40', 'T41', 'T42', 'T43',
+                    'T44',
+                    'T45', 'T46', 'T47', 'T51', 'T52', 'T53', 'T54', 'T61', 'T62', 'T63', 'T64', 'F11', 'F12', 'F13',
+                    'F20',
+                    'F31', 'F32', 'F33', 'F34', 'F35', 'F36', 'F37', 'F38', 'F40', 'F41', 'F42', 'F43', 'F44', 'F45',
+                    'F46',
+                    'F51', 'F52', 'F53', 'F54', 'F55', 'F56', 'F57', 'F61', 'F62', 'F63', 'F64']
+
+    @staticmethod
+    def get_genders():
+        try:
+            from database.config_manager import get_cached_config
+            return get_cached_config('genders', ['Male', 'Female'])
+        except (ImportError, Exception):
+            return ['Male', 'Female']
+
+    @staticmethod
+    def get_record_types():
+        try:
+            from database.config_manager import get_cached_config
+            return get_cached_config('record_types', ['WR', 'AR', 'CR', 'NR', 'PB', 'SB'])
+        except (ImportError, Exception):
+            return ['WR', 'AR', 'CR', 'NR', 'PB', 'SB']
+
+    @staticmethod
+    def get_result_special_values():
+        try:
+            from database.config_manager import get_cached_config
+            return get_cached_config('result_special_values', ['DNS', 'DNF', 'DSQ', 'NM', 'O', 'X', '-'])
+        except (ImportError, Exception):
+            return ['DNS', 'DNF', 'DSQ', 'NM', 'O', 'X', '-']
+
+    @staticmethod
+    def get_field_events():
+        try:
+            from database.config_manager import get_cached_config
+            return get_cached_config('field_events',
+                                     ['Javelin', 'Shot Put', 'Discus Throw', 'Club Throw', 'Long Jump', 'High Jump'])
+        except (ImportError, Exception):
+            return ['Javelin', 'Shot Put', 'Discus Throw', 'Club Throw', 'Long Jump', 'High Jump']
+
+    @staticmethod
+    def get_track_events():
+        try:
+            from database.config_manager import get_cached_config
+            return get_cached_config('track_events',
+                                     ['100m', '200m', '400m', '800m', '1500m', '5000m', '4x100m', 'Universal Relay'])
+        except (ImportError, Exception):
+            return ['100m', '200m', '400m', '800m', '1500m', '5000m', '4x100m', 'Universal Relay']
+
+    @staticmethod
+    def get_current_day():
+        try:
+            from database.config_manager import ConfigManager
+            day = ConfigManager.get_current_competition_day()
+            return int(day) if day is not None else 1
+        except (ImportError, Exception):
+            try:
+                return int(os.getenv('CURRENT_DAY', 1))
+            except (ValueError, TypeError):
+                return 1
+
+    @staticmethod
+    def get_countries_count():
+        try:
+            from database.config_manager import get_cached_config
+            return get_cached_config('countries_count', 61)
+        except (ImportError, Exception):
+            return int(os.getenv('COUNTRIES_COUNT', 61))
+
+    @staticmethod
+    def get_athletes_count():
+        try:
+            from database.config_manager import get_cached_config
+            return get_cached_config('athletes_count', 529)
+        except (ImportError, Exception):
+            return int(os.getenv('ATHLETES_COUNT', 529))
+
+    @staticmethod
+    def get_volunteers_count():
+        try:
+            from database.config_manager import get_cached_config
+            return get_cached_config('volunteers_count', 50)
+        except (ImportError, Exception):
+            return int(os.getenv('VOLUNTEERS_COUNT', 50))
+
+    @staticmethod
+    def get_loc_count():
+        try:
+            from database.config_manager import get_cached_config
+            return get_cached_config('loc_count', 15)
+        except (ImportError, Exception):
+            return int(os.getenv('LOC_COUNT', 15))
+
+    @staticmethod
+    def get_officials_count():
+        try:
+            from database.config_manager import get_cached_config
+            return get_cached_config('officials_count', 80)
+        except (ImportError, Exception):
+            return int(os.getenv('OFFICIALS_COUNT', 80))
+
+    @property
+    def CLASSES(self):
+        return self.get_classes()
+
+    @property
+    def GENDERS(self):
+        return self.get_genders()
+
+    @property
+    def RECORD_TYPES(self):
+        return self.get_record_types()
+
+    @property
+    def RESULT_SPECIAL_VALUES(self):
+        return self.get_result_special_values()
+
+    @property
+    def FIELD_EVENTS(self):
+        return self.get_field_events()
+
+    @property
+    def TRACK_EVENTS(self):
+        return self.get_track_events()
+
+    @property
+    def CURRENT_DAY(self):
+        return self.get_current_day()
+
+    @property
+    def COUNTRIES_COUNT(self):
+        return self.get_countries_count()
+
+    @property
+    def ATHLETES_COUNT(self):
+        return self.get_athletes_count()
+
+    @property
+    def VOLUNTEERS_COUNT(self):
+        return self.get_volunteers_count()
+
+    @property
+    def LOC_COUNT(self):
+        return self.get_loc_count()
+
+    @property
+    def OFFICIALS_COUNT(self):
+        return self.get_officials_count()
+
+
+config = Config()
