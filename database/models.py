@@ -245,9 +245,9 @@ class Result:
                         # Auto-select best attempt
                         result = Result._select_best_attempt(result, game)
 
-                # Calculate RASA scores if multi-class event
+                # Calculate RAZA scores if multi-class event
                 if len(game['classes_list']) > 1:
-                    results = Result.calculate_rasa_scores(results, game)
+                    results = Result.calculate_raza_scores(results, game)
 
                 # Auto-rank results
                 results = Result._auto_rank_results(results, game)
@@ -280,7 +280,7 @@ class Result:
 
     @staticmethod
     def _auto_rank_results(results, game):
-        """Automatically rank results based on performance or RASA score"""
+        """Automatically rank results based on performance or RAZA score"""
         valid_results = []
         invalid_results = []
 
@@ -291,14 +291,20 @@ class Result:
                 valid_results.append(result)
 
         # Sort valid results
-        if len(game['classes_list']) > 1 and any(r.get('rasa_score') for r in valid_results):
-            # Multi-class event: sort by RASA score (highest first)
-            valid_results.sort(key=lambda x: x.get('rasa_score', 0), reverse=True)
+        if len(game['classes_list']) > 1 and any(r.get('raza_score') for r in valid_results):
+            # Multi-class event: sort by RAZA score (highest first)
+            valid_results.sort(key=lambda x: x.get('raza_score', 0), reverse=True)
         else:
             # Single class: sort by performance
             if game['event'] in Config.FIELD_EVENTS:
                 # Field events: higher is better
-                valid_results.sort(key=lambda x: float(x.get('auto_performance', x['value']) or 0), reverse=True)
+                def get_performance_value(result):
+                    try:
+                        return float(result.get('auto_performance', result['value']) or 0)
+                    except:
+                        return 0
+
+                valid_results.sort(key=get_performance_value, reverse=True)
             else:
                 # Track events: lower time is better
                 def parse_time(time_str):
@@ -323,15 +329,15 @@ class Result:
         return valid_results + invalid_results
 
     @staticmethod
-    def calculate_rasa_scores(results, game):
-        """Calculate RASA scores using the Excel table"""
-        if not os.path.exists(Config.RASA_TABLE_PATH):
+    def calculate_raza_scores(results, game):
+        """Calculate RAZA scores using the Excel table with CORRECT official formula"""
+        if not os.path.exists(Config.RAZA_TABLE_PATH):
             return results
 
         try:
-            df = pd.read_excel(Config.RASA_TABLE_PATH)
+            df = pd.read_excel(Config.RAZA_TABLE_PATH)
 
-            # Map event names from config to RASA table
+            # Map event names from config to RAZA table
             event_mapping = {
                 'Javelin': 'Javelin Throw',
                 'Shot Put': 'Shot Put',
@@ -351,51 +357,58 @@ class Result:
 
             for result in results:
                 if result['value'] in Config.RESULT_SPECIAL_VALUES:
-                    result['rasa_score'] = None
+                    result['raza_score'] = None
                     continue
 
                 try:
                     # Parse performance value
+                    performance_str = result.get('auto_performance', result['value'])
+
                     if game['event'] in Config.FIELD_EVENTS:
-                        performance = float(result['value'])
+                        performance = float(performance_str)
                     else:
                         # Handle time format: M:SS.CS or SS.CS
-                        time_parts = result['value'].split(':')
+                        time_parts = performance_str.split(':')
                         if len(time_parts) == 2:
                             minutes, seconds = time_parts
                             performance = float(minutes) * 60 + float(seconds)
                         else:
-                            performance = float(result['value'])
+                            performance = float(performance_str)
 
-                    # Get RASA constants
+                    # Get RAZA constants
                     athlete_class = result['athlete_class']
                     event_name = event_mapping.get(game['event'], game['event'])
                     gender = 'Men' if result['athlete_gender'] == 'Male' else 'Women'
 
-                    # Find matching row in RASA table
+                    # Find matching row in RAZA table
                     mask = (df['Event'] == event_name) & \
                            (df['Class'] == athlete_class) & \
                            (df['Gender'] == gender)
 
-                    rasa_row = df[mask]
+                    raza_row = df[mask]
 
-                    if not rasa_row.empty:
-                        rasa_row = rasa_row.iloc[0]
-                        a = float(rasa_row['a'])
-                        b = float(rasa_row['b'])
-                        c = float(rasa_row['c'])
+                    if not raza_row.empty:
+                        raza_row = raza_row.iloc[0]
+                        a = float(raza_row['a'])
+                        b = float(raza_row['b'])
+                        c = float(raza_row['c'])
 
-                        # Calculate RASA score using Gompertz function: a * exp(-b - c * performance)
-                        score = int(a * np.exp(-b - c * performance))
-                        result['rasa_score'] = score
+                        # ✅ FORMULE OFFICIELLE CORRIGÉE :
+                        # Points = PLANCHER(A × e^(-B-C×Performance))
+                        # Utilisation de la fonction FLOOR (PLANCHER) comme dans la formule officielle
+                        score_float = a * np.exp(-b - c * performance)
+                        score = int(np.floor(score_float))  # ← CORRECTION : utiliser floor() au lieu de int()
+
+                        result['raza_score'] = score
                     else:
-                        result['rasa_score'] = None
+                        result['raza_score'] = None
 
                 except Exception as e:
-                    result['rasa_score'] = None
+                    print(f"Error calculating RAZA for result {result.get('id', 'unknown')}: {e}")
+                    result['raza_score'] = None
 
         except Exception as e:
-            pass
+            print(f"Error loading RAZA table: {e}")
 
         return results
 

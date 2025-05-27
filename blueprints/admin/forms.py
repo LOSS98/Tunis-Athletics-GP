@@ -1,7 +1,7 @@
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed
 from wtforms import StringField, PasswordField, IntegerField, SelectField, TimeField, TextAreaField, BooleanField, \
-    FieldList, FormField
+    FieldList, FormField, HiddenField
 from wtforms.validators import DataRequired, Length, NumberRange, Optional, ValidationError
 from config import Config
 import re
@@ -68,20 +68,29 @@ class AttemptForm(FlaskForm):
 
 
 class ResultForm(FlaskForm):
-    athlete_bib = IntegerField('Athlete BIB', validators=[DataRequired()])
+    # Correction: athlete_bib doit être IntegerField pour validation
+    athlete_bib = IntegerField('Athlete BIB', validators=[DataRequired(message="Please select an athlete")])
     rank = StringField('Rank', validators=[Optional(), Length(max=10)])
-    value = StringField('Performance Value', validators=[DataRequired(), Length(max=20)])
+    value = StringField('Performance Value',
+                        validators=[DataRequired(message="Performance value is required"), Length(max=20)])
     record = SelectField('Record', choices=[('', 'None')] + [(r, r) for r in Config.RECORD_TYPES],
                          validators=[Optional()])
-    attempts = FieldList(FormField(AttemptForm), min_entries=6, max_entries=6)
+
+    # Champs pour les tentatives (field events)
+    attempt_1 = StringField('Attempt 1', validators=[Optional()])
+    attempt_2 = StringField('Attempt 2', validators=[Optional()])
+    attempt_3 = StringField('Attempt 3', validators=[Optional()])
+    attempt_4 = StringField('Attempt 4', validators=[Optional()])
+    attempt_5 = StringField('Attempt 5', validators=[Optional()])
+    attempt_6 = StringField('Attempt 6', validators=[Optional()])
 
     def validate_value(self, field):
-        """Validate performance value format based on event type"""
+        """Validate performance value format"""
         if field.data in Config.RESULT_SPECIAL_VALUES:
-            return
+            return True
 
-        # This validation will be done in the route based on event type
-        pass
+        # La validation sera faite côté serveur selon le type d'événement
+        return True
 
 
 class StartListForm(FlaskForm):

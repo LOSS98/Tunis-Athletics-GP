@@ -10,7 +10,7 @@ import numpy as np
 @public_bp.route('/')
 def index():
     games = Game.get_with_status()
-    published_games = [g for g in games if g['has_results']]
+    published_games = [g for g in games if g.get('published', False) and g['has_results']]
     return render_template('public/index.html', games=published_games)
 
 
@@ -26,7 +26,7 @@ def results():
                  search.lower() in g['classes'].lower() or
                  str(g['day']) in search]
 
-    published_games = [g for g in games if g['has_results']]
+    published_games = [g for g in games if g.get('published', False) and g['has_results']]
     return render_template('public/results.html', games=published_games, search=search)
 
 
@@ -42,6 +42,7 @@ def startlists():
                  search.lower() in g['classes'].lower() or
                  str(g['day']) in search]
 
+    # Show all games, regardless of published status for startlists
     return render_template('public/startlists.html', games=games, search=search)
 
 
@@ -52,10 +53,28 @@ def game_detail(id):
         return render_template('404.html'), 404
 
     results = Result.get_all(game_id=id)
-    game['has_results'] = len(results) > 0
-    game['has_startlist'] = bool(game.get('start_file')) or len(StartList.get_by_game(id)) > 0
+    startlist = StartList.get_by_game(id)
 
-    return render_template('public/game_detail.html', game=game, results=results)
+    game['has_results'] = len(results) > 0
+    game['has_startlist'] = bool(game.get('start_file')) or len(startlist) > 0
+
+    return render_template('public/game_detail.html',
+                           game=game,
+                           results=results,
+                           startlist=startlist)
+
+
+@public_bp.route('/game/<int:id>/startlist')
+def game_startlist_detail(id):
+    game = Game.get_by_id(id)
+    if not game:
+        return render_template('404.html'), 404
+
+    startlist = StartList.get_by_game(id)
+
+    return render_template('public/startlist_detail.html',
+                           game=game,
+                           startlist=startlist)
 
 
 @public_bp.route('/records')
@@ -102,19 +121,19 @@ def athletes():
                            genders=Config.GENDERS)
 
 
-@public_bp.route('/rasa')
-def rasa():
-    return render_template('public/rasa.html')
+@public_bp.route('/raza')
+def raza():
+    return render_template('public/raza.html')
 
 
-@public_bp.route('/api/rasa-data')
-def get_rasa_data():
-    """API endpoint to get RASA table data for JavaScript"""
+@public_bp.route('/api/raza-data')
+def get_raza_data():
+    """API endpoint to get RAZA table data for JavaScript"""
     try:
-        if not os.path.exists(Config.RASA_TABLE_PATH):
+        if not os.path.exists(Config.RAZA_TABLE_PATH):
             return jsonify([])
 
-        df = pd.read_excel(Config.RASA_TABLE_PATH)
+        df = pd.read_excel(Config.RAZA_TABLE_PATH)
 
         # Convert to list of dictionaries
         data = df.to_dict('records')
@@ -134,9 +153,9 @@ def get_rasa_data():
         return jsonify([])
 
 
-@public_bp.route('/api/calculate-rasa', methods=['POST'])
-def calculate_rasa():
-    """API endpoint to calculate RASA score"""
+@public_bp.route('/api/calculate-raza', methods=['POST'])
+def calculate_raza():
+    """API endpoint to calculate RAZA score with CORRECT formula"""
     try:
         data = request.get_json()
         gender = data.get('gender')
@@ -144,27 +163,30 @@ def calculate_rasa():
         athlete_class = data.get('class')
         performance = float(data.get('performance'))
 
-        if not os.path.exists(Config.RASA_TABLE_PATH):
-            return jsonify({'error': 'RASA table not found'})
+        if not os.path.exists(Config.RAZA_TABLE_PATH):
+            return jsonify({'error': 'RAZA table not found'})
 
-        df = pd.read_excel(Config.RASA_TABLE_PATH)
+        df = pd.read_excel(Config.RAZA_TABLE_PATH)
 
         # Find matching row
         mask = (df['Event'] == event) & (df['Class'] == athlete_class) & (df['Gender'] == gender)
-        rasa_row = df[mask]
+        raza_row = df[mask]
 
-        if rasa_row.empty:
-            return jsonify({'error': 'No RASA data found for this combination'})
+        if raza_row.empty:
+            return jsonify({'error': 'No RAZA data found for this combination'})
 
-        rasa_row = rasa_row.iloc[0]
-        a = rasa_row['a']
-        b = rasa_row['b']
-        c = rasa_row['c']
+        raza_row = raza_row.iloc[0]
+        a = float(raza_row['a'])
+        b = float(raza_row['b'])
+        c = float(raza_row['c'])
+        print(a, b, c)
 
-        # Calculate RASA score using Gompertz function
-        score = int(a * np.exp(-b - c * performance))
+        # ✅ FORMULE OFFICIELLE CORRIGÉE :
+        # Points = PLANCHER(A × e^(-B-C×Performance))
+        score_float = a * np.exp(np.exp(-b - c * performance))
+        score = int(np.floor(score_float))  # ← CORRECTION : utiliser floor()
 
-        return jsonify({'rasa_score': score})
+        return jsonify({'raza_score': score})
 
     except Exception as e:
         return jsonify({'error': str(e)})
@@ -172,37 +194,52 @@ def calculate_rasa():
 
 @public_bp.route('/api/calculate-performance', methods=['POST'])
 def calculate_performance():
-    """API endpoint to calculate performance from RASA score"""
+    """API endpoint to calculate performance from RAZA score with CORRECT inverse formula"""
     try:
         data = request.get_json()
         gender = data.get('gender')
         event = data.get('event')
         athlete_class = data.get('class')
-        rasa_score = float(data.get('rasa_score'))
+        raza_score = float(data.get('raza_score'))
 
-        if not os.path.exists(Config.RASA_TABLE_PATH):
-            return jsonify({'error': 'RASA table not found'})
+        if not os.path.exists(Config.RAZA_TABLE_PATH):
+            return jsonify({'error': 'RAZA table not found'})
 
-        df = pd.read_excel(Config.RASA_TABLE_PATH)
+        df = pd.read_excel(Config.RAZA_TABLE_PATH)
 
         # Find matching row
         mask = (df['Event'] == event) & (df['Class'] == athlete_class) & (df['Gender'] == gender)
-        rasa_row = df[mask]
+        raza_row = df[mask]
 
-        if rasa_row.empty:
-            return jsonify({'error': 'No RASA data found for this combination'})
+        if raza_row.empty:
+            return jsonify({'error': 'No RAZA data found for this combination'})
 
-        rasa_row = rasa_row.iloc[0]
-        a = rasa_row['a']
-        b = rasa_row['b']
-        c = rasa_row['c']
+        raza_row = raza_row.iloc[0]
+        a = float(raza_row['a'])
+        b = float(raza_row['b'])
+        c = float(raza_row['c'])
 
-        # Reverse calculate performance from RASA score
-        # rasa_score = a * exp(-b - c * performance)
-        # performance = (-ln(rasa_score/a) - b) / c
-        performance = (-np.log(rasa_score / a) - b) / c
+        # ✅ FORMULE INVERSE OFFICIELLE CORRIGÉE :
+        # Performance = PLAFOND((B - ln(ln(Points/A))) / C, 0.01)
+        # Cette formule correspond à celle montrée dans l'image
+        if raza_score <= 0 or raza_score >= a:
+            return jsonify({'error': 'Invalid RAZA score range'})
 
-        return jsonify({'performance': performance})
+        try:
+            # Formule inverse : (B - ln(ln(Points/A))) / C
+            inner_ln = np.log(raza_score / a)
+            if inner_ln >= 0:  # ln doit être négatif pour que l'inner_ln soit valide
+                return jsonify({'error': 'Invalid RAZA score for calculation'})
+
+            performance = (b - np.log(-inner_ln)) / c
+
+            # Application du PLAFOND avec précision 0.01
+            performance = np.ceil(performance * 100) / 100
+
+            return jsonify({'performance': round(performance, 2)})
+
+        except (ValueError, ZeroDivisionError) as e:
+            return jsonify({'error': 'Mathematical error in calculation'})
 
     except Exception as e:
         return jsonify({'error': str(e)})

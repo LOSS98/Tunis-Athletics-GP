@@ -30,12 +30,23 @@
             <i class="fas fa-file-download mr-2"></i>Download Results PDF
         </a>
     {% endif %}
+    {% if startlist %}
+        <a href="{{ url_for('public.game_startlist_detail', id=game.id) }}"
+           class="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600">
+            <i class="fas fa-list mr-2"></i>View Start List
+        </a>
+    {% endif %}
 </div>
 
 {% if results %}
-<div class="bg-white rounded-lg shadow overflow-hidden">
+<div class="bg-white rounded-lg shadow overflow-hidden mb-6">
     <div class="p-6 border-b bg-gray-50">
-        <h2 class="text-xl font-bold">Results</h2>
+        <h2 class="text-xl font-bold">
+            Results
+            {% if game.classes_list|length > 1 %}
+                <span class="ml-2 text-sm bg-purple-100 text-purple-800 px-2 py-1 rounded">Multi-Class Event</span>
+            {% endif %}
+        </h2>
     </div>
     <div class="overflow-x-auto">
         <table class="w-full">
@@ -46,18 +57,23 @@
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">BIB</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Country</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Performance</th>
+                    {% if game.classes_list|length > 1 %}
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">RAZA Score</th>
+                    {% endif %}
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
                 {% for result in results %}
                 <tr class="hover:bg-gray-50">
                     <td class="px-6 py-4 whitespace-nowrap">
-                        {% if result.rank == '1' %}
+                        {% set rank = result.auto_rank or result.rank %}
+                        {% if rank == '1' %}
                             <span class="text-3xl">🥇</span>
-                        {% elif result.rank == '2' %}
+                        {% elif rank == '2' %}
                             <span class="text-3xl">🥈</span>
-                        {% elif result.rank == '3' %}
+                        {% elif rank == '3' %}
                             <span class="text-3xl">🥉</span>
                         {% endif %}
                         {% if result.record %}
@@ -66,15 +82,42 @@
                             </span>
                         {% endif %}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap font-semibold">{{ result.rank }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap">{{ result.athlete_bib }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap font-semibold">{{ rank or result.rank }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="bg-indigo-100 text-indigo-800 px-2 py-1 rounded text-sm font-semibold">
+                            {{ result.athlete_bib }}
+                        </span>
+                    </td>
                     <td class="px-6 py-4 whitespace-nowrap font-medium">{{ result.firstname }} {{ result.lastname }}</td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <img src="/static/images/flags/{{ result.country }}.svg" alt="{{ result.country }}"
                              class="inline w-8 h-5 mr-2">
                         {{ result.country }}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap font-bold text-lg">{{ result.value }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">{{ result.athlete_class }}</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap font-bold text-lg">
+                        {% if result.value in config.RESULT_SPECIAL_VALUES %}
+                            <span class="text-red-600">{{ result.value }}</span>
+                        {% else %}
+                            {{ result.auto_performance or result.value }}
+                            {% if game.event in config.FIELD_EVENTS and result.value not in config.RESULT_SPECIAL_VALUES %}
+                                <span class="text-sm text-gray-500">m</span>
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                    {% if game.classes_list|length > 1 %}
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if result.raza_score %}
+                            <div class="text-lg font-bold text-purple-600 bg-purple-50 px-2 py-1 rounded text-center">
+                                {{ result.raza_score }}
+                            </div>
+                        {% else %}
+                            <span class="text-gray-400">-</span>
+                        {% endif %}
+                    </td>
+                    {% endif %}
                 </tr>
                 {% endfor %}
             </tbody>
@@ -83,21 +126,79 @@
 </div>
 
 {% if game.result_file %}
-<div class="mt-6 bg-white rounded-lg shadow p-6">
+<div class="bg-white rounded-lg shadow p-6">
     <h3 class="text-lg font-bold mb-4">Official Results Document</h3>
     <embed src="/{{ config.UPLOAD_FOLDER }}/results/{{ game.result_file }}" type="application/pdf" width="100%" height="600px" />
 </div>
 {% endif %}
 
 {% else %}
-<div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
+<div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center mb-6">
     <i class="fas fa-clock text-4xl text-yellow-600 mb-4"></i>
     <h3 class="text-lg font-semibold text-yellow-900">Results Not Yet Available</h3>
     <p class="text-yellow-700 mt-2">Please check back later for the official results of this event.</p>
 </div>
 {% endif %}
 
-<div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+<!-- Start List Section -->
+{% if startlist %}
+<div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+    <div class="p-6 border-b bg-gray-50">
+        <div class="flex justify-between items-center">
+            <h2 class="text-xl font-bold">Start List ({{ startlist|length }} athletes)</h2>
+            <a href="{{ url_for('public.game_startlist_detail', id=game.id) }}" class="text-blue-600 hover:text-blue-800">
+                View Full Start List <i class="fas fa-arrow-right ml-1"></i>
+            </a>
+        </div>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lane/Order</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">BIB</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Country</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for entry in startlist[:10] %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap">{{ entry.lane_order or '-' }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="bg-indigo-100 text-indigo-800 px-2 py-1 rounded text-sm font-semibold">
+                            {{ entry.athlete_bib }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap font-medium">{{ entry.firstname }} {{ entry.lastname }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <img src="/static/images/flags/{{ entry.country }}.svg" alt="{{ entry.country }}"
+                             class="inline w-6 h-4 mr-1">
+                        {{ entry.country }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 py-1 text-xs bg-green-100 text-green-800 rounded">{{ entry.class }}</span>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% if startlist|length > 10 %}
+                <tr>
+                    <td colspan="5" class="px-6 py-4 text-center text-gray-500">
+                        ... and {{ startlist|length - 10 }} more athletes
+                        <a href="{{ url_for('public.game_startlist_detail', id=game.id) }}" class="text-blue-600 hover:text-blue-800 ml-2">
+                            View All
+                        </a>
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+<div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
     <h4 class="font-bold text-blue-900 mb-2">Legend:</h4>
     <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm text-blue-800">
         <div><span class="font-semibold">DNS:</span> Did not start</div>
@@ -108,5 +209,11 @@
         <div><span class="font-semibold">X:</span> Failure</div>
         <div><span class="font-semibold">-:</span> Pass</div>
     </div>
+    {% if game.classes_list|length > 1 %}
+    <div class="mt-3 p-2 bg-purple-50 rounded">
+        <span class="font-semibold text-purple-800">RAZA Scoring:</span>
+        <span class="text-purple-700 text-sm">Multi-class events use RAZA scores for fair comparison between different disability classes. Higher scores indicate better relative performance.</span>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

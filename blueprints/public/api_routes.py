@@ -7,14 +7,14 @@ import pandas as pd
 import os
 
 
-@public_bp.route('/api/rasa-data')
-def rasa_data():
-    """Return RASA data for the calculator"""
+@public_bp.route('/api/raza-data')
+def raza_data():
+    """Return RAZA data for the calculator"""
     try:
-        if not os.path.exists(Config.RASA_TABLE_PATH):
+        if not os.path.exists(Config.RAZA_TABLE_PATH):
             return jsonify([])
 
-        df = pd.read_excel(Config.RASA_TABLE_PATH)
+        df = pd.read_excel(Config.RAZA_TABLE_PATH)
 
         # Convert DataFrame to list of dictionaries
         data = []

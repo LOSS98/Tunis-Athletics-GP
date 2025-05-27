@@ -52,5 +52,5 @@ class Config:
     ADMIN_USERNAME = os.getenv('ADMIN_USERNAME', 'admin')
     ADMIN_PASSWORD = os.getenv('ADMIN_PASSWORD', 'admin2025')
 
-    # RASA Table Path
-    RASA_TABLE_PATH = os.path.join('static', 'raza_table_tunis_gp_25.xlsx')
+    # RAZA Table Path
+    RAZA_TABLE_PATH = os.path.join('static', 'raza_table_tunis_gp_25.xlsx')

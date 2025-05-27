@@ -9,6 +9,7 @@ from database.db_manager import execute_one
 from utils.helpers import allowed_file, save_uploaded_file
 from config import Config
 import os
+import re  # ← AJOUT DE L'IMPORT RE
 
 
 @admin_bp.route('/login', methods=['GET', 'POST'])
@@ -385,6 +386,7 @@ def game_auto_rank(id):
         if not game:
             return jsonify({'error': 'Game not found'}), 404
 
+        # Get results with auto-ranking applied
         results = Result.get_all(game_id=id)
 
         # Update ranks in database
@@ -417,12 +419,6 @@ def game_results(id):
         return redirect(url_for('admin.games_list'))
 
     results = Result.get_all(game_id=id)
-
-    # Get attempts for field events
-    if game['event'] in Config.FIELD_EVENTS:
-        for result in results:
-            result['attempts'] = Attempt.get_by_result(result['id'])
-
     startlist = StartList.get_by_game(id)
     form = ResultForm()
 
@@ -438,62 +434,152 @@ def game_results(id):
 @admin_required
 def result_add(game_id):
     game = Game.get_by_id(game_id)
-    form = ResultForm()
+    if not game:
+        flash('Game not found', 'danger')
+        return redirect(url_for('admin.games_list'))
 
-    if form.validate_on_submit():
-        athlete = Athlete.get_by_bib(form.athlete_bib.data)
-        if not athlete:
-            flash('Athlete not found', 'danger')
-            return redirect(url_for('admin.game_results', id=game_id))
+    # Récupérer les données du formulaire
+    athlete_bib = request.form.get('athlete_bib')
+    rank = request.form.get('rank', '').strip()
+    value = request.form.get('value', '').strip()
+    record = request.form.get('record', '').strip()
 
-        # Validate performance format
-        if not Result.validate_performance(form.value.data, game['event']):
-            if game['event'] in Config.FIELD_EVENTS:
-                flash('Invalid performance format. Use XX.XX for field events', 'danger')
-            else:
-                flash('Invalid performance format. Use M:SS.CS or SS.CS for track events', 'danger')
-            return redirect(url_for('admin.game_results', id=game_id))
+    # Validation des données
+    errors = []
 
-        data = {
-            'game_id': game_id,
-            'athlete_bib': form.athlete_bib.data,
-            'rank': form.rank.data,
-            'value': form.value.data,
-            'record': form.record.data if form.record.data else None
-        }
-
+    # Validation athlete_bib
+    if not athlete_bib:
+        errors.append('Please select an athlete')
+    else:
         try:
-            Result.delete_by_game_athlete(game_id, form.athlete_bib.data)
-            result_id = Result.create(**data)
+            athlete_bib = int(athlete_bib)
+            athlete = Athlete.get_by_bib(athlete_bib)
+            if not athlete:
+                errors.append('Athlete not found')
+        except (ValueError, TypeError):
+            errors.append('Invalid athlete BIB')
 
-            # If field event, save attempts
-            if game['event'] in Config.FIELD_EVENTS and result_id:
-                for i, attempt_form in enumerate(form.attempts):
-                    if attempt_form.value.data:
-                        Attempt.create(result_id, i + 1, attempt_form.value.data)
+    # Validation performance
+    if not value:
+        errors.append('Performance value is required')
+    elif value not in Config.RESULT_SPECIAL_VALUES:
+        # Validation du format selon le type d'événement
+        if game['event'] in Config.FIELD_EVENTS:
+            # Field events: XX.XX format
+            if not re.match(r'^\d+(\.\d{1,2})?$', value):
+                errors.append('Invalid performance format for field events. Use XX.XX (e.g., 15.67)')
+        else:
+            # Track events: M:SS.CS ou SS.CS format
+            if not re.match(r'^(\d{1,2}:)?\d{1,2}\.\d{2}$', value):
+                errors.append(
+                    'Invalid performance format for track events. Use MM:SS.CS or SS.CS (e.g., 1:23.45 or 23.45)')
 
-            flash('Result added successfully', 'success')
-        except Exception as e:
-            flash(f'Error adding result: {str(e)}', 'danger')
+    # Si erreurs, les afficher et retourner
+    if errors:
+        for error in errors:
+            flash(error, 'danger')
+        return redirect(url_for('admin.game_results', id=game_id))
+
+    # Traitement des tentatives pour les field events
+    performance_value = value
+    attempts_data = []
+
+    if game['event'] in Config.FIELD_EVENTS:
+        # Collecter les tentatives
+        for i in range(1, 7):
+            attempt_value = request.form.get(f'attempt_{i}', '').strip()
+            if attempt_value:
+                attempts_data.append({'number': i, 'value': attempt_value})
+
+        # Si pas de performance manuelle mais des tentatives valides, calculer la meilleure
+        if not value and attempts_data:
+            valid_attempts = []
+            for attempt in attempts_data:
+                attempt_val = attempt['value']
+                if attempt_val and attempt_val not in ['X', '-', 'O', '']:
+                    try:
+                        val = float(attempt_val)
+                        valid_attempts.append(val)
+                    except ValueError:
+                        continue
+
+            if valid_attempts:
+                best_attempt = max(valid_attempts)
+                performance_value = f"{best_attempt:.2f}"
+            else:
+                flash('No valid attempts found. Please enter at least one valid attempt or a performance value.',
+                      'danger')
+                return redirect(url_for('admin.game_results', id=game_id))
+
+    # Vérifier si un résultat existe déjà pour cet athlète
+    try:
+        existing_result = execute_one(
+            "SELECT id FROM results WHERE game_id = %s AND athlete_bib = %s",
+            (game_id, athlete_bib)
+        )
+        if existing_result:
+            # Supprimer l'ancien résultat et ses tentatives
+            Attempt.delete_by_result(existing_result['id'])
+            Result.delete(existing_result['id'])
+    except Exception as e:
+        print(f"Error checking existing result: {e}")
+
+    # Créer le nouveau résultat
+    data = {
+        'game_id': game_id,
+        'athlete_bib': athlete_bib,
+        'rank': rank if rank else None,
+        'value': performance_value,
+        'record': record if record else None
+    }
+
+    try:
+        result_id = Result.create(**data)
+
+        if not result_id:
+            flash('Error creating result', 'danger')
+            return redirect(url_for('admin.game_results', id=game_id))
+
+        # Sauvegarder les tentatives pour les field events
+        if game['event'] in Config.FIELD_EVENTS and attempts_data:
+            for attempt in attempts_data:
+                try:
+                    Attempt.create(result_id, attempt['number'], attempt['value'])
+                except Exception as e:
+                    print(f"Error saving attempt: {e}")
+
+        flash('Result added successfully', 'success')
+
+    except Exception as e:
+        print(f"Error adding result: {e}")
+        flash(f'Error adding result: {str(e)}', 'danger')
 
     return redirect(url_for('admin.game_results', id=game_id))
 
 
 @admin_bp.route('/results/<int:id>/delete', methods=['POST'])
 @admin_required
-def result_delete_action(id):
-    result = Result.get_by_id(id)
-    if result:
-        try:
-            # Delete attempts first
-            Attempt.delete_by_result(id)
-            Result.delete(id)
-            flash('Result deleted successfully', 'success')
-        except Exception as e:
-            flash(f'Error deleting result: {str(e)}', 'danger')
-        return redirect(url_for('admin.game_results', id=result['game_id']))
+def result_delete(id):
+    try:
+        result = Result.get_by_id(id)
+        if not result:
+            flash('Result not found', 'danger')
+            return redirect(url_for('admin.games_list'))
 
-    return redirect(url_for('admin.games_list'))
+        game_id = result['game_id']
+
+        # Supprimer les tentatives d'abord
+        Attempt.delete_by_result(id)
+        # Puis supprimer le résultat
+        Result.delete(id)
+
+        flash('Result deleted successfully', 'success')
+        return redirect(url_for('admin.game_results', id=game_id))
+
+    except Exception as e:
+        print(f"Error deleting result: {e}")
+        flash(f'Error deleting result: {str(e)}', 'danger')
+        return redirect(url_for('admin.games_list'))
 
 
 @admin_bp.route('/records')

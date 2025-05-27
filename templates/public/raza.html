@@ -1,22 +1,28 @@
 {% extends "base.html" %}
 
-{% block title %}RASA Score System - World Para Athletics Grand Prix{% endblock %}
+{% block title %}RAZA Score System - World Para Athletics Grand Prix{% endblock %}
 
 {% block content %}
 <div class="mb-8">
-    <h1 class="text-3xl font-bold mb-4">RASA Point Score System</h1>
+    <h1 class="text-3xl font-bold mb-4">RAZA Point Score System</h1>
     <p class="text-gray-600">Understanding Paralympic Performance Comparison</p>
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
     <div class="bg-white rounded-lg shadow p-6">
-        <h2 class="text-2xl font-bold mb-4">What is RASA?</h2>
-        <p class="mb-4">The RASA (Revised Athletics Scoring Approach) point score system is the official method used by World Para Athletics to compare performances across different disability classes in athletics competitions.</p>
-        <p class="mb-4">Named after mathematician Purshottam Rasa, the system uses a mathematical formula to convert performances into points, allowing fair competition between athletes with different disabilities.</p>
+        <h2 class="text-2xl font-bold mb-4">What is RAZA?</h2>
+        <p class="mb-4">The RAZA (Revised Athletics Scoring Approach) point score system is the official method used by World Para Athletics to compare performances across different disability classes in athletics competitions.</p>
+        <p class="mb-4">Named after mathematician Purshottam Raza, the system uses a mathematical formula to convert performances into points, allowing fair competition between athletes with different disabilities.</p>
         <div class="bg-blue-50 p-4 rounded-lg">
-            <h3 class="font-bold mb-2">The Gompertz Function:</h3>
-            <code class="text-lg">Points = a × exp(-b - c × performance)</code>
-            <p class="text-sm mt-2">Where a, b, and c are class-specific constants</p>
+            <h3 class="font-bold mb-2">Official Formula (Gompertz):</h3>
+            <div class="font-mono text-lg mb-2">
+                Points = <strong>FLOOR</strong>(A × e<sup>(-B-C×Performance)</sup>)
+            </div>
+            <h3 class="font-bold mb-2">Inverse formula:</h3>
+            <div class="font-mono text-lg mb-2">
+                Performance = <strong>CEILING</strong>((B - ln(ln(Points/A))) / C)
+            </div>
+            <p class="text-sm mt-2">Where A, B, and C are constants specific to each class and event</p>
         </div>
     </div>
 
@@ -38,7 +44,7 @@
             <li class="flex items-start">
                 <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
                 <div>
-                    <strong>Higher is Better:</strong> The athlete with the highest RASA score wins, regardless of their class
+                    <strong>Higher is Better:</strong> The athlete with the highest RAZA score wins, regardless of their class
                 </div>
             </li>
             <li class="flex items-start">
@@ -52,10 +58,10 @@
 </div>
 
 <div class="bg-white rounded-lg shadow p-6 mb-8">
-    <h2 class="text-2xl font-bold mb-4">RASA Score Calculator</h2>
+    <h2 class="text-2xl font-bold mb-4">RAZA Score Calculator</h2>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-            <h3 class="text-lg font-semibold mb-3">Performance to RASA Score</h3>
+            <h3 class="text-lg font-semibold mb-3">Performance to RAZA Score</h3>
             <div class="space-y-3">
                 <select id="gender" class="w-full px-3 py-2 border rounded-lg">
                     <option value="">Select Gender</option>
@@ -69,14 +75,14 @@
                     <option value="">Select Class</option>
                 </select>
                 <input type="text" id="performance" placeholder="Enter performance" class="w-full px-3 py-2 border rounded-lg">
-                <button onclick="calculateRASA()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 w-full">
-                    Calculate RASA Score
+                <button onclick="calculateRAZA()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 w-full">
+                    Calculate RAZA Score
                 </button>
             </div>
         </div>
 
         <div>
-            <h3 class="text-lg font-semibold mb-3">RASA Score to Performance</h3>
+            <h3 class="text-lg font-semibold mb-3">RAZA Score to Performance</h3>
             <div class="space-y-3">
                 <select id="gender2" class="w-full px-3 py-2 border rounded-lg">
                     <option value="">Select Gender</option>
@@ -89,7 +95,7 @@
                 <select id="class2" class="w-full px-3 py-2 border rounded-lg">
                     <option value="">Select Class</option>
                 </select>
-                <input type="number" id="rasaScore" placeholder="Enter RASA score" class="w-full px-3 py-2 border rounded-lg">
+                <input type="number" id="razaScore" placeholder="Enter RAZA score" class="w-full px-3 py-2 border rounded-lg">
                 <button onclick="calculatePerformance()" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 w-full">
                     Calculate Performance
                 </button>
@@ -110,7 +116,7 @@
            target="_blank" class="border rounded-lg p-4 hover:bg-gray-50 flex items-center">
             <i class="fas fa-file-pdf text-red-500 text-3xl mr-4"></i>
             <div>
-                <h3 class="font-semibold">Field Events RASA Scores</h3>
+                <h3 class="font-semibold">Field Events RAZA Scores</h3>
                 <p class="text-sm text-gray-600">2025-2026 Official IPC Document</p>
             </div>
         </a>
@@ -118,7 +124,7 @@
            target="_blank" class="border rounded-lg p-4 hover:bg-gray-50 flex items-center">
             <i class="fas fa-file-pdf text-red-500 text-3xl mr-4"></i>
             <div>
-                <h3 class="font-semibold">Track Events RASA Scores</h3>
+                <h3 class="font-semibold">Track Events RAZA Scores</h3>
                 <p class="text-sm text-gray-600">2025-2026 Official IPC Document</p>
             </div>
         </a>
@@ -126,22 +132,22 @@
 </div>
 
 <script>
-let rasaData = [];
+let razaData = [];
 
-async function loadRasaData() {
+async function loadRazaData() {
     try {
-        const response = await fetch('/api/rasa-data');
-        rasaData = await response.json();
-        console.log('RASA data loaded:', rasaData.length, 'entries');
+        const response = await fetch('/api/raza-data');
+        razaData = await response.json();
+        console.log('RAZA data loaded:', razaData.length, 'entries');
 
-        if (rasaData.length > 0) {
-            console.log('Sample data:', rasaData[0]);
+        if (razaData.length > 0) {
+            console.log('Sample data:', razaData[0]);
             populateInitialOptions();
         } else {
-            console.error('No RASA data loaded');
+            console.error('No RAZA data loaded');
         }
     } catch (error) {
-        console.error('Error loading RASA data:', error);
+        console.error('Error loading RAZA data:', error);
     }
 }
 
@@ -172,13 +178,13 @@ function updateEventOptions(genderId, eventId, classId) {
     eventSelect.innerHTML = '<option value="">Select Event</option>';
     classSelect.innerHTML = '<option value="">Select Class</option>';
 
-    if (!gender || rasaData.length === 0) {
+    if (!gender || razaData.length === 0) {
         console.log('No gender selected or no data available');
         return;
     }
 
     // Get unique events for selected gender
-    const events = [...new Set(rasaData
+    const events = [...new Set(razaData
         .filter(d => d.Gender === gender)
         .map(d => d.Event)
     )].sort();
@@ -205,13 +211,13 @@ function updateClassOptions(genderId, eventId, classId) {
 
     classSelect.innerHTML = '<option value="">Select Class</option>';
 
-    if (!gender || !event || rasaData.length === 0) {
+    if (!gender || !event || razaData.length === 0) {
         console.log('Missing gender/event or no data');
         return;
     }
 
     // Get unique classes for selected gender and event
-    const classes = [...new Set(rasaData
+    const classes = [...new Set(razaData
         .filter(d => d.Gender === gender && d.Event === event)
         .map(d => d.Class)
     )].sort();
@@ -254,7 +260,7 @@ function formatPerformance(value, eventType) {
     }
 }
 
-async function calculateRASA() {
+async function calculateRAZA() {
     const gender = document.getElementById('gender').value;
     const event = document.getElementById('event').value;
     const cls = document.getElementById('class').value;
@@ -265,20 +271,20 @@ async function calculateRASA() {
         return;
     }
 
-    const data = rasaData.find(d => d.Gender === gender && d.Event === event && d.Class === cls);
+    const data = razaData.find(d => d.Gender === gender && d.Event === event && d.Class === cls);
     if (!data) {
-        alert('No RASA data found for this combination');
+        alert('No RAZA data found for this combination');
         console.log('Looking for:', {gender, event, cls});
-        console.log('Available combinations:', rasaData.map(d => `${d.Gender}-${d.Event}-${d.Class}`));
+        console.log('Available combinations:', razaData.map(d => `${d.Gender}-${d.Event}-${d.Class}`));
         return;
     }
 
     try {
         const perfValue = parsePerformance(performance, data.Type);
-        const rasaScore = data.a * Math.exp(-data.b - data.c * perfValue);
+        const razaScore = data.a * Math.exp(-data.b - data.c * perfValue);
 
         document.getElementById('result').classList.remove('hidden');
-        document.getElementById('resultText').textContent = `RASA Score: ${Math.round(rasaScore)} points`;
+        document.getElementById('resultText').textContent = `RAZA Score: ${Math.round(razaScore)} points`;
     } catch (error) {
         alert('Invalid performance format');
         console.error('Calculation error:', error);
@@ -289,21 +295,21 @@ async function calculatePerformance() {
     const gender = document.getElementById('gender2').value;
     const event = document.getElementById('event2').value;
     const cls = document.getElementById('class2').value;
-    const rasaScore = parseFloat(document.getElementById('rasaScore').value);
+    const razaScore = parseFloat(document.getElementById('razaScore').value);
 
-    if (!gender || !event || !cls || !rasaScore) {
+    if (!gender || !event || !cls || !razaScore) {
         alert('Please fill all fields');
         return;
     }
 
-    const data = rasaData.find(d => d.Gender === gender && d.Event === event && d.Class === cls);
+    const data = razaData.find(d => d.Gender === gender && d.Event === event && d.Class === cls);
     if (!data) {
-        alert('No RASA data found for this combination');
+        alert('No RAZA data found for this combination');
         return;
     }
 
     try {
-        const performance = (-Math.log(rasaScore / data.a) - data.b) / data.c;
+        const performance = (-Math.log(razaScore / data.a) - data.b) / data.c;
 
         document.getElementById('result').classList.remove('hidden');
         document.getElementById('resultText').textContent =
@@ -316,8 +322,8 @@ async function calculatePerformance() {
 
 // Load data when page loads
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Page loaded, loading RASA data...');
-    loadRasaData();
+    console.log('Page loaded, loading RAZA data...');
+    loadRazaData();
 });
 </script>
 {% endblock %}
