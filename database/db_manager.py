@@ -19,23 +19,74 @@ def get_db_connection():
         connection.close()
 
 
+def clean_params(params):
+    """Clean parameters by converting empty strings and 'None' strings to None"""
+    if not params:
+        return params
+
+    cleaned = []
+    for param in params:
+        if param == '' or param == 'None' or (isinstance(param, str) and param.strip() == ''):
+            cleaned.append(None)
+        else:
+            cleaned.append(param)
+    return tuple(cleaned)
+
+
 def execute_query(query, params=None, fetch=False):
-    with get_db_connection() as conn:
-        with conn.cursor() as cursor:
-            cursor.execute(query, params)
-            if fetch:
-                return cursor.fetchall()
-            conn.commit()
-            if query.strip().upper().startswith('INSERT') and 'RETURNING' in query.upper():
-                return cursor.fetchone()
-            return None
+    """Execute a query and optionally fetch results"""
+    try:
+        # Clean parameters to handle None/empty values properly
+        if params:
+            params = clean_params(params)
+
+        with get_db_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(query, params)
+
+                # For INSERT queries with RETURNING clause
+                if query.strip().upper().startswith('INSERT') and 'RETURNING' in query.upper():
+                    result = cursor.fetchone()
+                    conn.commit()
+                    print(f"✓ INSERT with RETURNING executed, result: {result}")
+                    return result
+
+                # For SELECT queries or when fetch=True
+                if fetch or query.strip().upper().startswith('SELECT'):
+                    result = cursor.fetchall()
+                    return result
+
+                # For other queries (UPDATE, DELETE, etc.)
+                conn.commit()
+                print(f"✓ Query executed successfully, affected rows: {cursor.rowcount}")
+                return cursor.rowcount
+
+    except Exception as e:
+        print(f"✗ Database error in execute_query: {e}")
+        print(f"Query: {query}")
+        print(f"Original params: {params}")
+        raise
 
 
 def execute_one(query, params=None):
-    with get_db_connection() as conn:
-        with conn.cursor() as cursor:
-            cursor.execute(query, params)
-            return cursor.fetchone()
+    """Execute a query and return one result"""
+    try:
+        # Clean parameters to handle None/empty values properly
+        print(f"Executing query: {query}")
+        if params:
+            print(f"With params: {params}")
+            params = clean_params(params)
+            print(f"With params: {params}")
+
+        with get_db_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute(query, params)
+                return cursor.fetchone()
+    except Exception as e:
+        print(f"✗ Database error in execute_one: {e}")
+        print(f"Query: {query}")
+        print(f"Original params: {params}")
+        raise
 
 
 def init_db():
@@ -134,7 +185,12 @@ def init_db():
     with get_db_connection() as conn:
         with conn.cursor() as cursor:
             for query in queries:
-                cursor.execute(query)
+                try:
+                    cursor.execute(query)
+                    print(f"✓ Table created/verified: {query.split()[5] if 'CREATE TABLE' in query else 'unknown'}")
+                except Exception as e:
+                    print(f"✗ Error creating table: {e}")
+                    print(f"Query: {query[:100]}...")
         conn.commit()
 
     insert_default_config()
@@ -170,8 +226,9 @@ def insert_default_config():
                     "INSERT INTO competition_config (setting_key, setting_value, setting_type, description) VALUES (%s, %s, %s, %s)",
                     (key, value, setting_type, description)
                 )
+                print(f"✓ Default config inserted: {key}")
         except Exception as e:
-            print(f"Warning: Could not insert config {key}: {e}")
+            print(f"✗ Warning: Could not insert config {key}: {e}")
 
     default_days = [
         (1, '2025-06-12', '2025-06-12', 'Day 1 - Opening Events'),
@@ -195,5 +252,49 @@ def insert_default_config():
                     "INSERT INTO competition_days (day_number, date_start, date_end, description) VALUES (%s, %s, %s, %s)",
                     (day_num, start_date, end_date, desc)
                 )
+                print(f"✓ Default day inserted: Day {day_num}")
         except Exception as e:
-            print(f"Warning: Could not insert day {day_num}: {e}")
+            print(f"✗ Warning: Could not insert day {day_num}: {e}")
+
+
+def test_connection():
+    """Test database connection"""
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT 1")
+                result = cursor.fetchone()
+                print("✓ Database connection successful")
+                return True
+    except Exception as e:
+        print(f"✗ Database connection failed: {e}")
+        return False
+
+
+def check_tables():
+    """Check if all required tables exist"""
+    required_tables = [
+        'users', 'athletes', 'games', 'results',
+        'startlist', 'attempts', 'competition_config', 'competition_days'
+    ]
+
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cursor:
+                cursor.execute("""
+                    SELECT table_name FROM information_schema.tables 
+                    WHERE table_schema = 'public'
+                """)
+                existing_tables = [row['table_name'] for row in cursor.fetchall()]
+
+                print("Database tables status:")
+                for table in required_tables:
+                    if table in existing_tables:
+                        print(f"✓ {table}")
+                    else:
+                        print(f"✗ {table} - MISSING")
+
+                return all(table in existing_tables for table in required_tables)
+    except Exception as e:
+        print(f"Error checking tables: {e}")
+        return False
