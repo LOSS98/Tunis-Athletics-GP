@@ -72,11 +72,8 @@ def execute_one(query, params=None):
     """Execute a query and return one result"""
     try:
         # Clean parameters to handle None/empty values properly
-        print(f"Executing query: {query}")
         if params:
-            print(f"With params: {params}")
             params = clean_params(params)
-            print(f"With params: {params}")
 
         with get_db_connection() as conn:
             with conn.cursor() as cursor:

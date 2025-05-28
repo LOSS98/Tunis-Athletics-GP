@@ -137,6 +137,9 @@ let razaData = [];
 async function loadRazaData() {
     try {
         const response = await fetch('/api/raza-data');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         razaData = await response.json();
         console.log('RAZA data loaded:', razaData.length, 'entries');
 
@@ -145,14 +148,29 @@ async function loadRazaData() {
             populateInitialOptions();
         } else {
             console.error('No RAZA data loaded');
+            showError('No RAZA data available. Please check the data file.');
         }
     } catch (error) {
         console.error('Error loading RAZA data:', error);
+        showError('Failed to load RAZA data. Please refresh the page.');
     }
 }
 
+function showError(message) {
+    const result = document.getElementById('result');
+    result.classList.remove('hidden');
+    result.className = 'mt-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg';
+    document.getElementById('resultText').textContent = message;
+}
+
+function showSuccess(message) {
+    const result = document.getElementById('result');
+    result.classList.remove('hidden');
+    result.className = 'mt-6 p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg';
+    document.getElementById('resultText').textContent = message;
+}
+
 function populateInitialOptions() {
-    // Setup event listeners for gender selects
     const gender1 = document.getElementById('gender');
     const gender2 = document.getElementById('gender2');
 
@@ -174,7 +192,6 @@ function updateEventOptions(genderId, eventId, classId) {
     const eventSelect = document.getElementById(eventId);
     const classSelect = document.getElementById(classId);
 
-    // Clear existing options
     eventSelect.innerHTML = '<option value="">Select Event</option>';
     classSelect.innerHTML = '<option value="">Select Class</option>';
 
@@ -183,7 +200,6 @@ function updateEventOptions(genderId, eventId, classId) {
         return;
     }
 
-    // Get unique events for selected gender
     const events = [...new Set(razaData
         .filter(d => d.Gender === gender)
         .map(d => d.Event)
@@ -198,7 +214,6 @@ function updateEventOptions(genderId, eventId, classId) {
         eventSelect.appendChild(option);
     });
 
-    // Setup event listener for event select
     eventSelect.addEventListener('change', function() {
         updateClassOptions(genderId, eventId, classId);
     });
@@ -216,7 +231,6 @@ function updateClassOptions(genderId, eventId, classId) {
         return;
     }
 
-    // Get unique classes for selected gender and event
     const classes = [...new Set(razaData
         .filter(d => d.Gender === gender && d.Event === event)
         .map(d => d.Class)
@@ -233,15 +247,39 @@ function updateClassOptions(genderId, eventId, classId) {
 }
 
 function parsePerformance(performance, eventType) {
+    if (!performance || performance.trim() === '') {
+        throw new Error('Performance value is required');
+    }
+
+    performance = performance.trim();
+
     if (eventType === 'Field') {
-        return parseFloat(performance);
+        const value = parseFloat(performance);
+        if (isNaN(value) || value <= 0) {
+            throw new Error('Invalid field event performance. Please enter a positive number.');
+        }
+        return value;
     } else {
-        const parts = performance.split(':');
-        if (parts.length === 2) {
-            const [minutes, seconds] = parts;
-            return parseFloat(minutes) * 60 + parseFloat(seconds);
+        // Handle time formats: MM:SS.ss, SS.ss, or just SS
+        if (performance.includes(':')) {
+            const parts = performance.split(':');
+            if (parts.length !== 2) {
+                throw new Error('Invalid time format. Use MM:SS.ss or SS.ss');
+            }
+            const minutes = parseFloat(parts[0]);
+            const seconds = parseFloat(parts[1]);
+
+            if (isNaN(minutes) || isNaN(seconds) || minutes < 0 || seconds < 0 || seconds >= 60) {
+                throw new Error('Invalid time values. Minutes and seconds must be positive, seconds < 60');
+            }
+
+            return minutes * 60 + seconds;
         } else {
-            return parseFloat(performance);
+            const value = parseFloat(performance);
+            if (isNaN(value) || value <= 0) {
+                throw new Error('Invalid time performance. Please enter a positive number.');
+            }
+            return value;
         }
     }
 }
@@ -250,12 +288,12 @@ function formatPerformance(value, eventType) {
     if (eventType === 'Field') {
         return value.toFixed(2) + ' m';
     } else {
-        const minutes = Math.floor(value / 60);
-        const seconds = (value % 60).toFixed(2);
-        if (minutes > 0) {
+        if (value >= 60) {
+            const minutes = Math.floor(value / 60);
+            const seconds = (value % 60).toFixed(2);
             return `${minutes}:${seconds.padStart(5, '0')}`;
         } else {
-            return seconds;
+            return value.toFixed(2) + ' s';
         }
     }
 }
@@ -267,19 +305,19 @@ async function calculateRAZA() {
     const performance = document.getElementById('performance').value;
 
     if (!gender || !event || !cls || !performance) {
-        alert('Please fill all fields');
+        showError('Please fill all fields');
         return;
     }
 
     try {
-        // Déterminer le type d'événement pour parser la performance
         const data = razaData.find(d => d.Gender === gender && d.Event === event && d.Class === cls);
         if (!data) {
-            alert('No RAZA data found for this combination');
+            showError('No RAZA data found for this combination');
             return;
         }
 
         const perfValue = parsePerformance(performance, data.Type);
+        console.log(`Parsed performance: ${perfValue} for event type: ${data.Type}`);
 
         const response = await fetch('/api/calculate-raza', {
             method: 'POST',
@@ -296,17 +334,20 @@ async function calculateRAZA() {
 
         const result = await response.json();
 
+        if (!response.ok) {
+            throw new Error(result.error || `HTTP error! status: ${response.status}`);
+        }
+
         if (result.error) {
-            alert('Error: ' + result.error);
+            showError('Error: ' + result.error);
             return;
         }
 
-        document.getElementById('result').classList.remove('hidden');
-        document.getElementById('resultText').textContent = `RAZA Score: ${result.raza_score} points`;
+        showSuccess(`RAZA Score: ${result.raza_score} points`);
 
     } catch (error) {
-        alert('Error calculating RAZA score');
         console.error('Calculation error:', error);
+        showError('Error calculating RAZA score: ' + error.message);
     }
 }
 
@@ -317,7 +358,12 @@ async function calculatePerformance() {
     const razaScore = parseFloat(document.getElementById('razaScore').value);
 
     if (!gender || !event || !cls || !razaScore) {
-        alert('Please fill all fields');
+        showError('Please fill all fields');
+        return;
+    }
+
+    if (isNaN(razaScore) || razaScore <= 0) {
+        showError('Please enter a valid RAZA score (positive number)');
         return;
     }
 
@@ -337,27 +383,26 @@ async function calculatePerformance() {
 
         const result = await response.json();
 
+        if (!response.ok) {
+            throw new Error(result.error || `HTTP error! status: ${response.status}`);
+        }
+
         if (result.error) {
-            alert('Error: ' + result.error);
+            showError('Error: ' + result.error);
             return;
         }
 
-        // Déterminer le type d'événement pour formater la performance
         const data = razaData.find(d => d.Gender === gender && d.Event === event && d.Class === cls);
-        const eventType = data ? data.Type : 'Track'; // Par défaut Track si pas trouvé
+        const eventType = data ? data.Type : 'Track';
 
-        document.getElementById('result').classList.remove('hidden');
-        document.getElementById('resultText').textContent =
-            `Performance needed: ${formatPerformance(result.performance, eventType)}`;
+        showSuccess(`Performance needed: ${formatPerformance(result.performance, eventType)}`);
 
     } catch (error) {
-        alert('Error calculating performance');
         console.error('Calculation error:', error);
+        showError('Error calculating performance: ' + error.message);
     }
 }
 
-
-// Load data when page loads
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Page loaded, loading RAZA data...');
     loadRazaData();

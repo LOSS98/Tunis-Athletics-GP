@@ -1,15 +1,22 @@
 {% extends "admin/base_admin.html" %}
 
-{% block page_title %}Start List - {{ game.event }}{% endblock %}
+{% block page_title %}Start List - {{ game.event }} {% endblock %}
 
 {% block content %}
 <div class="mb-6">
     <div class="bg-white rounded-lg shadow p-4">
-        <h3 class="text-lg font-bold">Game Information</h3>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3 text-sm">
+        <h3 class="text-lg font-bold">
+            Game Information
+            <span class="bg-amber-100 text-amber-500 px-2 py-1 rounded-full text-xs font-medium">
+                #{{ game.id }}
+            </span>
+        </h3>
+
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mt-3 text-sm">
             <div><span class="font-semibold">Event:</span> {{ game.event }}</div>
             <div><span class="font-semibold">Gender:</span> {{ game.gender }}</div>
             <div><span class="font-semibold">Classes:</span> {{ game.classes }}</div>
+            <div><span class="font-semibold">Phase:</span> {{ game.phase }}</div>
             <div><span class="font-semibold">Day {{ game.day }}</span> - {{ game.time }}</div>
         </div>
     </div>

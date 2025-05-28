@@ -32,6 +32,7 @@ def create_app():
 
     app.register_blueprint(admin_bp, url_prefix='/admin')
     app.register_blueprint(public_bp)
+    csrf.exempt(public_bp)
 
     @app.context_processor
     def inject_template_vars():
@@ -113,6 +114,8 @@ def create_app():
             # Static properties
             UPLOAD_FOLDER = Config.UPLOAD_FOLDER
             RAZA_TABLE_PATH = Config.RAZA_TABLE_PATH
+
+
 
         return {
             'config': TemplateConfig(),

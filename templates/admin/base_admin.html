@@ -22,7 +22,7 @@
                 <p class="text-sm text-gray-400">World Para Athletics</p>
                 <div class="mt-2 text-xs text-gray-500">
                     <i class="fas fa-user mr-1"></i>{{ current_user.username }}
-                    <span class="ml-1 px-1 py-0.5 bg-{{ 'purple' if current_user.is_loc() else 'gray' }}-600 rounded text-xs">
+                    <span class="ml-1 px-1 py-0.5 text-white bg-{{ 'purple' if current_user.is_loc() else 'gray' }}-600 rounded text-xs">
                         {{ current_user.admin_type.upper() }}
                     </span>
                 </div>

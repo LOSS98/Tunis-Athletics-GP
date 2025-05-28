@@ -178,7 +178,6 @@ class Game:
         current_day = Config.get_current_day()
         current_time = datetime.now()
 
-        # Ensure current_day is an integer
         if current_day is None:
             current_day = 1
         try:
@@ -189,7 +188,6 @@ class Game:
         for game in games:
             game_day = game['day']
 
-            # Ensure game_day is an integer
             try:
                 game_day = int(game_day)
             except (ValueError, TypeError):
@@ -219,8 +217,11 @@ class Game:
             game['is_published'] = game.get('published', False)
 
             result_count = Result.count_by_game(game['id'])
+            startlist_count = StartList.count_by_game(game['id'])
             game['result_count'] = result_count
-            game['is_complete'] = result_count >= game['nb_athletes']
+            game['startlist_count'] = startlist_count
+            game['result_is_complete'] = result_count >= game['nb_athletes']
+            game['startlist_is_complete'] = startlist_count >= game['nb_athletes']
             game['classes_list'] = [c.strip() for c in game['classes'].split(',')]
 
         return games
@@ -509,6 +510,11 @@ class StartList:
         count = execute_one("SELECT COUNT(*) as count FROM startlist WHERE game_id = %s", (game_id,))
         return count['count'] > 0 if count else False
 
+    @staticmethod
+    def count_by_game(game_id):
+        count = execute_one("SELECT COUNT(*) as count FROM startlist WHERE game_id = %s", (game_id,))
+        return count['count'] if count else 0
+
 
 class Attempt:
     @staticmethod
@@ -519,11 +525,26 @@ class Attempt:
         )
 
     @staticmethod
-    def create(result_id, attempt_number, value):
+    def create(result_id, attempt_number, value, raza='Null'):
         return execute_query(
-            "INSERT INTO attempts (result_id, attempt_number, value) VALUES (%s, %s, %s)",
-            (result_id, attempt_number, value)
+            "INSERT INTO attempts (result_id, attempt_number, value, raza_score) VALUES (%s, %s, %s, %s)",
+            (result_id, attempt_number, value, raza)
         )
+
+    @staticmethod
+    def createMultiple(result_id, attemps=None):
+        if attemps is None:
+            return False
+        query = "INSERT INTO attempts (result_id, attempt_number, value, raza_score) VALUES "
+        parms= ()
+        for attemp in attemps:
+            attempt_number = attemp
+            value = attemps[attemp]['value']
+            raza = attemps[attemp]['raza_score']
+            query += "(%s, %s, %s, %s), "
+            parms += (result_id, attempt_number, value, raza)
+        query = query.rstrip(', ')
+        return execute_query(query, parms)
 
     @staticmethod
     def delete_by_result(result_id):

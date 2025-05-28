@@ -98,43 +98,38 @@
                     <div id="selectedAthlete" class="mt-2 text-sm text-gray-600" data-game-classes="{{ game.classes }}"></div>
                 </div>
 
-                <!-- Rank -->
-                <div>
-                    <label class="block text-gray-700 text-sm font-bold mb-2">Rank</label>
-                    {% if form and form.rank %}
-                        {{ form.rank(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500", placeholder="1, 2, 3...") }}
-                    {% else %}
-                        <input type="text" name="rank" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500" placeholder="1, 2, 3...">
-                    {% endif %}
-                </div>
+{#                <div>#}
+{#                    <label class="block text-gray-700 text-sm font-bold mb-2">Rank</label>#}
+{#                    {% if form and form.rank %}#}
+{#                        {{ form.rank(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500", placeholder="1, 2, 3...") }}#}
+{#                    {% else %}#}
+{#                        <input type="text" name="rank" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500" placeholder="1, 2, 3...">#}
+{#                    {% endif %}#}
+{#                </div>#}
 
                 <!-- Performance Value -->
-                <div>
-                    <label class="block text-gray-700 text-sm font-bold mb-2">
-                        Performance Value *
-                        {% if is_field_event %}
-                        <small class="text-gray-500">(auto-filled from best attempt)</small>
-                        {% endif %}
-                    </label>
+                    {% if is_track_event %}
+                        <div>
+                            <label class="block text-gray-700 text-sm font-bold mb-2">
+                                Performance Value
+                                {% if is_field_event %}
+                                <small class="text-gray-500">(auto-filled from best attempt)</small>
+                                {% endif %}
+                            </label>
+                            <input type="text" name="value" id="performanceValue"
+                                   class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500"
+                                   placeholder="MM:SS.CS or SS.CS" required>
 
-                    {% if is_field_event %}
-                        <input type="text" name="value" id="performanceValue"
-                               class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500"
-                               placeholder="XX.XX m (auto-filled)">
-                    {% else %}
-                        <input type="text" name="value" id="performanceValue"
-                               class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500"
-                               placeholder="MM:SS.CS or SS.CS" required>
+
+                            <select class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500 mt-1"
+                                    onchange="selectSpecialValue(this.value)">
+                                <option value="">Or select special value</option>
+                                {% for val in config.RESULT_SPECIAL_VALUES %}
+                                    <option value="{{ val }}">{{ val }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
                     {% endif %}
-
-                    <select class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500 mt-1"
-                            onchange="selectSpecialValue(this.value)">
-                        <option value="">Or select special value</option>
-                        {% for val in config.RESULT_SPECIAL_VALUES %}
-                            <option value="{{ val }}">{{ val }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
 
                 <!-- Record -->
                 <div>
@@ -162,7 +157,7 @@
                         <label class="text-sm text-gray-600">Attempt {{ i + 1 }}</label>
                         <input type="text" name="attempts-{{ i }}-value" id="attempt{{ i }}"
                                class="w-full px-2 py-1 border rounded focus:outline-none focus:border-red-500"
-                               placeholder="XX.XX" onchange="updateBestAttempt()">
+                               placeholder="XX.XX">
                     </div>
                     {% endfor %}
                 </div>
@@ -391,34 +386,6 @@ function selectSpecialValue(value) {
         document.getElementById('performanceValue').value = value;
         // Reset select
         event.target.value = '';
-    }
-}
-
-// Auto-fill best attempt for field events
-function updateBestAttempt() {
-    if (!isFieldEvent) return;
-
-    const performanceInput = document.getElementById('performanceValue');
-    let bestValue = 0;
-    let bestAttempt = '';
-
-    for (let i = 0; i < 6; i++) {
-        const attemptInput = document.getElementById(`attempt${i}`);
-        if (!attemptInput) continue;
-
-        const value = attemptInput.value.trim();
-
-        if (value && !['X', '-', 'O', ''].includes(value.toUpperCase())) {
-            const numValue = parseFloat(value);
-            if (!isNaN(numValue) && numValue > bestValue) {
-                bestValue = numValue;
-                bestAttempt = value;
-            }
-        }
-    }
-
-    if (bestAttempt) {
-        performanceInput.value = bestAttempt;
     }
 }
 
