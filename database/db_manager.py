@@ -122,6 +122,7 @@ def init_db():
             published BOOLEAN DEFAULT FALSE,
             start_file VARCHAR(255),
             result_file VARCHAR(255),
+            wind_velocity double precision DEFAULT 0.0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )""",
 
@@ -133,6 +134,7 @@ def init_db():
             value VARCHAR(20) NOT NULL,
             raza_score double precision,
             wind_velocity double precision,
+            weight double precision,
             record VARCHAR(10),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE,

@@ -4,9 +4,6 @@ from database.db_manager import execute_query, execute_one
 from datetime import datetime, timedelta
 from config import Config
 import re
-import pandas as pd
-import numpy as np
-import os
 
 
 class User(UserMixin):
@@ -167,6 +164,7 @@ class Game:
     def update_velocity(id, velocity_value):
         print(f"Updating velocity for game {id} to {velocity_value}")
         return execute_query("UPDATE games SET wind_velocity = %s WHERE id = %s", (velocity_value, id))
+
     @staticmethod
     def toggle_publish(id):
         game = execute_one("SELECT published FROM games WHERE id = %s", (id,))
@@ -175,6 +173,29 @@ class Game:
             execute_query("UPDATE games SET published = %s WHERE id = %s", (new_status, id))
             return new_status
         return False
+
+    @staticmethod
+    def has_alerts(id):
+        game = execute_one("SELECT gender, classes FROM games WHERE id = %s", (id,))
+        if not game:
+            return False
+
+        game_gender = game['gender']
+        game_classes = [c.strip() for c in game['classes'].split(',')]
+
+        result = execute_one("""
+            SELECT COUNT(*) as count FROM results r
+            JOIN athletes a ON r.athlete_bib = a.bib
+            WHERE r.game_id = %s AND (a.gender != %s OR a.class NOT IN %s)
+        """, (id, game_gender, tuple(game_classes)))
+
+        startlist_result = execute_one("""
+            SELECT COUNT(*) as count FROM startlist s
+            JOIN athletes a ON s.athlete_bib = a.bib
+            WHERE s.game_id = %s AND (a.gender != %s OR a.class NOT IN %s)
+        """, (id, game_gender, tuple(game_classes)))
+
+        return (result['count'] > 0) or (startlist_result['count'] > 0)
 
     @staticmethod
     def get_with_status():
@@ -219,6 +240,7 @@ class Game:
             game['has_results'] = Game.has_results(game['id'])
             game['has_startlist'] = bool(game.get('start_file')) or StartList.has_startlist(game['id'])
             game['is_published'] = game.get('published', False)
+            game['has_alerts'] = Game.has_alerts(game['id'])
 
             result_count = Result.count_by_game(game['id'])
             startlist_count = StartList.count_by_game(game['id'])
@@ -293,51 +315,6 @@ class Result:
         return result
 
     @staticmethod
-    def _auto_rank_results(results, game):
-        special_values = Config.get_result_special_values()
-        field_events = Config.get_field_events()
-
-        valid_results = []
-        invalid_results = []
-
-        for result in results:
-            if result['value'] in special_values:
-                invalid_results.append(result)
-            else:
-                valid_results.append(result)
-
-        if len(game['classes_list']) > 1 and any(r.get('raza_score') for r in valid_results):
-            valid_results.sort(key=lambda x: x.get('raza_score', 0), reverse=True)
-        else:
-            if game['event'] in field_events:
-                def get_performance_value(result):
-                    try:
-                        return float(result.get('auto_performance', result['value']) or 0)
-                    except:
-                        return 0
-
-                valid_results.sort(key=get_performance_value, reverse=True)
-            else:
-                def parse_time(time_str):
-                    try:
-                        if ':' in time_str:
-                            parts = time_str.split(':')
-                            return float(parts[0]) * 60 + float(parts[1])
-                        return float(time_str)
-                    except:
-                        return float('inf')
-
-                valid_results.sort(key=lambda x: parse_time(x.get('auto_performance', x['value']) or '999:99.99'))
-
-        for i, result in enumerate(valid_results):
-            result['auto_rank'] = str(i + 1)
-
-        for result in invalid_results:
-            result['auto_rank'] = result['value']
-
-        return valid_results + invalid_results
-
-    @staticmethod
     def get_by_id(id):
         return execute_one("SELECT * FROM results WHERE id = %s", (id,))
 
@@ -347,6 +324,21 @@ class Result:
 
     @staticmethod
     def create(**data):
+        if 'value' in data and isinstance(data['value'], (int, float)):
+            game_id = data.get('game_id')
+            if game_id:
+                game = Game.get_by_id(game_id)
+                if game and game['event'] in Config.get_track_events():
+                    data['value'] = Config.format_time(data['value'])
+                elif game and game['event'] in Config.get_field_events():
+                    data['value'] = Config.format_distance(data['value'])
+
+        if 'wind_velocity' in data and data['wind_velocity'] is not None:
+            data['wind_velocity'] = float(Config.format_wind(data['wind_velocity']))
+
+        if 'weight' in data and data['weight'] is not None:
+            data['weight'] = float(data['weight'])
+
         keys = ', '.join(data.keys())
         placeholders = ', '.join(['%s'] * len(data))
         query = f"INSERT INTO results ({keys}) VALUES ({placeholders}) RETURNING id"
@@ -383,13 +375,6 @@ class Result:
         return execute_query(query, fetch=True)
 
     @staticmethod
-    def delete_by_game_athlete(game_id, athlete_bib):
-        return execute_query(
-            "DELETE FROM results WHERE game_id = %s AND athlete_bib = %s",
-            (game_id, athlete_bib)
-        )
-
-    @staticmethod
     def validate_performance(value, event_type):
         special_values = Config.get_result_special_values()
         field_events = Config.get_field_events()
@@ -400,7 +385,7 @@ class Result:
         if event_type in field_events:
             pattern = r'^\d+(\.\d{1,2})?$'
         else:
-            pattern = r'^(\d{1,2}:)?\d{1,2}\.\d{2}$'
+            pattern = r'^(\d{1,2}:)?\d{1,2}\.\d{1,4}$'
 
         return bool(re.match(pattern, value))
 
@@ -451,7 +436,10 @@ class Attempt:
         )
 
     @staticmethod
-    def create(result_id, attempt_number, value, wind_velocity='Null', raza_score='Null'):
+    def create(result_id, attempt_number, value, wind_velocity=None, raza_score=None):
+        if wind_velocity is not None:
+            wind_velocity = float(Config.format_wind(wind_velocity))
+
         return execute_query(
             "INSERT INTO attempts (result_id, attempt_number, value, raza_score, wind_velocity) VALUES (%s, %s, %s, %s, %s)",
             (result_id, attempt_number, value, raza_score, wind_velocity)
@@ -462,16 +450,18 @@ class Attempt:
         if attempts is None:
             return False
         query = "INSERT INTO attempts (result_id, attempt_number, value, raza_score, wind_velocity) VALUES "
-        parms= ()
+        params = ()
         for attempt in attempts:
             attempt_number = attempt
             value = attempts[attempt]['value']
             raza = attempts[attempt]['raza_score']
-            wind = attempts[attempt].get('wind_velocity', 'Null')
+            wind = attempts[attempt].get('wind_velocity', None)
+            if wind is not None:
+                wind = float(Config.format_wind(wind))
             query += "(%s, %s, %s, %s, %s), "
-            parms += (result_id, attempt_number, value, raza, wind)
+            params += (result_id, attempt_number, value, raza, wind)
         query = query.rstrip(', ')
-        return execute_query(query, parms)
+        return execute_query(query, params)
 
     @staticmethod
     def delete_by_result(result_id):

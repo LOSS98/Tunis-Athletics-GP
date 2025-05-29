@@ -23,6 +23,7 @@
         <table class="w-full">
             <thead class="bg-gray-50">
                 <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alerts</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gender</th>
@@ -40,6 +41,13 @@
             <tbody class="divide-y divide-gray-200">
                 {% for game in games %}
                 <tr>
+                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                        {% if game.has_alerts %}
+                            <i class="fas fa-exclamation-triangle text-red-500" title="Gender or class mismatches detected"></i>
+                        {% else %}
+                            <i class="fas fa-check-circle text-green-500" title="No alerts"></i>
+                        {% endif %}
+                    </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm">{{ game.id }}</td>
                     <td class="px-6 py-4 whitespace-nowrap">{{ game.event }}</td>
                     <td class="px-6 py-4 whitespace-nowrap">{{ game.gender }}</td>
@@ -65,12 +73,12 @@
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <span class="{% if game.startlist_is_complete %}text-green-600{% else %}text-gray-600{% endif %}">
-                            {{ game.result_count }}/{{ game.nb_athletes }}
+                            {{ game.startlist_count }}/{{ game.nb_athletes }}
                         </span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <span class="{% if game.result_is_complete %}text-green-600{% else %}text-gray-600{% endif %}">
-                            {{ game.startlist_count }}/{{ game.nb_athletes }}
+                            {{ game.result_count }}/{{ game.nb_athletes }}
                         </span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm">

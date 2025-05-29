@@ -32,15 +32,12 @@ class AthleteForm(FlaskForm):
     firstname = StringField('First Name', validators=[DataRequired(), Length(max=100)])
     lastname = StringField('Last Name', validators=[DataRequired(), Length(max=100)])
     country = StringField('Country Code', validators=[DataRequired(), Length(min=3, max=3)])
-    gender = SelectField('Gender', validators=[DataRequired()])
+    gender = SelectField('Gender', choices=[('Male', 'Male'), ('Female', 'Female')], validators=[DataRequired()])
     athlete_class = SelectField('Class', validators=[DataRequired()])
     photo = FileField('Photo', validators=[FileAllowed(['jpg', 'jpeg', 'png', 'gif'])])
 
     def __init__(self, *args, **kwargs):
         super(AthleteForm, self).__init__(*args, **kwargs)
-
-        genders = get_config_choices('genders', ['Male', 'Female'])
-        self.gender.choices = [(g, g) for g in genders]
 
         classes = get_config_choices('classes', [
             'T11', 'T12', 'T13', 'T20', 'T33', 'T34', 'T35', 'T36', 'T37', 'T38', 'T40', 'T41', 'T42', 'T43', 'T44',
@@ -53,7 +50,7 @@ class AthleteForm(FlaskForm):
 
 class GameForm(FlaskForm):
     event = SelectField('Event', validators=[DataRequired()])
-    gender = SelectField('Gender', validators=[DataRequired()])
+    gender = SelectField('Gender', choices=[('Male', 'Male'), ('Female', 'Female')], validators=[DataRequired()])
     classes = StringField('Classes (comma separated)', validators=[DataRequired(), Length(max=200)])
     phase = StringField('Phase', validators=[Optional(), Length(max=50)])
     area = StringField('Area', validators=[Optional(), Length(max=50)])
@@ -73,9 +70,6 @@ class GameForm(FlaskForm):
 
     def __init__(self, *args, **kwargs):
         super(GameForm, self).__init__(*args, **kwargs)
-
-        genders = get_config_choices('genders', ['Male', 'Female'])
-        self.gender.choices = [(g, g) for g in genders]
 
         field_events = get_config_choices('field_events',
                                           ['Javelin', 'Shot Put', 'Discus Throw', 'Club Throw', 'Long Jump',
@@ -130,6 +124,16 @@ class ResultForm(FlaskForm):
         special_values = get_config_choices('result_special_values', ['DNS', 'DNF', 'DSQ', 'NM', 'O', 'X', '-'])
         if field.data in special_values:
             return True
+
+        if ':' in field.data:
+            if not re.match(r'^(\d{1,2}:)?\d{1,2}\.\d{1,4}$', field.data):
+                raise ValidationError('Invalid time format. Use MM:SS.SSSS or SS.SSSS')
+        else:
+            try:
+                float(field.data)
+            except ValueError:
+                raise ValidationError('Invalid performance value')
+
         return True
 
 

@@ -27,8 +27,6 @@ def register_routes(bp):
             try:
                 ConfigManager.set_config('classes', form.classes.data, 'list',
                                         'Available disability classes', current_user.id)
-                ConfigManager.set_config('genders', form.genders.data, 'list',
-                                        'Available genders', current_user.id)
                 ConfigManager.set_config('record_types', form.record_types.data, 'list',
                                         'Available record types', current_user.id)
                 ConfigManager.set_config('result_special_values', form.result_special_values.data, 'list',
@@ -37,6 +35,8 @@ def register_routes(bp):
                                         'Field events', current_user.id)
                 ConfigManager.set_config('track_events', form.track_events.data, 'list',
                                         'Track events', current_user.id)
+                ConfigManager.set_config('wind_affected_field_events', form.wind_affected_field_events.data, 'list',
+                                        'Wind-affected field events', current_user.id)
 
                 clear_config_cache()
 
@@ -48,11 +48,11 @@ def register_routes(bp):
         elif request.method == 'GET':
             configs = ConfigManager.get_all_config()
             form.classes.data = ','.join(configs.get('classes', []))
-            form.genders.data = ','.join(configs.get('genders', []))
             form.record_types.data = ','.join(configs.get('record_types', []))
             form.result_special_values.data = ','.join(configs.get('result_special_values', []))
             form.field_events.data = ','.join(configs.get('field_events', []))
             form.track_events.data = ','.join(configs.get('track_events', []))
+            form.wind_affected_field_events.data = ','.join(configs.get('wind_affected_field_events', []))
 
         return render_template('admin/config/general.html', form=form)
 

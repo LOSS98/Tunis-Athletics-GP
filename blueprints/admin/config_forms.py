@@ -8,10 +8,6 @@ class ConfigForm(FlaskForm):
                             description='List of disability classes (comma-separated)',
                             validators=[DataRequired()])
 
-    genders = StringField('Genders',
-                          description='Available genders (comma-separated)',
-                          validators=[DataRequired()])
-
     record_types = StringField('Record Types',
                                description='Available record types (comma-separated)',
                                validators=[DataRequired()])
@@ -27,6 +23,10 @@ class ConfigForm(FlaskForm):
     track_events = StringField('Track Events',
                                description='Track events (comma-separated)',
                                validators=[DataRequired()])
+
+    wind_affected_field_events = StringField('Wind-Affected Field Events',
+                                           description='Field events affected by wind velocity (comma-separated)',
+                                           validators=[Optional()])
 
 
 class StatsConfigForm(FlaskForm):

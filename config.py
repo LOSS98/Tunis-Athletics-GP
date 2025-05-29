@@ -49,11 +49,7 @@ class Config:
 
     @staticmethod
     def get_genders():
-        try:
-            from database.config_manager import get_cached_config
-            return get_cached_config('genders', ['Male', 'Female'])
-        except (ImportError, Exception):
-            return ['Male', 'Female']
+        return ['Male', 'Female']
 
     @staticmethod
     def get_record_types():
@@ -88,6 +84,14 @@ class Config:
                                      ['100m', '200m', '400m', '800m', '1500m', '5000m', '4x100m', 'Universal Relay'])
         except (ImportError, Exception):
             return ['100m', '200m', '400m', '800m', '1500m', '5000m', '4x100m', 'Universal Relay']
+
+    @staticmethod
+    def get_wind_affected_field_events():
+        try:
+            from database.config_manager import get_cached_config
+            return get_cached_config('wind_affected_field_events', ['Long Jump'])
+        except (ImportError, Exception):
+            return ['Long Jump']
 
     @staticmethod
     def get_current_day():
@@ -141,6 +145,60 @@ class Config:
         except (ImportError, Exception):
             return int(os.getenv('OFFICIALS_COUNT', 80))
 
+    @staticmethod
+    def format_time(time_value):
+        if not time_value or time_value in Config.get_result_special_values():
+            return time_value
+
+        try:
+            time_str = str(time_value)
+            if ':' in time_str:
+                parts = time_str.split(':')
+                minutes = int(parts[0])
+                seconds = float(parts[1])
+            else:
+                time_float = float(time_str)
+                minutes = int(time_float // 60)
+                seconds = time_float % 60
+
+            return f"{minutes:02d}:{seconds:06.3f}"
+        except:
+            return time_value
+
+    @staticmethod
+    def format_distance(distance_value):
+        if not distance_value or str(distance_value) in Config.get_result_special_values():
+            return distance_value
+
+        try:
+            return f"{float(distance_value):.2f}"
+        except:
+            return distance_value
+
+    @staticmethod
+    def format_wind(wind_value):
+        if not wind_value:
+            return "0.00"
+
+        try:
+            return f"{float(wind_value):.2f}"
+        except:
+            return str(wind_value)
+
+    @staticmethod
+    def format_weight(weight_value):
+        if not weight_value:
+            return ""
+
+        try:
+            weight_float = float(weight_value)
+            if weight_float < 1:
+                return f"{int(weight_float * 1000)} gr"
+            else:
+                return f"{weight_float:.3f} kg"
+        except:
+            return str(weight_value)
+
     @property
     def CLASSES(self):
         return self.get_classes()
@@ -164,6 +222,10 @@ class Config:
     @property
     def TRACK_EVENTS(self):
         return self.get_track_events()
+
+    @property
+    def WIND_AFFECTED_FIELD_EVENTS(self):
+        return self.get_wind_affected_field_events()
 
     @property
     def CURRENT_DAY(self):

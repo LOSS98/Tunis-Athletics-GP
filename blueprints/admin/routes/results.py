@@ -1,5 +1,4 @@
 from flask import render_template, redirect, url_for, flash, request
-
 from utils.raza_calculation import calculate_raza, verify_combination
 from ..auth import admin_required
 from ..forms import ResultForm
@@ -8,6 +7,54 @@ from database.db_manager import execute_one, execute_query
 from config import Config
 import re
 import traceback
+
+
+def parse_time_to_seconds(time_str):
+    time_str = time_str.strip()
+
+    if ':' in time_str:
+        parts = time_str.split(':')
+        if len(parts) != 2:
+            raise ValueError('Invalid time format')
+
+        minutes = int(parts[0])
+        seconds_part = parts[1]
+
+        if '.' in seconds_part:
+            sec_parts = seconds_part.split('.')
+            seconds = int(sec_parts[0])
+            decimal_part = sec_parts[1]
+            decimal_part = decimal_part.ljust(4, '0')[:4]
+            milliseconds = int(decimal_part)
+        else:
+            seconds = int(seconds_part)
+            milliseconds = 0
+
+        total_seconds = minutes * 60 + seconds + (milliseconds / 10000)
+    else:
+        if '.' in time_str:
+            sec_parts = time_str.split('.')
+            seconds = int(sec_parts[0])
+            decimal_part = sec_parts[1]
+            decimal_part = decimal_part.ljust(4, '0')[:4]
+            milliseconds = int(decimal_part)
+        else:
+            seconds = int(time_str)
+            milliseconds = 0
+
+        total_seconds = seconds + (milliseconds / 10000)
+
+    return total_seconds
+
+
+def format_time_output(seconds):
+    minutes = int(seconds // 60)
+    remaining_seconds = seconds % 60
+
+    if minutes > 0:
+        return f"{minutes:02d}:{remaining_seconds:06.3f}"
+    else:
+        return f"{remaining_seconds:06.3f}"
 
 
 def register_routes(bp):
@@ -40,13 +87,11 @@ def register_routes(bp):
                 flash('Game not found', 'danger')
                 return redirect(url_for('admin.games_list'))
 
-            # Safe extraction of form data with None checks
             athlete_bib = request.form.get('athlete_bib')
             value = request.form.get('value', '').strip() if request.form.get('value') else ''
             weight_raw = request.form.get('weight')
             weight = weight_raw.strip() if weight_raw else None
 
-            # Safe extraction of attempts and wind data
             attempts = []
             wind_attempts = []
 
@@ -60,7 +105,6 @@ def register_routes(bp):
             errors = []
             athlete = None
 
-            # Validate athlete
             if not athlete_bib:
                 errors.append('Please select an athlete')
             else:
@@ -72,7 +116,6 @@ def register_routes(bp):
                 except (ValueError, TypeError):
                     errors.append('Invalid athlete BIB')
 
-            # Validate based on event type
             if game['event'] in Config.get_field_events():
                 if not any(attempt for attempt in attempts if attempt):
                     errors.append('At least one valid attempt is required for field events')
@@ -80,23 +123,20 @@ def register_routes(bp):
                 if not value:
                     errors.append('Performance value is required for track events')
                 elif value not in Config.get_result_special_values():
-                    # Validate time format only if it's not a special value
-                    if not re.match(r'^\d+:\d{2}(\.\d{1,3})?$', value):
-                        errors.append('Invalid time format. Use MM:SS or MM:SS.sss')
+                    if not re.match(r'^(\d{1,2}:)?\d{1,2}\.\d{1,4}$', value):
+                        errors.append('Invalid time format. Use MM:SS.SSSS or SS.SSSS')
 
             if errors:
                 for error in errors:
                     flash(error, 'danger')
                 return redirect(url_for('admin.game_results', id=game_id))
 
-            # Check for existing result
             existing_result = Result.get_by_game_athlete(game_id, athlete_bib)
             if existing_result:
                 flash('Result for this athlete already exists, old result was deleted', 'warning')
                 Attempt.delete_by_result(existing_result['id'])
                 Result.delete(existing_result['id'])
 
-            # Process field events
             if game['event'] in Config.get_field_events():
                 valid_attempts = []
                 raza_scores = []
@@ -125,50 +165,53 @@ def register_routes(bp):
                         except (ValueError, TypeError) as e:
                             print(f"Error processing attempt {i + 1}: {e}")
 
+                    wind_velocity = None
+                    if i < len(wind_attempts) and wind_attempts[i]:
+                        try:
+                            wind_velocity = float(wind_attempts[i])
+                        except (ValueError, TypeError):
+                            wind_velocity = None
+
                     attempts_data[i + 1] = {
                         'value': attempt_value,
                         'raza_score': str(raza_score),
-                        'wind_velocity': wind_attempts[i] if i < len(wind_attempts) else None
+                        'wind_velocity': wind_velocity
                     }
 
                 performance_value = max(valid_attempts) if valid_attempts else 0.0
                 max_raza_score = max(raza_scores) if raza_scores else 0
 
-                # Create result
-                result_id = Result.create(
-                    game_id=game_id,
-                    athlete_bib=athlete_bib,
-                    value=performance_value,
-                    raza_score=max_raza_score,
-                    weight=weight
-                )
+                result_data = {
+                    'game_id': game_id,
+                    'athlete_bib': athlete_bib,
+                    'value': performance_value,
+                    'raza_score': max_raza_score
+                }
+
+                if weight:
+                    try:
+                        result_data['weight'] = float(weight)
+                    except (ValueError, TypeError):
+                        pass
+
+                result_id = Result.create(**result_data)
 
                 if not result_id:
                     flash('Failed to create result', 'danger')
                     return redirect(url_for('admin.game_results', id=game_id))
 
-                # Create attempts
                 Attempt.create_multiple(result_id=result_id, attempts=attempts_data)
 
-            # Process track events
             elif game['event'] in Config.get_track_events():
                 max_raza_score = 0
 
-                # Handle special values
                 if value.upper() in Config.get_result_special_values():
                     performance_value = value.upper()
                 else:
-                    # Parse time format
                     try:
-                        time_parts = value.split(':')
-                        minutes = int(time_parts[0])
-                        seconds_parts = time_parts[1].split('.')
-                        seconds = int(seconds_parts[0])
-                        milliseconds = int(seconds_parts[1]) if len(seconds_parts) > 1 else 0
+                        performance_value = parse_time_to_seconds(value)
+                        formatted_value = format_time_output(performance_value)
 
-                        performance_value = minutes * 60 + seconds + (milliseconds / 1000)
-
-                        # Calculate RAZA score for numerical values
                         if verify_combination(gender=athlete['gender'], event=game['event'],
                                               athlete_class=athlete['class']):
                             try:
@@ -185,19 +228,22 @@ def register_routes(bp):
                             except Exception as e:
                                 print(f"Error calculating track raza score: {e}")
 
+                        performance_value = formatted_value
+
                     except (ValueError, IndexError) as e:
                         flash('Invalid time format', 'danger')
                         return redirect(url_for('admin.game_results', id=game_id))
 
                 print(f"Calculated RAZA score: {max_raza_score} for performance: {performance_value}")
 
-                # Create result
-                result_id = Result.create(
-                    game_id=game_id,
-                    athlete_bib=athlete_bib,
-                    value=performance_value,
-                    raza_score=max_raza_score
-                )
+                result_data = {
+                    'game_id': game_id,
+                    'athlete_bib': athlete_bib,
+                    'value': performance_value,
+                    'raza_score': max_raza_score
+                }
+
+                result_id = Result.create(**result_data)
 
                 if not result_id:
                     flash('Failed to create result', 'danger')
