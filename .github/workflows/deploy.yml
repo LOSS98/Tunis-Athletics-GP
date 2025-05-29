@@ -10,6 +10,30 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+    - name: Pull latest code
+      uses: appleboy/ssh-action@v0.1.7
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        password: ${{ secrets.PASSWORD }}
+        port: 6534
+        timeout: 120s
+        script: |
+          cd /home/khalil/tunis-gp25
+          git pull origin main --force
+
+    - name: Stop containers
+      uses: appleboy/ssh-action@v0.1.7
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        password: ${{ secrets.PASSWORD }}
+        port: 6534
+        timeout: 60s
+        script: |
+          cd /home/khalil/tunis-gp25
+          docker-compose down || true
+
     - name: Create environment file
       uses: appleboy/ssh-action@v0.1.7
       with:
@@ -20,7 +44,7 @@ jobs:
         timeout: 60s
         script: |
           cd /home/khalil/tunis-gp25
-          cat > .env << 'EOF'
+          cat > .env << EOF
           SECRET_KEY=${{ secrets.SECRET_KEY }}
           DATABASE_URL=${{ secrets.DATABASE_URL }}
           
@@ -48,31 +72,12 @@ jobs:
           VOLUNTEERS_COUNT=${{ secrets.VOLUNTEERS_COUNT }}
           LOC_COUNT=${{ secrets.LOC_COUNT }}
           OFFICIALS_COUNT=${{ secrets.OFFICIALS_COUNT }}
+          
+          POSTGRES_DB=tunis_gp25_db
+          POSTGRES_USER=tunis_user
+          POSTGRES_PASSWORD=TunisGP25_SecurePass_2024
+          FLASK_SECRET_KEY=${{ secrets.SECRET_KEY }}
           EOF
-
-    - name: Pull latest code
-      uses: appleboy/ssh-action@v0.1.7
-      with:
-        host: ${{ secrets.HOST }}
-        username: ${{ secrets.USERNAME }}
-        password: ${{ secrets.PASSWORD }}
-        port: 6534
-        timeout: 120s
-        script: |
-          cd /home/khalil/tunis-gp25
-          git pull origin main --force
-
-    - name: Stop containers
-      uses: appleboy/ssh-action@v0.1.7
-      with:
-        host: ${{ secrets.HOST }}
-        username: ${{ secrets.USERNAME }}
-        password: ${{ secrets.PASSWORD }}
-        port: 6534
-        timeout: 60s
-        script: |
-          cd /home/khalil/tunis-gp25
-          docker-compose down
 
     - name: Build containers
       uses: appleboy/ssh-action@v0.1.7
