@@ -1,9 +1,9 @@
 from flask import render_template, redirect, url_for, flash, request, jsonify
 from flask_login import current_user
 from ..auth import loc_required
-from ..config_forms import ConfigForm, StatsConfigForm, CompetitionDayForm, CurrentDayForm, CountryForm
+from ..config_forms import ConfigForm, StatsConfigForm, CompetitionDayForm, CurrentDayForm, CountryForm, RecordTypeForm
 from database.config_manager import ConfigManager, clear_config_cache
-from database.db_manager import execute_one
+from database.db_manager import execute_one, execute_query
 
 
 def register_routes(bp):
@@ -14,12 +14,14 @@ def register_routes(bp):
         days = ConfigManager.get_competition_days()
         current_day = ConfigManager.get_current_competition_day()
         countries = ConfigManager.get_countries()
+        record_types = ConfigManager.get_record_types_with_details()
 
         return render_template('admin/config/index.html',
                                configs=configs,
                                days=days,
                                current_day=current_day,
-                               countries=countries)
+                               countries=countries,
+                               record_types=record_types)
 
     @bp.route('/config/general', methods=['GET', 'POST'])
     @loc_required
@@ -45,11 +47,21 @@ def register_routes(bp):
             if not tag_value:
                 return jsonify({'error': 'Tag value cannot be empty'}), 400
 
-            if ConfigManager.add_config_tag(config_key, tag_value):
-                clear_config_cache()
-                return jsonify({'success': True, 'message': 'Tag added successfully'})
-            else:
-                return jsonify({'error': 'Tag already exists or could not be added'}), 400
+            existing = execute_one(
+                "SELECT id FROM config_tags WHERE config_key = %s AND tag_value = %s",
+                (config_key, tag_value)
+            )
+
+            if existing:
+                return jsonify({'error': 'Tag already exists'}), 400
+
+            execute_query(
+                "INSERT INTO config_tags (config_key, tag_value) VALUES (%s, %s)",
+                (config_key, tag_value)
+            )
+
+            clear_config_cache()
+            return jsonify({'success': True, 'message': 'Tag added successfully'})
 
         except Exception as e:
             print(f"Error adding tag: {e}")
@@ -69,7 +81,11 @@ def register_routes(bp):
             if not config_key or not tag_value:
                 return jsonify({'error': 'Missing config_key or tag_value'}), 400
 
-            ConfigManager.remove_config_tag(config_key, tag_value)
+            execute_query(
+                "DELETE FROM config_tags WHERE config_key = %s AND tag_value = %s",
+                (config_key, tag_value)
+            )
+
             clear_config_cache()
             return jsonify({'success': True, 'message': 'Tag removed successfully'})
 
@@ -110,6 +126,96 @@ def register_routes(bp):
             form.officials_count.data = configs.get('officials_count', 80)
 
         return render_template('admin/config/stats.html', form=form)
+
+    @bp.route('/config/record-types')
+    @loc_required
+    def config_record_types():
+        record_types = ConfigManager.get_record_types_with_details()
+        return render_template('admin/config/record_types.html', record_types=record_types)
+
+    @bp.route('/config/record-types/add', methods=['GET', 'POST'])
+    @loc_required
+    def config_record_type_add():
+        form = RecordTypeForm()
+
+        if form.validate_on_submit():
+            try:
+                existing = execute_one(
+                    "SELECT id FROM record_types WHERE abbreviation = %s",
+                    (form.abbreviation.data.upper(),)
+                )
+                if existing:
+                    flash('Record type abbreviation already exists', 'danger')
+                    return render_template('admin/config/record_type_form.html', form=form, title='Add Record Type')
+
+                ConfigManager.create_record_type(
+                    form.abbreviation.data.upper(),
+                    form.full_name.data,
+                    form.scope_type.data,
+                    form.scope_values.data,
+                    form.description.data
+                )
+                flash('Record type added successfully', 'success')
+                return redirect(url_for('admin.config_record_types'))
+            except Exception as e:
+                flash(f'Error adding record type: {str(e)}', 'danger')
+
+        return render_template('admin/config/record_type_form.html', form=form, title='Add Record Type')
+
+    @bp.route('/config/record-types/<int:record_type_id>/edit', methods=['GET', 'POST'])
+    @loc_required
+    def config_record_type_edit(record_type_id):
+        record_type = execute_one("SELECT * FROM record_types WHERE id = %s", (record_type_id,))
+        if not record_type:
+            flash('Record type not found', 'danger')
+            return redirect(url_for('admin.config_record_types'))
+
+        form = RecordTypeForm()
+
+        if form.validate_on_submit():
+            try:
+                existing = execute_one(
+                    "SELECT id FROM record_types WHERE abbreviation = %s AND id != %s",
+                    (form.abbreviation.data.upper(), record_type_id)
+                )
+                if existing:
+                    flash('Record type abbreviation already exists', 'danger')
+                    return render_template('admin/config/record_type_form.html', form=form, title='Edit Record Type',
+                                           record_type=record_type)
+
+                ConfigManager.update_record_type(
+                    record_type_id,
+                    form.abbreviation.data.upper(),
+                    form.full_name.data,
+                    form.scope_type.data,
+                    form.scope_values.data,
+                    form.description.data
+                )
+                flash('Record type updated successfully', 'success')
+                return redirect(url_for('admin.config_record_types'))
+            except Exception as e:
+                flash(f'Error updating record type: {str(e)}', 'danger')
+
+        elif request.method == 'GET':
+            form.abbreviation.data = record_type['abbreviation']
+            form.full_name.data = record_type['full_name']
+            form.scope_type.data = record_type['scope_type']
+            form.scope_values.data = record_type['scope_values']
+            form.description.data = record_type['description']
+
+        return render_template('admin/config/record_type_form.html', form=form, title='Edit Record Type',
+                               record_type=record_type)
+
+    @bp.route('/config/record-types/<int:record_type_id>/delete', methods=['POST'])
+    @loc_required
+    def config_record_type_delete(record_type_id):
+        try:
+            ConfigManager.delete_record_type(record_type_id)
+            flash('Record type deleted successfully', 'success')
+        except Exception as e:
+            flash(f'Error deleting record type: {str(e)}', 'danger')
+
+        return redirect(url_for('admin.config_record_types'))
 
     @bp.route('/config/countries')
     @loc_required

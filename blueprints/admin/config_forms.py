@@ -88,3 +88,34 @@ class CountryForm(FlaskForm):
     flag_available = BooleanField('Flag Available',
                                   default=False,
                                   description='Whether a flag image is available for this country')
+
+
+class RecordTypeForm(FlaskForm):
+    abbreviation = StringField('Abbreviation',
+                               validators=[DataRequired(), Length(min=1, max=10)],
+                               description='Short abbreviation (e.g., WR, AR, CR)')
+
+    full_name = StringField('Full Name',
+                            validators=[DataRequired(), Length(max=100)],
+                            description='Complete record type name')
+
+    scope_type = SelectField('Scope Type',
+                             choices=[
+                                 ('world', 'World'),
+                                 ('continental', 'Continental'),
+                                 ('regional', 'Regional'),
+                                 ('national', 'National'),
+                                 ('personal', 'Personal'),
+                                 ('seasonal', 'Seasonal'),
+                                 ('competition', 'Competition')
+                             ],
+                             validators=[DataRequired()],
+                             description='Geographic or temporal scope of this record')
+
+    scope_values = StringField('Scope Values',
+                               validators=[Optional()],
+                               description='Comma-separated countries/continents (e.g., "FRA,GBR" or "Europe,Asia")')
+
+    description = TextAreaField('Description',
+                                validators=[Optional()],
+                                description='Additional information about this record type')
