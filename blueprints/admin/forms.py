@@ -8,10 +8,12 @@ import re
 
 
 def get_config_choices(key, default_choices=None):
+    """Safely get configuration choices with fallback"""
     try:
         from database.config_manager import get_cached_config
         return get_cached_config(key, default_choices or [])
-    except ImportError:
+    except (ImportError, Exception) as e:
+        print(f"Warning: Could not load config for {key}: {e}")
         return default_choices or []
 
 

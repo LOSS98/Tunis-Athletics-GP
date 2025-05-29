@@ -6,17 +6,25 @@ from contextlib import contextmanager
 
 @contextmanager
 def get_db_connection():
-    connection = psycopg2.connect(
-        host=Config.DB_HOST,
-        user=Config.DB_USER,
-        password=Config.DB_PASSWORD,
-        database=Config.DB_NAME,
-        cursor_factory=RealDictCursor
-    )
+    """Context manager for database connections with proper error handling"""
+    connection = None
     try:
+        connection = psycopg2.connect(
+            host=Config.DB_HOST,
+            user=Config.DB_USER,
+            password=Config.DB_PASSWORD,
+            database=Config.DB_NAME,
+            cursor_factory=RealDictCursor
+        )
         yield connection
+    except psycopg2.Error as e:
+        print(f"Database connection error: {e}")
+        if connection:
+            connection.rollback()
+        raise
     finally:
-        connection.close()
+        if connection:
+            connection.close()
 
 
 def clean_params(params):
@@ -61,8 +69,13 @@ def execute_query(query, params=None, fetch=False):
                 print(f"✓ Query executed successfully, affected rows: {cursor.rowcount}")
                 return cursor.rowcount
 
-    except Exception as e:
+    except psycopg2.Error as e:
         print(f"✗ Database error in execute_query: {e}")
+        print(f"Query: {query}")
+        print(f"Original params: {params}")
+        raise
+    except Exception as e:
+        print(f"✗ Unexpected error in execute_query: {e}")
         print(f"Query: {query}")
         print(f"Original params: {params}")
         raise
@@ -79,14 +92,20 @@ def execute_one(query, params=None):
             with conn.cursor() as cursor:
                 cursor.execute(query, params)
                 return cursor.fetchone()
-    except Exception as e:
+    except psycopg2.Error as e:
         print(f"✗ Database error in execute_one: {e}")
+        print(f"Query: {query}")
+        print(f"Original params: {params}")
+        raise
+    except Exception as e:
+        print(f"✗ Unexpected error in execute_one: {e}")
         print(f"Query: {query}")
         print(f"Original params: {params}")
         raise
 
 
 def init_db():
+    """Initialize database tables with proper error handling"""
     queries = [
         """CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
@@ -185,18 +204,27 @@ def init_db():
         )"""
     ]
 
-    with get_db_connection() as conn:
-        with conn.cursor() as cursor:
-            for query in queries:
-                try:
-                    cursor.execute(query)
-                    print(f"✓ Table created/verified: {query.split()[5] if 'CREATE TABLE' in query else 'unknown'}")
-                except Exception as e:
-                    print(f"✗ Error creating table: {e}")
-                    print(f"Query: {query[:100]}...")
-        conn.commit()
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cursor:
+                for query in queries:
+                    try:
+                        cursor.execute(query)
+                        table_name = query.split()[5] if 'CREATE TABLE' in query else 'unknown'
+                        print(f"✓ Table created/verified: {table_name}")
+                    except psycopg2.Error as e:
+                        print(f"✗ Error creating table: {e}")
+                        print(f"Query: {query[:100]}...")
+                        raise
+            conn.commit()
+            print("✓ Database initialization completed successfully")
 
-    insert_default_config()
+        # Insert default configuration after tables are created
+        insert_default_config()
+
+    except Exception as e:
+        print(f"✗ Critical error during database initialization: {e}")
+        raise
 
 
 def insert_default_config():
@@ -210,6 +238,7 @@ def insert_default_config():
         ('result_special_values', 'DNS,DNF,DSQ,NM,O,X,-', 'list', 'Special result values'),
         ('field_events', 'Javelin,Shot Put,Discus Throw,Club Throw,Long Jump,High Jump', 'list', 'Field events'),
         ('track_events', '100m,200m,400m,800m,1500m,5000m,4x100m,Universal Relay', 'list', 'Track events'),
+        ('wind_affected_field_events', 'Long Jump', 'list', 'Wind-affected field events'),
         ('current_day', '1', 'integer', 'Current competition day'),
         ('countries_count', '61', 'integer', 'Number of participating countries'),
         ('athletes_count', '529', 'integer', 'Number of registered athletes'),

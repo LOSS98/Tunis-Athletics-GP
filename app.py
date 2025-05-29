@@ -69,6 +69,10 @@ def create_app():
                 return Config.get_track_events()
 
             @property
+            def WIND_AFFECTED_FIELD_EVENTS(self):
+                return Config.get_wind_affected_field_events()
+
+            @property
             def CURRENT_DAY(self):
                 return Config.get_current_day()
 
@@ -111,11 +115,25 @@ def create_app():
             def get_track_events(self):
                 return Config.get_track_events()
 
+            def get_wind_affected_field_events(self):
+                return Config.get_wind_affected_field_events()
+
+            # Formatting methods - these were missing!
+            def format_time(self, time_value):
+                return Config.format_time(time_value)
+
+            def format_distance(self, distance_value):
+                return Config.format_distance(distance_value)
+
+            def format_wind(self, wind_value):
+                return Config.format_wind(wind_value)
+
+            def format_weight(self, weight_value):
+                return Config.format_weight(weight_value)
+
             # Static properties
             UPLOAD_FOLDER = Config.UPLOAD_FOLDER
             RAZA_TABLE_PATH = Config.RAZA_TABLE_PATH
-
-
 
         return {
             'config': TemplateConfig(),
