@@ -164,6 +164,10 @@ class Game:
         return execute_query("UPDATE games SET status = %s WHERE id = %s", (status, id))
 
     @staticmethod
+    def update_velocity(id, velocity_value):
+        print(f"Updating velocity for game {id} to {velocity_value}")
+        return execute_query("UPDATE games SET wind_velocity = %s WHERE id = %s", (velocity_value, id))
+    @staticmethod
     def toggle_publish(id):
         game = execute_one("SELECT published FROM games WHERE id = %s", (id,))
         if game:
@@ -261,11 +265,6 @@ class Result:
                         result['attempts'] = Attempt.get_by_result(result['id'])
                         result = Result._select_best_attempt(result, game)
 
-                if len(game['classes_list']) > 1:
-                    results = Result.calculate_raza_scores(results, game)
-
-                results = Result._auto_rank_results(results, game)
-
         return results
 
     @staticmethod
@@ -339,92 +338,19 @@ class Result:
         return valid_results + invalid_results
 
     @staticmethod
-    def calculate_raza_scores(results, game):
-        if not os.path.exists(Config.RAZA_TABLE_PATH):
-            return results
-
-        try:
-            df = pd.read_excel(Config.RAZA_TABLE_PATH)
-            special_values = Config.get_result_special_values()
-            field_events = Config.get_field_events()
-
-            event_mapping = {
-                'Javelin': 'Javelin Throw',
-                'Shot Put': 'Shot Put',
-                'Discus Throw': 'Discus Throw',
-                'Club Throw': 'Club Throw',
-                'Long Jump': 'Long Jump',
-                'High Jump': 'High Jump',
-                '100m': '100 m',
-                '200m': '200 m',
-                '400m': '400 m',
-                '800m': '800 m',
-                '1500m': '1500 m',
-                '5000m': '5000 m',
-                '4x100m': '4x100 m',
-                'Universal Relay': 'Universal Relay'
-            }
-
-            for result in results:
-                if result['value'] in special_values:
-                    result['raza_score'] = None
-                    continue
-
-                try:
-                    performance_str = result.get('auto_performance', result['value'])
-
-                    if game['event'] in field_events:
-                        performance = float(performance_str)
-                    else:
-                        time_parts = performance_str.split(':')
-                        if len(time_parts) == 2:
-                            minutes, seconds = time_parts
-                            performance = float(minutes) * 60 + float(seconds)
-                        else:
-                            performance = float(performance_str)
-
-                    athlete_class = result['athlete_class']
-                    event_name = event_mapping.get(game['event'], game['event'])
-                    gender = 'Men' if result['athlete_gender'] == 'Male' else 'Women'
-
-                    mask = (df['Event'] == event_name) & \
-                           (df['Class'] == athlete_class) & \
-                           (df['Gender'] == gender)
-
-                    raza_row = df[mask]
-
-                    if not raza_row.empty:
-                        raza_row = raza_row.iloc[0]
-                        a = float(raza_row['a'])
-                        b = float(raza_row['b'])
-                        c = float(raza_row['c'])
-
-                        score_float = a * np.exp(-np.exp(b - c * performance))
-                        score = int(np.floor(score_float))
-
-                        result['raza_score'] = score
-                    else:
-                        result['raza_score'] = None
-
-                except Exception as e:
-                    print(f"Error calculating RAZA for result {result.get('id', 'unknown')}: {e}")
-                    result['raza_score'] = None
-
-        except Exception as e:
-            print(f"Error loading RAZA table: {e}")
-
-        return results
-
-    @staticmethod
     def get_by_id(id):
         return execute_one("SELECT * FROM results WHERE id = %s", (id,))
+
+    @staticmethod
+    def get_by_game_athlete(game_id, athlete_bib):
+        return execute_one("SELECT * FROM results WHERE game_id = %s AND athlete_bib = %s", (game_id, athlete_bib))
 
     @staticmethod
     def create(**data):
         keys = ', '.join(data.keys())
         placeholders = ', '.join(['%s'] * len(data))
         query = f"INSERT INTO results ({keys}) VALUES ({placeholders}) RETURNING id"
-        result = execute_one(query, list(data.values()))
+        result = execute_query(query, list(data.values()))
         return result['id'] if result else None
 
     @staticmethod
@@ -525,24 +451,25 @@ class Attempt:
         )
 
     @staticmethod
-    def create(result_id, attempt_number, value, raza='Null'):
+    def create(result_id, attempt_number, value, wind_velocity='Null', raza_score='Null'):
         return execute_query(
-            "INSERT INTO attempts (result_id, attempt_number, value, raza_score) VALUES (%s, %s, %s, %s)",
-            (result_id, attempt_number, value, raza)
+            "INSERT INTO attempts (result_id, attempt_number, value, raza_score, wind_velocity) VALUES (%s, %s, %s, %s, %s)",
+            (result_id, attempt_number, value, raza_score, wind_velocity)
         )
 
     @staticmethod
-    def createMultiple(result_id, attemps=None):
-        if attemps is None:
+    def create_multiple(result_id, attempts=None):
+        if attempts is None:
             return False
-        query = "INSERT INTO attempts (result_id, attempt_number, value, raza_score) VALUES "
+        query = "INSERT INTO attempts (result_id, attempt_number, value, raza_score, wind_velocity) VALUES "
         parms= ()
-        for attemp in attemps:
-            attempt_number = attemp
-            value = attemps[attemp]['value']
-            raza = attemps[attemp]['raza_score']
-            query += "(%s, %s, %s, %s), "
-            parms += (result_id, attempt_number, value, raza)
+        for attempt in attempts:
+            attempt_number = attempt
+            value = attempts[attempt]['value']
+            raza = attempts[attempt]['raza_score']
+            wind = attempts[attempt].get('wind_velocity', 'Null')
+            query += "(%s, %s, %s, %s, %s), "
+            parms += (result_id, attempt_number, value, raza, wind)
         query = query.rstrip(', ')
         return execute_query(query, parms)
 

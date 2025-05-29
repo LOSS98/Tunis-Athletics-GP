@@ -2,6 +2,7 @@ from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed
 from wtforms import StringField, PasswordField, IntegerField, SelectField, TimeField, TextAreaField, BooleanField, \
     FieldList, FormField, HiddenField
+from wtforms.fields.numeric import DecimalField, FloatField
 from wtforms.validators import DataRequired, Length, NumberRange, Optional, ValidationError
 import re
 
@@ -104,12 +105,20 @@ class ResultForm(FlaskForm):
                         validators=[DataRequired(message="Performance value is required"), Length(max=20)])
     record = SelectField('Record', validators=[Optional()])
 
+    weight = FloatField('Weight', validators=[Optional()], render_kw={"placeholder": "X.XXX kg"})
+
     attempt_1 = StringField('Attempt 1', validators=[Optional()])
     attempt_2 = StringField('Attempt 2', validators=[Optional()])
     attempt_3 = StringField('Attempt 3', validators=[Optional()])
     attempt_4 = StringField('Attempt 4', validators=[Optional()])
     attempt_5 = StringField('Attempt 5', validators=[Optional()])
     attempt_6 = StringField('Attempt 6', validators=[Optional()])
+    wind_attempt_1 = FloatField('Wind attempt 1', validators=[Optional()])
+    wind_attempt_2 = FloatField('Wind attempt 2', validators=[Optional()])
+    wind_attempt_3 = FloatField('Wind attempt 3', validators=[Optional()])
+    wind_attempt_4 = FloatField('Wind attempt 4', validators=[Optional()])
+    wind_attempt_5 = FloatField('Wind attempt 5', validators=[Optional()])
+    wind_attempt_6 = FloatField('Wind attempt 6', validators=[Optional()])
 
     def __init__(self, *args, **kwargs):
         super(ResultForm, self).__init__(*args, **kwargs)

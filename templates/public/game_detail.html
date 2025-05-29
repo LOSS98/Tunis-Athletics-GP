@@ -171,6 +171,13 @@
                                                 -
                                             {% endif %}
                                         </div>
+                                        {% if game.classes_list|length > 1 %}
+                                            {% if attempt.raza_score %}
+                                                <div class="text-xs font-medium text-gray-600 mb-1">
+                                                    RAZA {{ attempt.raza_score }}
+                                                </div>
+                                            {% endif %}
+                                        {% endif %}
                                         {% if attempt.value == result.best_attempt %}
                                         <div class="text-xs text-green-600 font-medium mt-1">
                                             <i class="fas fa-star"></i> Best

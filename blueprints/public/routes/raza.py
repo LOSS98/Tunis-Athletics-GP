@@ -60,10 +60,8 @@ def register_routes(bp):
 
             if not gender or not event or not athlete_class:
                 return jsonify({'error': 'Missing required fields (gender, event, class)'}), 400
-            is_track = True
-            if event in Config.get_field_events():
-                is_track = False
-            return calculate_raza(gender, event, athlete_class, performance, is_track)
+
+            return calculate_raza(gender, event, athlete_class, performance)
 
         except Exception as e:
             print(f"Error in calculate_raza: {str(e)}")
@@ -92,10 +90,7 @@ def register_routes(bp):
 
             if not gender or not event or not athlete_class:
                 return jsonify({'error': 'Missing required fields (gender, event, class)'}), 400
-            is_track = True
-            if event in Config.get_field_events():
-                is_track = False
-            return calculate_performance(gender, event, athlete_class, raza_score, is_track)
+            return calculate_performance(gender, event, athlete_class, raza_score)
 
 
         except Exception as e:

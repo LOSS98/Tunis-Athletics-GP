@@ -131,6 +131,8 @@ def init_db():
             athlete_bib INTEGER NOT NULL,
             rank VARCHAR(10),
             value VARCHAR(20) NOT NULL,
+            raza_score double precision,
+            wind_velocity double precision,
             record VARCHAR(10),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE,
@@ -152,6 +154,8 @@ def init_db():
             result_id INTEGER NOT NULL,
             attempt_number INTEGER NOT NULL,
             value VARCHAR(20),
+            raza_score double precision,
+            wind_velocity double precision,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (result_id) REFERENCES results(id) ON DELETE CASCADE,
             UNIQUE (result_id, attempt_number)

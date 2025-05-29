@@ -194,7 +194,7 @@
                             {% if result.value in config.RESULT_SPECIAL_VALUES %}
                                 <span class="text-red-600">{{ result.value }}</span>
                             {% else %}
-                                {{ result.auto_performance or result.value }}
+                                {{ result.value }}
                                 {% if game.event in config.FIELD_EVENTS and result.value not in config.RESULT_SPECIAL_VALUES %}
                                     <span class="text-sm text-gray-500">m</span>
                                 {% endif %}

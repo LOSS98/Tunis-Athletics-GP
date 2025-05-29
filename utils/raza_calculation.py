@@ -8,9 +8,29 @@ import numpy as np
 import traceback
 from decimal import Decimal, ROUND_DOWN, ROUND_UP
 
-
-def calculate_raza(gender, event, athlete_class, performance, is_track=True):
+def verify_combination(gender, event, athlete_class):
     try:
+        gender = gender_mapping(gender)
+        if not os.path.exists(Config.RAZA_TABLE_PATH):
+            return False
+        df = pd.read_excel(Config.RAZA_TABLE_PATH)
+        mask = (
+                (df["Event"] == event)
+                & (df["Class"] == athlete_class)
+                & (df["Gender"] == gender)
+        )
+        raza_row = df[mask]
+        if raza_row.empty:
+            return False
+        else:
+            return True
+    except Exception as e:
+        print(f"Error in calculate_raza: {str(e)}")
+        return False
+
+def calculate_raza(gender, event, athlete_class, performance):
+    try:
+        gender = gender_mapping(gender)
         if not os.path.exists(Config.RAZA_TABLE_PATH):
             return jsonify({"error": "RAZA table not found"}), 404
 
@@ -31,9 +51,8 @@ def calculate_raza(gender, event, athlete_class, performance, is_track=True):
         a = float(raza_row["a"])
         b = float(raza_row["b"])
         c = float(raza_row["c"])
-        print(f"RAZA parameters: a={a}, b={b}, c={c}, performance={performance}")
 
-        if is_track:
+        if event in Config.get_track_events():
             exponent = -np.exp(b - (c / performance))
             score_float = a * np.exp(exponent)
             score = round_down(score_float, decimales=0)
@@ -42,10 +61,7 @@ def calculate_raza(gender, event, athlete_class, performance, is_track=True):
             score_float = a * np.exp(exponent)
             score = round_down(score_float, decimales=0)
 
-        print(f"Score before rounding: {score_float}")
-        print(f"Final score (rounded down): {score}")
-
-        return jsonify({"raza_score": score})
+        return jsonify({"raza_score": int(score)})
 
     except Exception as e:
         print(f"Error in calculate_raza: {str(e)}")
@@ -53,8 +69,9 @@ def calculate_raza(gender, event, athlete_class, performance, is_track=True):
         return jsonify({"error": f"Calculation error: {str(e)}"}), 500
 
 
-def calculate_performance(gender, event, athlete_class, raza_score, is_track=True):
+def calculate_performance(gender, event, athlete_class, raza_score):
     try:
+        gender = gender_mapping(gender)
         if not os.path.exists(Config.RAZA_TABLE_PATH):
             return jsonify({"error": "RAZA table not found"}), 404
 
@@ -94,16 +111,13 @@ def calculate_performance(gender, event, athlete_class, raza_score, is_track=Tru
 
             ln_ln_ratio = np.log(ln_ratio)
 
-            if is_track:
+            if event in Config.get_track_events():
                 performance = c / (b - ln_ln_ratio)
                 performance_rounded = round_down(performance, decimales=2)
             else:
                 performance = (b - ln_ln_ratio) / c
                 performance_rounded = round_up(performance, decimales=2)
 
-            print(f"Performance before rounding: {performance}")
-
-            print(f"Required {'time' if is_track else 'distance'} (rounded up): {performance_rounded}")
             return jsonify({"performance": performance_rounded})
 
         except (ValueError, ZeroDivisionError) as e:
@@ -133,3 +147,11 @@ def round_up(n, decimales):
             rounding=ROUND_UP
         )
     )
+
+def gender_mapping(gender):
+    if gender == 'Male':
+        return 'Men'
+    elif gender == 'Female':
+        return 'Women'
+    else:
+        return gender

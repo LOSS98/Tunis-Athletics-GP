@@ -1,3 +1,5 @@
+import traceback
+
 from flask import render_template, redirect, url_for, flash, request, jsonify
 from ..auth import admin_required, loc_required
 from ..forms import GameForm
@@ -19,6 +21,48 @@ def register_routes(bp):
                     str(g['day']) in search]
 
         return render_template('admin/games/list.html', games=games, search=search)
+
+    @bp.route('/games/<int:game_id>/wind-velocity', methods=['POST'])
+    @admin_required
+    def game_update_wind_velocity(game_id):
+        try:
+            game = Game.get_by_id(game_id)
+            if not game:
+                flash('Game not found', 'danger')
+                return redirect(url_for('admin.games_list'))
+
+            wind_velocity = request.form.get('wind_velocity', '').strip()
+
+            if wind_velocity == '':
+                flash('Wind velocity is required', 'danger')
+                return redirect(url_for('admin.game_results', id=game_id))
+
+            try:
+                wind_velocity_float = float(wind_velocity)
+            except ValueError:
+                flash('Wind velocity must be a valid number', 'danger')
+                return redirect(url_for('admin.game_results', id=game_id))
+
+            if wind_velocity_float < -20.0 or wind_velocity_float > 20.0:
+                flash('Wind velocity updated but too high !', 'danger')
+
+            Game.update_velocity(game_id, wind_velocity_float)
+
+            if wind_velocity_float > 2.0:
+                flash(f'Wind velocity updated to +{wind_velocity_float} m/s (wind-assisted - records ineligible)',
+                      'warning')
+            elif wind_velocity_float < -2.0:
+                flash(f'Wind velocity updated to {wind_velocity_float} m/s (strong headwind)', 'info')
+            else:
+                flash(f'Wind velocity updated to {wind_velocity_float} m/s', 'success')
+
+            return redirect(url_for('admin.game_results', id=game_id))
+
+        except Exception as e:
+            print(f"Error updating wind velocity for game {game_id}: {e}")
+            traceback.print_exc()
+            flash(f'Error updating wind velocity: {str(e)}', 'danger')
+            return redirect(url_for('admin.game_results', id=game_id))
 
     @bp.route('/games/create', methods=['GET', 'POST'])
     @admin_required

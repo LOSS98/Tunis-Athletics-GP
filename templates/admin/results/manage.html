@@ -6,7 +6,11 @@
 <!-- Game Information -->
 <div class="mb-6">
     <div class="bg-white rounded-lg shadow p-4">
-        <h3 class="text-lg font-bold">Game Information</h3>
+        <h3 class="text-lg font-bold">Game Information
+            <span class="bg-amber-100 text-amber-500 px-2 py-1 rounded-full text-xs font-medium">
+                #{{ game.id }}
+            </span>
+        </h3>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3 text-sm">
             <div><span class="font-semibold">Event:</span> {{ game.event }}</div>
             <div><span class="font-semibold">Gender:</span> {{ game.gender }}</div>
@@ -18,7 +22,7 @@
         <div class="mt-2 p-2 bg-purple-50 border border-purple-200 rounded">
             <i class="fas fa-calculator text-purple-600 mr-2"></i>
             <span class="text-purple-800 font-medium">Multi-Class Event:</span>
-            <span class="text-purple-700 text-sm">RASA scores will be calculated for fair comparison</span>
+            <span class="text-purple-700 text-sm">RAZA scores will be calculated for fair comparison</span>
         </div>
         {% endif %}
 
@@ -52,12 +56,74 @@
             <!-- Auto Rank Button -->
             <button onclick="autoRankResults({{ game.id }}, event)"
                     class="bg-purple-500 text-white px-4 py-1 rounded hover:bg-purple-600"
-                    title="Auto-rank by performance or RASA score">
+                    title="Auto-rank by performance or RAZA score">
                 <i class="fas fa-sort-numeric-down"></i> Auto Rank
             </button>
         </div>
     </div>
 </div>
+
+<!-- Wind Velocity Form for Track Events -->
+{% if is_track_event %}
+<div class="mb-6">
+    <div class="bg-white rounded-lg shadow p-4">
+        <h3 class="text-lg font-bold mb-4">
+            <i class="fas fa-wind text-blue-500 mr-2"></i>
+            Wind Velocity Settings
+        </h3>
+
+        <form method="POST" action="{{ url_for('admin.game_update_wind_velocity', game_id=game.id) }}" class="flex items-center gap-4">
+            <!-- CSRF Protection -->
+            {% if form %}
+                {{ form.hidden_tag() }}
+            {% else %}
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
+            {% endif %}
+
+            <div class="flex items-center gap-2">
+                <label class="text-sm font-medium text-gray-700">Wind Velocity:</label>
+                <div class="relative">
+                    <input type="number"
+                           name="wind_velocity"
+                           step="0.01"
+                           value="{{ game.wind_velocity or 0.0 }}"
+                           class="w-24 px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500 text-center"
+                           placeholder="0.00">
+                    <span class="absolute right-2 top-1/2 transform -translate-y-1/2 text-sm text-gray-500">m/s</span>
+                </div>
+            </div>
+
+            <button type="submit"
+                    class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 text-sm">
+                <i class="fas fa-save mr-1"></i>Update
+            </button>
+
+            <!-- Current wind status display -->
+            <div class="flex items-center gap-2 text-sm">
+                <span class="text-gray-600">Current:</span>
+                <span class="bg-lime-100 text-lime-800 px-2 py-1 rounded font-medium">
+                    {% if game.wind_velocity > 0.00 %}+{% endif %}{{ game.wind_velocity or '-' }} m/s
+                </span>
+                {% if game.wind_velocity and game.wind_velocity > 2.0 %}
+                    <span class="text-red-600 text-xs">
+                        <i class="fas fa-exclamation-triangle"></i> Wind-assisted
+                    </span>
+                {% elif game.wind_velocity and game.wind_velocity < -2.0 %}
+                    <span class="text-blue-600 text-xs">
+                        <i class="fas fa-snowflake"></i> Strong headwind
+                    </span>
+                {% endif %}
+            </div>
+        </form>
+
+        <!-- Wind info note -->
+        <div class="mt-3 p-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800">
+            <i class="fas fa-info-circle mr-1"></i>
+            <strong>Note:</strong> Wind velocity affects record eligibility. Tailwinds > +2.0 m/s make records ineligible.
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <!-- Add Result Form -->
 <div class="mb-6">
@@ -112,9 +178,6 @@
                         <div>
                             <label class="block text-gray-700 text-sm font-bold mb-2">
                                 Performance Value
-                                {% if is_field_event %}
-                                <small class="text-gray-500">(auto-filled from best attempt)</small>
-                                {% endif %}
                             </label>
                             <input type="text" name="value" id="performanceValue"
                                    class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500"
@@ -145,6 +208,17 @@
                         </select>
                     {% endif %}
                 </div>
+                 <!-- Weight -->
+                {% if is_field_event %}
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Weight</label>
+                    {% if form and form.weight %}
+                        {{ form.weight(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
+                    {% else %}
+                        <input name="weight" type="number" placeholder="X.XXX kg" step="0.001" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500">
+                    {% endif %}
+                </div>
+                {% endif %}
             </div>
 
             <!-- Attempts Section for Field Events -->
@@ -152,12 +226,15 @@
             <div class="mt-4" id="attemptsSection">
                 <h4 class="font-bold mb-2">Attempts (performance will be auto-filled from best attempt)</h4>
                 <div class="grid grid-cols-2 md:grid-cols-6 gap-2">
-                    {% for i in range(6) %}
+                    {% for i in range(1,7) %}
                     <div>
-                        <label class="text-sm text-gray-600">Attempt {{ i + 1 }}</label>
-                        <input type="text" name="attempts-{{ i }}-value" id="attempt{{ i }}"
+                        <label class="text-sm text-gray-600">Attempt {{ i }}</label>
+                        <input type="text" name="attempt-{{ i }}-value" id="attempt{{ i }}"
                                class="w-full px-2 py-1 border rounded focus:outline-none focus:border-red-500"
                                placeholder="XX.XX">
+                        <input type="number" step="0.01" name="wind-attempt-{{ i }}-value" id="wind-attempt{{ i }}"
+                               class="mt-1 w-full px-2 py-1 border rounded focus:outline-none focus:border-red-500"
+                               placeholder="XX.XX m/s">
                     </div>
                     {% endfor %}
                 </div>
@@ -199,6 +276,11 @@
         <div class="flex justify-between items-center">
             <h3 class="text-lg font-bold">Current Results ({{ results|length }}/{{ game.nb_athletes }})</h3>
             <div class="text-sm text-gray-600">
+                {% if is_track_event %}
+                    <span class="bg-lime-100 text-lime-800 px-2 py-1 rounded">Wind velocity : {% if game.wind_velocity > 0.0 %}+{% endif %}{{ game.wind_velocity }} m/s</span>
+                {% endif %}
+            </div>
+            <div class="text-sm text-gray-600">
                 {% if game.classes_list|length > 1 %}
                     <span class="bg-purple-100 text-purple-800 px-2 py-1 rounded">Multi-Class Event</span>
                 {% else %}
@@ -218,11 +300,14 @@
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Country</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class</th>
+                    {% if is_field_event %}
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Weight</th>
+                    {% endif %}
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Performance {% if is_field_event %}📏{% else %}⏱️{% endif %}
                     </th>
                     {% if game.classes_list|length > 1 %}
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">RASA Score 🧮</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">RAZA Score 🧮</th>
                     {% endif %}
                     {% if is_field_event %}
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Attempts</th>
@@ -270,13 +355,19 @@
                         {% endif %}
                     </td>
 
+                    <!-- Weight -->
+                    {% if is_field_event %}
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 py-1 text-xs bg-red-100 text-red-800 rounded">{{ result.weight or '-' }} kg</span>
+                    </td>
+                    {% endif %}
                     <!-- Performance -->
                     <td class="px-6 py-4 whitespace-nowrap">
                         <div class="font-semibold text-lg">
                             {% if result.value in config.RESULT_SPECIAL_VALUES %}
                                 <span class="text-red-600">{{ result.value }}</span>
                             {% else %}
-                                {{ result.auto_performance or result.value }}
+                                {{ result.value }}
                                 {% if is_field_event and result.value not in config.RESULT_SPECIAL_VALUES %}
                                     <span class="text-sm text-gray-500">m</span>
                                 {% endif %}
@@ -284,11 +375,11 @@
                         </div>
                     </td>
 
-                    <!-- RASA Score -->
+                    <!-- RAZA Score -->
                     {% if game.classes_list|length > 1 %}
                     <td class="px-6 py-4 whitespace-nowrap">
-                        {% if result.rasa_score %}
-                            <div class="text-lg font-bold text-purple-600 bg-purple-50 px-2 py-1 rounded text-center">{{ result.rasa_score }}</div>
+                        {% if result.raza_score %}
+                            <div class="text-lg font-bold text-purple-600 bg-purple-50 px-2 py-1 rounded text-center">{{ result.raza_score }}</div>
                         {% else %}
                             <span class="text-gray-400">-</span>
                         {% endif %}
@@ -308,6 +399,8 @@
                                         <div class="text-center border rounded px-1 py-1 {% if attempt.value == result.best_attempt %}bg-green-100 border-green-300 font-bold{% else %}bg-gray-50{% endif %}">
                                             <div class="text-gray-500">{{ loop.index }}</div>
                                             <div>{{ attempt.value or '-' }}</div>
+                                            <div>{{ attempt.raza_score or '-' }}</div>
+                                            <div>{{ attempt.wind_velocity or '-' }} m/s</div>
                                         </div>
                                     {% endfor %}
                                 </div>
@@ -363,8 +456,8 @@
     </div>
     {% if game.classes_list|length > 1 %}
     <div class="mt-3 p-2 bg-purple-50 rounded">
-        <span class="font-semibold text-purple-800">RASA Scoring:</span>
-        <span class="text-purple-700 text-sm">Multi-class events use RASA scores for fair comparison between different disability classes.</span>
+        <span class="font-semibold text-purple-800">RAZA Scoring:</span>
+        <span class="text-purple-700 text-sm">Multi-class events use RAZA scores for fair comparison between different disability classes.</span>
     </div>
     {% endif %}
 </div>
@@ -521,7 +614,7 @@ function togglePublish(gameId, event) {
 }
 
 function autoRankResults(gameId, event) {
-    if (confirm('Auto-rank all results based on performance/RASA scores? This will update ranks automatically.')) {
+    if (confirm('Auto-rank all results based on performance/RAZA scores? This will update ranks automatically.')) {
         const button = event.target.closest('button');
         const originalText = button.innerHTML;
         button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ranking...';
