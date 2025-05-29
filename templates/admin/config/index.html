@@ -9,11 +9,11 @@
         <span class="font-medium text-blue-800">Configuration Management</span>
     </div>
     <p class="text-blue-700 text-sm mt-1">
-        Manage competition settings, classes, events, and competition schedule. Changes take effect immediately.
+        Manage competition settings, classes, events, countries, and competition schedule. Changes take effect immediately.
     </p>
 </div>
 
-<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+<div class="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
     <div class="bg-white rounded-lg shadow p-4 text-center">
         <div class="text-2xl font-bold text-blue-600">Day {{ current_day }}</div>
         <div class="text-sm text-gray-600">Current Competition Day</div>
@@ -38,9 +38,14 @@
         <div class="text-2xl font-bold text-orange-600">{{ configs.get('classes', [])|length }}</div>
         <div class="text-sm text-gray-600">Classes</div>
     </div>
+
+    <div class="bg-white rounded-lg shadow p-4 text-center">
+        <div class="text-2xl font-bold text-red-600">{{ countries|length }}</div>
+        <div class="text-sm text-gray-600">Countries in DB</div>
+    </div>
 </div>
 
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
     <div class="bg-white rounded-lg shadow">
         <div class="p-6 border-b">
             <div class="flex items-center">
@@ -110,6 +115,39 @@
     <div class="bg-white rounded-lg shadow">
         <div class="p-6 border-b">
             <div class="flex items-center">
+                <i class="fas fa-globe text-red-600 text-2xl mr-3"></i>
+                <div>
+                    <h3 class="text-lg font-bold">Countries</h3>
+                    <p class="text-sm text-gray-600">Participating nations and flags</p>
+                </div>
+            </div>
+        </div>
+        <div class="p-6">
+            <div class="space-y-3">
+                <div class="flex justify-between">
+                    <span class="text-sm text-gray-600">Total Countries:</span>
+                    <span class="text-sm font-medium">{{ countries|length }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-sm text-gray-600">With Flags:</span>
+                    <span class="text-sm font-medium">{{ countries|selectattr('flag_available')|list|length }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-sm text-gray-600">Continents:</span>
+                    <span class="text-sm font-medium">{{ countries|map(attribute='continent')|unique|list|length }}</span>
+                </div>
+            </div>
+            <div class="mt-4">
+                <a href="{{ url_for('admin.config_countries') }}" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 text-sm">
+                    <i class="fas fa-globe mr-1"></i> Manage
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow">
+        <div class="p-6 border-b">
+            <div class="flex items-center">
                 <i class="fas fa-calendar-alt text-purple-600 text-2xl mr-3"></i>
                 <div>
                     <h3 class="text-lg font-bold">Competition Days</h3>
@@ -160,6 +198,10 @@
         <a href="{{ url_for('admin.config_day_add') }}" class="bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600 text-sm">
             <i class="fas fa-plus mr-1"></i> Add Competition Day
         </a>
+
+        <a href="{{ url_for('admin.config_country_add') }}" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 text-sm">
+            <i class="fas fa-globe mr-1"></i> Add Country
+        </a>
     </div>
 </div>
 
@@ -185,6 +227,10 @@
                 <div>
                     <span class="font-medium">Track:</span>
                     {{ configs.get('track_events', [])|join(', ') }}
+                </div>
+                <div>
+                    <span class="font-medium">Weight Events:</span>
+                    {{ configs.get('weight_field_events', [])|join(', ') }}
                 </div>
             </div>
         </div>

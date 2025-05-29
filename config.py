@@ -31,21 +31,13 @@ class Config:
     @staticmethod
     def get_classes():
         try:
-            from database.config_manager import get_cached_config
-            return get_cached_config('classes', [
-                'T11', 'T12', 'T13', 'T20', 'T33', 'T34', 'T35', 'T36', 'T37', 'T38', 'T40', 'T41', 'T42', 'T43', 'T44',
-                'T45', 'T46', 'T47', 'T51', 'T52', 'T53', 'T54', 'T61', 'T62', 'T63', 'T64', 'F11', 'F12', 'F13', 'F20',
-                'F31', 'F32', 'F33', 'F34', 'F35', 'F36', 'F37', 'F38', 'F40', 'F41', 'F42', 'F43', 'F44', 'F45', 'F46',
-                'F51', 'F52', 'F53', 'F54', 'F55', 'F56', 'F57', 'F61', 'F62', 'F63', 'F64'
-            ])
+            from database.config_manager import ConfigManager
+            return ConfigManager.get_config_tags('classes')
         except (ImportError, Exception):
             return ['T11', 'T12', 'T13', 'T20', 'T33', 'T34', 'T35', 'T36', 'T37', 'T38', 'T40', 'T41', 'T42', 'T43',
-                    'T44',
-                    'T45', 'T46', 'T47', 'T51', 'T52', 'T53', 'T54', 'T61', 'T62', 'T63', 'T64', 'F11', 'F12', 'F13',
-                    'F20',
-                    'F31', 'F32', 'F33', 'F34', 'F35', 'F36', 'F37', 'F38', 'F40', 'F41', 'F42', 'F43', 'F44', 'F45',
-                    'F46',
-                    'F51', 'F52', 'F53', 'F54', 'F55', 'F56', 'F57', 'F61', 'F62', 'F63', 'F64']
+                    'T44', 'T45', 'T46', 'T47', 'T51', 'T52', 'T53', 'T54', 'T61', 'T62', 'T63', 'T64', 'F11', 'F12',
+                    'F13', 'F20', 'F31', 'F32', 'F33', 'F34', 'F35', 'F36', 'F37', 'F38', 'F40', 'F41', 'F42', 'F43',
+                    'F44', 'F45', 'F46', 'F51', 'F52', 'F53', 'F54', 'F55', 'F56', 'F57', 'F61', 'F62', 'F63', 'F64']
 
     @staticmethod
     def get_genders():
@@ -54,44 +46,50 @@ class Config:
     @staticmethod
     def get_record_types():
         try:
-            from database.config_manager import get_cached_config
-            return get_cached_config('record_types', ['WR', 'AR', 'CR', 'NR', 'PB', 'SB'])
+            from database.config_manager import ConfigManager
+            return ConfigManager.get_config_tags('record_types')
         except (ImportError, Exception):
             return ['WR', 'AR', 'CR', 'NR', 'PB', 'SB']
 
     @staticmethod
     def get_result_special_values():
         try:
-            from database.config_manager import get_cached_config
-            return get_cached_config('result_special_values', ['DNS', 'DNF', 'DSQ', 'NM', 'O', 'X', '-'])
+            from database.config_manager import ConfigManager
+            return ConfigManager.get_config_tags('result_special_values')
         except (ImportError, Exception):
             return ['DNS', 'DNF', 'DSQ', 'NM', 'O', 'X', '-']
 
     @staticmethod
     def get_field_events():
         try:
-            from database.config_manager import get_cached_config
-            return get_cached_config('field_events',
-                                     ['Javelin', 'Shot Put', 'Discus Throw', 'Club Throw', 'Long Jump', 'High Jump'])
+            from database.config_manager import ConfigManager
+            return ConfigManager.get_config_tags('field_events')
         except (ImportError, Exception):
             return ['Javelin', 'Shot Put', 'Discus Throw', 'Club Throw', 'Long Jump', 'High Jump']
 
     @staticmethod
     def get_track_events():
         try:
-            from database.config_manager import get_cached_config
-            return get_cached_config('track_events',
-                                     ['100m', '200m', '400m', '800m', '1500m', '5000m', '4x100m', 'Universal Relay'])
+            from database.config_manager import ConfigManager
+            return ConfigManager.get_config_tags('track_events')
         except (ImportError, Exception):
             return ['100m', '200m', '400m', '800m', '1500m', '5000m', '4x100m', 'Universal Relay']
 
     @staticmethod
     def get_wind_affected_field_events():
         try:
-            from database.config_manager import get_cached_config
-            return get_cached_config('wind_affected_field_events', ['Long Jump'])
+            from database.config_manager import ConfigManager
+            return ConfigManager.get_config_tags('wind_affected_field_events')
         except (ImportError, Exception):
             return ['Long Jump']
+
+    @staticmethod
+    def get_weight_field_events():
+        try:
+            from database.config_manager import ConfigManager
+            return ConfigManager.get_config_tags('weight_field_events')
+        except (ImportError, Exception):
+            return ['Shot Put', 'Discus Throw', 'Javelin', 'Club Throw']
 
     @staticmethod
     def get_current_day():
@@ -108,42 +106,50 @@ class Config:
     @staticmethod
     def get_countries_count():
         try:
-            from database.config_manager import get_cached_config
-            return get_cached_config('countries_count', 61)
+            from database.config_manager import ConfigManager
+            return ConfigManager.get_config('countries_count', 61)
         except (ImportError, Exception):
             return int(os.getenv('COUNTRIES_COUNT', 61))
 
     @staticmethod
     def get_athletes_count():
         try:
-            from database.config_manager import get_cached_config
-            return get_cached_config('athletes_count', 529)
+            from database.config_manager import ConfigManager
+            return ConfigManager.get_config('athletes_count', 529)
         except (ImportError, Exception):
             return int(os.getenv('ATHLETES_COUNT', 529))
 
     @staticmethod
     def get_volunteers_count():
         try:
-            from database.config_manager import get_cached_config
-            return get_cached_config('volunteers_count', 50)
+            from database.config_manager import ConfigManager
+            return ConfigManager.get_config('volunteers_count', 50)
         except (ImportError, Exception):
             return int(os.getenv('VOLUNTEERS_COUNT', 50))
 
     @staticmethod
     def get_loc_count():
         try:
-            from database.config_manager import get_cached_config
-            return get_cached_config('loc_count', 15)
+            from database.config_manager import ConfigManager
+            return ConfigManager.get_config('loc_count', 15)
         except (ImportError, Exception):
             return int(os.getenv('LOC_COUNT', 15))
 
     @staticmethod
     def get_officials_count():
         try:
-            from database.config_manager import get_cached_config
-            return get_cached_config('officials_count', 80)
+            from database.config_manager import ConfigManager
+            return ConfigManager.get_config('officials_count', 80)
         except (ImportError, Exception):
             return int(os.getenv('OFFICIALS_COUNT', 80))
+
+    @staticmethod
+    def get_countries():
+        try:
+            from database.config_manager import ConfigManager
+            return ConfigManager.get_countries()
+        except (ImportError, Exception):
+            return []
 
     @staticmethod
     def format_time(time_value):
@@ -226,6 +232,10 @@ class Config:
     @property
     def WIND_AFFECTED_FIELD_EVENTS(self):
         return self.get_wind_affected_field_events()
+
+    @property
+    def WEIGHT_FIELD_EVENTS(self):
+        return self.get_weight_field_events()
 
     @property
     def CURRENT_DAY(self):

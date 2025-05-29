@@ -44,7 +44,6 @@ def clean_params(params):
 def execute_query(query, params=None, fetch=False):
     """Execute a query and optionally fetch results"""
     try:
-        # Clean parameters to handle None/empty values properly
         if params:
             params = clean_params(params)
 
@@ -52,19 +51,16 @@ def execute_query(query, params=None, fetch=False):
             with conn.cursor() as cursor:
                 cursor.execute(query, params)
 
-                # For INSERT queries with RETURNING clause
                 if query.strip().upper().startswith('INSERT') and 'RETURNING' in query.upper():
                     result = cursor.fetchone()
                     conn.commit()
                     print(f"✓ INSERT with RETURNING executed, result: {result}")
                     return result
 
-                # For SELECT queries or when fetch=True
                 if fetch or query.strip().upper().startswith('SELECT'):
                     result = cursor.fetchall()
                     return result
 
-                # For other queries (UPDATE, DELETE, etc.)
                 conn.commit()
                 print(f"✓ Query executed successfully, affected rows: {cursor.rowcount}")
                 return cursor.rowcount
@@ -84,7 +80,6 @@ def execute_query(query, params=None, fetch=False):
 def execute_one(query, params=None):
     """Execute a query and return one result"""
     try:
-        # Clean parameters to handle None/empty values properly
         if params:
             params = clean_params(params)
 
@@ -115,6 +110,15 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )""",
 
+        """CREATE TABLE IF NOT EXISTS countries (
+            id SERIAL PRIMARY KEY,
+            code VARCHAR(3) UNIQUE NOT NULL,
+            name VARCHAR(100) NOT NULL,
+            continent VARCHAR(50) NOT NULL,
+            flag_available BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )""",
+
         """CREATE TABLE IF NOT EXISTS athletes (
             id SERIAL PRIMARY KEY,
             bib INTEGER UNIQUE NOT NULL,
@@ -131,7 +135,7 @@ def init_db():
             id SERIAL PRIMARY KEY,
             event VARCHAR(100) NOT NULL,
             gender VARCHAR(10) NOT NULL,
-            classes VARCHAR(200) NOT NULL,
+            classes TEXT NOT NULL,
             phase VARCHAR(50),
             area VARCHAR(50),
             day INTEGER NOT NULL,
@@ -201,6 +205,14 @@ def init_db():
             description VARCHAR(255),
             is_active BOOLEAN DEFAULT TRUE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )""",
+
+        """CREATE TABLE IF NOT EXISTS config_tags (
+            id SERIAL PRIMARY KEY,
+            config_key VARCHAR(100) NOT NULL,
+            tag_value VARCHAR(100) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE (config_key, tag_value)
         )"""
     ]
 
@@ -219,8 +231,8 @@ def init_db():
             conn.commit()
             print("✓ Database initialization completed successfully")
 
-        # Insert default configuration after tables are created
         insert_default_config()
+        insert_default_countries()
 
     except Exception as e:
         print(f"✗ Critical error during database initialization: {e}")
@@ -230,15 +242,6 @@ def init_db():
 def insert_default_config():
     """Insert default configuration if not exists"""
     default_configs = [
-        ('classes',
-         'T11,T12,T13,T20,T33,T34,T35,T36,T37,T38,T40,T41,T42,T43,T44,T45,T46,T47,T51,T52,T53,T54,T61,T62,T63,T64,F11,F12,F13,F20,F31,F32,F33,F34,F35,F36,F37,F38,F40,F41,F42,F43,F44,F45,F46,F51,F52,F53,F54,F55,F56,F57,F61,F62,F63,F64',
-         'list', 'Available classification classes'),
-        ('genders', 'Male,Female', 'list', 'Available genders'),
-        ('record_types', 'WR,AR,CR,NR,PB,SB', 'list', 'Available record types'),
-        ('result_special_values', 'DNS,DNF,DSQ,NM,O,X,-', 'list', 'Special result values'),
-        ('field_events', 'Javelin,Shot Put,Discus Throw,Club Throw,Long Jump,High Jump', 'list', 'Field events'),
-        ('track_events', '100m,200m,400m,800m,1500m,5000m,4x100m,Universal Relay', 'list', 'Track events'),
-        ('wind_affected_field_events', 'Long Jump', 'list', 'Wind-affected field events'),
         ('current_day', '1', 'integer', 'Current competition day'),
         ('countries_count', '61', 'integer', 'Number of participating countries'),
         ('athletes_count', '529', 'integer', 'Number of registered athletes'),
@@ -261,6 +264,32 @@ def insert_default_config():
                 print(f"✓ Default config inserted: {key}")
         except Exception as e:
             print(f"✗ Warning: Could not insert config {key}: {e}")
+
+    default_tags = [
+        ('classes', ['T11', 'T12', 'T13', 'T20', 'T33', 'T34', 'T35', 'T36', 'T37', 'T38', 'T40', 'T41', 'T42', 'T43', 'T44', 'T45', 'T46', 'T47', 'T51', 'T52', 'T53', 'T54', 'T61', 'T62', 'T63', 'T64', 'F11', 'F12', 'F13', 'F20', 'F31', 'F32', 'F33', 'F34', 'F35', 'F36', 'F37', 'F38', 'F40', 'F41', 'F42', 'F43', 'F44', 'F45', 'F46', 'F51', 'F52', 'F53', 'F54', 'F55', 'F56', 'F57', 'F61', 'F62', 'F63', 'F64']),
+        ('record_types', ['WR', 'AR', 'CR', 'NR', 'PB', 'SB']),
+        ('result_special_values', ['DNS', 'DNF', 'DSQ', 'NM', 'O', 'X', '-']),
+        ('field_events', ['Javelin', 'Shot Put', 'Discus Throw', 'Club Throw', 'Long Jump', 'High Jump']),
+        ('track_events', ['100m', '200m', '400m', '800m', '1500m', '5000m', '4x100m', 'Universal Relay']),
+        ('wind_affected_field_events', ['Long Jump']),
+        ('weight_field_events', ['Shot Put', 'Discus Throw', 'Javelin', 'Club Throw'])
+    ]
+
+    for key, tags in default_tags:
+        try:
+            existing = execute_one(
+                "SELECT COUNT(*) as count FROM config_tags WHERE config_key = %s",
+                (key,)
+            )
+            if existing['count'] == 0:
+                for tag in tags:
+                    execute_query(
+                        "INSERT INTO config_tags (config_key, tag_value) VALUES (%s, %s)",
+                        (key, tag)
+                    )
+                print(f"✓ Default tags inserted for: {key}")
+        except Exception as e:
+            print(f"✗ Warning: Could not insert tags for {key}: {e}")
 
     default_days = [
         (1, '2025-06-12', '2025-06-12', 'Day 1 - Opening Events'),
@@ -289,6 +318,89 @@ def insert_default_config():
             print(f"✗ Warning: Could not insert day {day_num}: {e}")
 
 
+def insert_default_countries():
+    """Insert default countries if not exists"""
+    default_countries = [
+        ('TUN', 'Tunisia', 'Africa', True),
+        ('FRA', 'France', 'Europe', True),
+        ('USA', 'United States', 'North America', True),
+        ('GBR', 'Great Britain', 'Europe', True),
+        ('GER', 'Germany', 'Europe', True),
+        ('JPN', 'Japan', 'Asia', True),
+        ('AUS', 'Australia', 'Oceania', True),
+        ('BRA', 'Brazil', 'South America', True),
+        ('CAN', 'Canada', 'North America', True),
+        ('CHN', 'China', 'Asia', True),
+        ('ITA', 'Italy', 'Europe', True),
+        ('ESP', 'Spain', 'Europe', True),
+        ('RUS', 'Russia', 'Europe', True),
+        ('UKR', 'Ukraine', 'Europe', True),
+        ('POL', 'Poland', 'Europe', True),
+        ('NED', 'Netherlands', 'Europe', True),
+        ('SWE', 'Sweden', 'Europe', True),
+        ('NOR', 'Norway', 'Europe', True),
+        ('DEN', 'Denmark', 'Europe', True),
+        ('FIN', 'Finland', 'Europe', True),
+        ('BEL', 'Belgium', 'Europe', True),
+        ('SUI', 'Switzerland', 'Europe', True),
+        ('AUT', 'Austria', 'Europe', True),
+        ('CZE', 'Czech Republic', 'Europe', True),
+        ('HUN', 'Hungary', 'Europe', True),
+        ('GRE', 'Greece', 'Europe', True),
+        ('POR', 'Portugal', 'Europe', True),
+        ('IRL', 'Ireland', 'Europe', True),
+        ('LUX', 'Luxembourg', 'Europe', True),
+        ('ISL', 'Iceland', 'Europe', True),
+        ('MEX', 'Mexico', 'North America', True),
+        ('ARG', 'Argentina', 'South America', True),
+        ('CHI', 'Chile', 'South America', True),
+        ('COL', 'Colombia', 'South America', True),
+        ('PER', 'Peru', 'South America', True),
+        ('ECU', 'Ecuador', 'South America', True),
+        ('URU', 'Uruguay', 'South America', True),
+        ('PAR', 'Paraguay', 'South America', True),
+        ('BOL', 'Bolivia', 'South America', True),
+        ('VEN', 'Venezuela', 'South America', True),
+        ('KOR', 'South Korea', 'Asia', True),
+        ('IND', 'India', 'Asia', True),
+        ('THA', 'Thailand', 'Asia', True),
+        ('MAS', 'Malaysia', 'Asia', True),
+        ('SGP', 'Singapore', 'Asia', True),
+        ('PHI', 'Philippines', 'Asia', True),
+        ('IDN', 'Indonesia', 'Asia', True),
+        ('VIE', 'Vietnam', 'Asia', True),
+        ('HKG', 'Hong Kong', 'Asia', True),
+        ('TPE', 'Chinese Taipei', 'Asia', True),
+        ('EGY', 'Egypt', 'Africa', True),
+        ('MAR', 'Morocco', 'Africa', True),
+        ('ALG', 'Algeria', 'Africa', True),
+        ('RSA', 'South Africa', 'Africa', True),
+        ('KEN', 'Kenya', 'Africa', True),
+        ('ETH', 'Ethiopia', 'Africa', True),
+        ('NGR', 'Nigeria', 'Africa', True),
+        ('GHA', 'Ghana', 'Africa', True),
+        ('SEN', 'Senegal', 'Africa', True),
+        ('CIV', 'Ivory Coast', 'Africa', True),
+        ('NZL', 'New Zealand', 'Oceania', True),
+    ]
+
+    for code, name, continent, flag_available in default_countries:
+        try:
+            existing = execute_one(
+                "SELECT id FROM countries WHERE code = %s",
+                (code,)
+            )
+            if not existing:
+                execute_query(
+                    "INSERT INTO countries (code, name, continent, flag_available) VALUES (%s, %s, %s, %s)",
+                    (code, name, continent, flag_available)
+                )
+        except Exception as e:
+            print(f"✗ Warning: Could not insert country {code}: {e}")
+
+    print("✓ Default countries inserted")
+
+
 def test_connection():
     """Test database connection"""
     try:
@@ -306,8 +418,8 @@ def test_connection():
 def check_tables():
     """Check if all required tables exist"""
     required_tables = [
-        'users', 'athletes', 'games', 'results',
-        'startlist', 'attempts', 'competition_config', 'competition_days'
+        'users', 'countries', 'athletes', 'games', 'results',
+        'startlist', 'attempts', 'competition_config', 'competition_days', 'config_tags'
     ]
 
     try:

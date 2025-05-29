@@ -51,6 +51,7 @@ def calculate_raza(gender, event, athlete_class, performance):
 
         raza_row = raza_row.iloc[0]
 
+        # Check if required columns exist
         required_cols = ['a', 'b', 'c']
         for col in required_cols:
             if col not in raza_row or pd.isna(raza_row[col]):
@@ -60,19 +61,26 @@ def calculate_raza(gender, event, athlete_class, performance):
         b = float(raza_row["b"])
         c = float(raza_row["c"])
 
+        # Validate performance value
         if performance <= 0:
             return jsonify({"error": "Performance must be positive"}), 400
 
+        # Calculate RAZA score using Gompertz function
         try:
             if event in Config.get_track_events():
+                # For track events (time): shorter time = better performance
                 exponent = -np.exp(b - (c / performance))
                 score_float = a * np.exp(exponent)
             else:
+                # For field events (distance/height): longer distance = better performance
                 exponent = -np.exp(b - c * performance)
                 score_float = a * np.exp(exponent)
 
+            # Round down to nearest integer as per RAZA rules
             score = int(round_down(score_float, decimales=0))
 
+            # Validate score range
+            if score < 0 or score > 2000:  # Reasonable bounds
                 return jsonify({"error": "Calculated score out of valid range"}), 400
 
             return jsonify({"raza_score": score})
@@ -108,6 +116,7 @@ def calculate_performance(gender, event, athlete_class, raza_score):
 
         raza_row = raza_row.iloc[0]
 
+        # Check if required columns exist
         required_cols = ['a', 'b', 'c']
         for col in required_cols:
             if col not in raza_row or pd.isna(raza_row[col]):
@@ -117,10 +126,12 @@ def calculate_performance(gender, event, athlete_class, raza_score):
         b = float(raza_row["b"])
         c = float(raza_row["c"])
 
+        # Validate RAZA score
         if raza_score <= 0 or raza_score >= a:
             return jsonify({"error": f"RAZA score must be between 0 and {int(a)}"}), 400
 
         try:
+            # Inverse Gompertz calculation
             ratio = a / raza_score
             if ratio <= 1:
                 return jsonify({"error": "Invalid RAZA score for calculation"}), 400
@@ -132,12 +143,15 @@ def calculate_performance(gender, event, athlete_class, raza_score):
             ln_ln_ratio = np.log(ln_ratio)
 
             if event in Config.get_track_events():
+                # For track events
                 performance = c / (b - ln_ln_ratio)
                 performance_rounded = round_up(performance, decimales=2)
             else:
+                # For field events
                 performance = (b - ln_ln_ratio) / c
                 performance_rounded = round_up(performance, decimales=2)
 
+            # Validate performance result
             if performance_rounded <= 0:
                 return jsonify({"error": "Calculated performance is invalid"}), 400
 

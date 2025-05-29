@@ -3,61 +3,73 @@
 {% block page_title %}Manage Results - {{ game.event }}{% endblock %}
 
 {% block content %}
+<!-- Include Game Edit Modal -->
+{% include 'admin/components/game_edit_modal.html' %}
+
 <!-- Game Information -->
 <div class="mb-6">
     <div class="bg-white rounded-lg shadow p-4">
-        <h3 class="text-lg font-bold">Game Information
-            <span class="bg-amber-100 text-amber-500 px-2 py-1 rounded-full text-xs font-medium">
-                #{{ game.id }}
-            </span>
-        </h3>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3 text-sm">
-            <div><span class="font-semibold">Event:</span> {{ game.event }}</div>
-            <div><span class="font-semibold">Gender:</span> {{ game.gender }}</div>
-            <div><span class="font-semibold">Classes:</span> {{ game.classes }}</div>
-            <div><span class="font-semibold">Day {{ game.day }}</span> - {{ game.time }}</div>
-        </div>
+        <div class="flex justify-between items-start">
+            <div>
+                <h3 class="text-lg font-bold">Game Information
+                    <span class="bg-amber-100 text-amber-500 px-2 py-1 rounded-full text-xs font-medium">
+                        #{{ game.id }}
+                    </span>
+                </h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3 text-sm">
+                    <div><span class="font-semibold">Event:</span> {{ game.event }}</div>
+                    <div><span class="font-semibold">Gender:</span> {{ game.gender }}</div>
+                    <div><span class="font-semibold">Classes:</span> {{ game.classes }}</div>
+                    <div><span class="font-semibold">Day {{ game.day }}</span> - {{ game.time }}</div>
+                </div>
 
-        {% if game.classes_list|length > 1 %}
-        <div class="mt-2 p-2 bg-purple-50 border border-purple-200 rounded">
-            <i class="fas fa-calculator text-purple-600 mr-2"></i>
-            <span class="text-purple-800 font-medium">Multi-Class Event:</span>
-            <span class="text-purple-700 text-sm">RAZA scores will be calculated for fair comparison</span>
-        </div>
-        {% endif %}
+                {% if game.classes_list|length > 1 %}
+                <div class="mt-2 p-2 bg-purple-50 border border-purple-200 rounded">
+                    <i class="fas fa-calculator text-purple-600 mr-2"></i>
+                    <span class="text-purple-800 font-medium">Multi-Class Event:</span>
+                    <span class="text-purple-700 text-sm">RAZA scores will be calculated for fair comparison</span>
+                </div>
+                {% endif %}
+            </div>
 
-        <div class="mt-4 flex gap-2 flex-wrap">
-            <!-- Status Update Form -->
-            <form method="POST" action="{{ url_for('admin.game_update_status', id=game.id) }}" class="inline">
-                {% if form %}
-                    {{ form.hidden_tag() }}
-                {% else %}
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
+            <div class="flex gap-2">
+                <button onclick="openGameEditModal({{ game.id }}, {{ game|tojson }})"
+                        class="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600">
+                    <i class="fas fa-edit mr-1"></i>Edit Game
+                </button>
+
+                <!-- Status Update Form -->
+                <form method="POST" action="{{ url_for('admin.game_update_status', id=game.id) }}" class="inline">
+                    {% if form %}
+                        {{ form.hidden_tag() }}
+                    {% else %}
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
+                    {% endif %}
+
+                    <select name="status" class="px-3 py-1 border rounded text-sm" onchange="this.form.submit()">
+                        <option value="scheduled" {% if game.status == 'scheduled' %}selected{% endif %}>Scheduled</option>
+                        <option value="started" {% if game.status == 'started' %}selected{% endif %}>Started</option>
+                        <option value="in_progress" {% if game.status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                        <option value="finished" {% if game.status == 'finished' %}selected{% endif %}>Finished</option>
+                        <option value="cancelled" {% if game.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                    </select>
+                </form>
+
+                <!-- Publish Button -->
+                {% if current_user.is_loc() %}
+                <button onclick="togglePublish({{ game.id }}, event)"
+                        class="px-3 py-1 rounded text-white text-sm {% if game.get('published', False) %}bg-red-500 hover:bg-red-600{% else %}bg-green-500 hover:bg-green-600{% endif %}">
+                    {% if game.get('published', False) %}Unpublish{% else %}Publish{% endif %}
+                </button>
                 {% endif %}
 
-                <select name="status" class="px-3 py-1 border rounded" onchange="this.form.submit()">
-                    <option value="scheduled" {% if game.status == 'scheduled' %}selected{% endif %}>Scheduled</option>
-                    <option value="started" {% if game.status == 'started' %}selected{% endif %}>Started</option>
-                    <option value="in_progress" {% if game.status == 'in_progress' %}selected{% endif %}>In Progress</option>
-                    <option value="finished" {% if game.status == 'finished' %}selected{% endif %}>Finished</option>
-                    <option value="cancelled" {% if game.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
-                </select>
-            </form>
-
-            <!-- Publish Button -->
-            {% if current_user.is_loc() %}
-            <button onclick="togglePublish({{ game.id }}, event)"
-                    class="px-4 py-1 rounded text-white {% if game.get('published', False) %}bg-red-500 hover:bg-red-600{% else %}bg-green-500 hover:bg-green-600{% endif %}">
-                {% if game.get('published', False) %}Unpublish{% else %}Publish{% endif %}
-            </button>
-            {% endif %}
-
-            <!-- Auto Rank Button -->
-            <button onclick="autoRankResults({{ game.id }}, event)"
-                    class="bg-purple-500 text-white px-4 py-1 rounded hover:bg-purple-600"
-                    title="Auto-rank by performance or RAZA score">
-                <i class="fas fa-sort-numeric-down"></i> Auto Rank
-            </button>
+                <!-- Auto Rank Button -->
+                <button onclick="autoRankResults({{ game.id }}, event)"
+                        class="bg-purple-500 text-white px-3 py-1 rounded text-sm hover:bg-purple-600"
+                        title="Auto-rank by performance or RAZA score">
+                    <i class="fas fa-sort-numeric-down"></i> Auto Rank
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -71,15 +83,15 @@
             Wind Velocity Settings
         </h3>
 
-        <form method="POST" action="{{ url_for('admin.game_update_wind_velocity', game_id=game.id) }}" class="flex items-center gap-4">
-            <!-- CSRF Protection -->
-            {% if form %}
-                {{ form.hidden_tag() }}
-            {% else %}
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
-            {% endif %}
+        <div class="flex items-center gap-4 flex-wrap">
+            <!-- Wind Velocity Update Form -->
+            <form method="POST" action="{{ url_for('admin.game_update_wind_velocity', game_id=game.id) }}" class="flex items-center gap-2">
+                {% if form %}
+                    {{ form.hidden_tag() }}
+                {% else %}
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
+                {% endif %}
 
-            <div class="flex items-center gap-2">
                 <label class="text-sm font-medium text-gray-700">Wind Velocity:</label>
                 <div class="relative">
                     <input type="number"
@@ -90,12 +102,30 @@
                            placeholder="0.00">
                     <span class="absolute right-2 top-1/2 transform -translate-y-1/2 text-sm text-gray-500">m/s</span>
                 </div>
-            </div>
 
-            <button type="submit"
-                    class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 text-sm">
-                <i class="fas fa-save mr-1"></i>Update
-            </button>
+                <button type="submit"
+                        class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 text-sm">
+                    <i class="fas fa-save mr-1"></i>Update
+                </button>
+            </form>
+
+            <!-- Remove Wind Velocity Button for Track Events -->
+            {% if is_track_event %}
+            <form method="POST" action="{{ url_for('admin.game_remove_wind_velocity', game_id=game.id) }}" class="inline">
+                {% if form %}
+                    {{ form.hidden_tag() }}
+                {% else %}
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
+                {% endif %}
+
+                <button type="submit"
+                        class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 text-sm"
+                        onclick="return confirm('Remove wind velocity measurement for this track event?')"
+                        title="Remove wind velocity for this track event">
+                    <i class="fas fa-times mr-1"></i>Remove Wind
+                </button>
+            </form>
+            {% endif %}
 
             <!-- Current wind status display -->
             <div class="flex items-center gap-2 text-sm">
@@ -113,12 +143,13 @@
                     </span>
                 {% endif %}
             </div>
-        </form>
+        </div>
 
         <!-- Wind info note -->
         <div class="mt-3 p-2 bg-blue-50 border border-blue-200 rounded text-sm text-blue-800">
             <i class="fas fa-info-circle mr-1"></i>
             <strong>Note:</strong> Wind velocity affects record eligibility. Tailwinds > +2.0 m/s make records ineligible.
+            {% if is_track_event %}Track events can remove wind measurement if not applicable.{% endif %}
         </div>
     </div>
 </div>
@@ -199,7 +230,7 @@
                 </div>
 
                 <!-- Weight -->
-                {% if is_field_event %}
+                {% if is_field_event and game.event in config.get('weight_field_events', []) %}
                 <div>
                     <label class="block text-gray-700 text-sm font-bold mb-2">Weight</label>
                     {% if form and form.weight %}
@@ -298,7 +329,7 @@
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Country</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class</th>
-                    {% if is_field_event %}
+                    {% if is_field_event and game.event in config.get('weight_field_events', []) %}
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Weight</th>
                     {% endif %}
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -370,7 +401,7 @@
                     </td>
 
                     <!-- Weight -->
-                    {% if is_field_event %}
+                    {% if is_field_event and game.event in config.get('weight_field_events', []) %}
                     <td class="px-6 py-4 whitespace-nowrap">
                         <span class="px-2 py-1 text-xs bg-red-100 text-red-800 rounded">{{ config.format_weight(result.weight) or '-' }}</span>
                     </td>
@@ -478,6 +509,12 @@
     <div class="mt-3 p-2 bg-purple-50 rounded">
         <span class="font-semibold text-purple-800">RAZA Scoring:</span>
         <span class="text-purple-700 text-sm">Multi-class events use RAZA scores for fair comparison between different disability classes.</span>
+    </div>
+    {% endif %}
+    {% if is_field_event and game.event in config.get('weight_field_events', []) %}
+    <div class="mt-3 p-2 bg-orange-50 rounded">
+        <span class="font-semibold text-orange-800">Weight Events:</span>
+        <span class="text-orange-700 text-sm">Different implement weights may be used for different classes in this event.</span>
     </div>
     {% endif %}
 </div>

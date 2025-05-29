@@ -64,6 +64,26 @@ def register_routes(bp):
             flash(f'Error updating wind velocity: {str(e)}', 'danger')
             return redirect(url_for('admin.game_results', id=game_id))
 
+    @bp.route('/games/<int:game_id>/remove-wind-velocity', methods=['POST'])
+    @admin_required
+    def game_remove_wind_velocity(game_id):
+        try:
+            game = Game.get_by_id(game_id)
+            if not game:
+                flash('Game not found', 'danger')
+                return redirect(url_for('admin.games_list'))
+
+            Game.update_velocity(game_id, 0.0)
+            flash('Wind velocity measurement removed for this event', 'success')
+
+            return redirect(url_for('admin.game_results', id=game_id))
+
+        except Exception as e:
+            print(f"Error removing wind velocity for game {game_id}: {e}")
+            traceback.print_exc()
+            flash(f'Error removing wind velocity: {str(e)}', 'danger')
+            return redirect(url_for('admin.game_results', id=game_id))
+
     @bp.route('/games/create', methods=['GET', 'POST'])
     @admin_required
     def game_create():
@@ -109,52 +129,32 @@ def register_routes(bp):
             flash('Game not found', 'danger')
             return redirect(url_for('admin.games_list'))
 
-        form = GameForm()
-
-        if form.validate_on_submit():
+        if request.method == 'POST':
             data = {
-                'event': form.event.data,
-                'gender': form.gender.data,
-                'classes': form.classes.data,
-                'phase': form.phase.data,
-                'area': form.area.data,
-                'day': form.day.data,
-                'time': form.time.data,
-                'nb_athletes': form.nb_athletes.data,
-                'status': form.status.data,
-                'published': form.published.data
+                'event': request.form.get('event'),
+                'gender': request.form.get('gender'),
+                'classes': request.form.get('classes'),
+                'phase': request.form.get('phase'),
+                'area': request.form.get('area'),
+                'day': int(request.form.get('day')),
+                'time': request.form.get('time'),
+                'nb_athletes': int(request.form.get('nb_athletes')),
+                'status': request.form.get('status'),
+                'published': 'published' in request.form
             }
-
-            if form.start_file.data:
-                filename = save_uploaded_file(form.start_file.data, 'startlists')
-                if filename:
-                    data['start_file'] = filename
-
-            if form.result_file.data:
-                filename = save_uploaded_file(form.result_file.data, 'results')
-                if filename:
-                    data['result_file'] = filename
 
             try:
                 Game.update(id, **data)
+                if request.headers.get('Content-Type') == 'application/json':
+                    return jsonify({'success': True})
                 flash('Game updated successfully', 'success')
                 return redirect(url_for('admin.games_list'))
             except Exception as e:
+                if request.headers.get('Content-Type') == 'application/json':
+                    return jsonify({'error': str(e)}), 500
                 flash(f'Error updating game: {str(e)}', 'danger')
 
-        elif request.method == 'GET':
-            form.event.data = game['event']
-            form.gender.data = game['gender']
-            form.classes.data = game['classes']
-            form.phase.data = game['phase']
-            form.area.data = game['area']
-            form.day.data = game['day']
-            form.time.data = game['time']
-            form.nb_athletes.data = game['nb_athletes']
-            form.status.data = game['status']
-            form.published.data = game.get('published', False)
-
-        return render_template('admin/games/edit.html', form=form, game=game)
+        return redirect(url_for('admin.games_list'))
 
     @bp.route('/games/<int:id>/delete', methods=['POST'])
     @admin_required

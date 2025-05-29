@@ -1,32 +1,16 @@
 from flask_wtf import FlaskForm
-from wtforms import StringField, IntegerField, TextAreaField, DateField, BooleanField
-from wtforms.validators import DataRequired, NumberRange, Optional
+from wtforms import StringField, IntegerField, TextAreaField, DateField, BooleanField, SelectField, HiddenField
+from wtforms.validators import DataRequired, NumberRange, Optional, Length
 
 
 class ConfigForm(FlaskForm):
-    classes = TextAreaField('Classes',
-                            description='List of disability classes (comma-separated)',
-                            validators=[DataRequired()])
-
-    record_types = StringField('Record Types',
-                               description='Available record types (comma-separated)',
-                               validators=[DataRequired()])
-
-    result_special_values = StringField('Special Result Values',
-                                        description='Special values for results (comma-separated)',
-                                        validators=[DataRequired()])
-
-    field_events = StringField('Field Events',
-                               description='Field events (comma-separated)',
-                               validators=[DataRequired()])
-
-    track_events = StringField('Track Events',
-                               description='Track events (comma-separated)',
-                               validators=[DataRequired()])
-
-    wind_affected_field_events = StringField('Wind-Affected Field Events',
-                                           description='Field events affected by wind velocity (comma-separated)',
-                                           validators=[Optional()])
+    classes = HiddenField('Classes')
+    record_types = HiddenField('Record Types')
+    result_special_values = HiddenField('Special Result Values')
+    field_events = HiddenField('Field Events')
+    track_events = HiddenField('Track Events')
+    wind_affected_field_events = HiddenField('Wind Affected Field Events')
+    weight_field_events = HiddenField('Weight Field Events')
 
 
 class StatsConfigForm(FlaskForm):
@@ -77,3 +61,30 @@ class CurrentDayForm(FlaskForm):
     current_day = IntegerField('Current Day',
                                validators=[DataRequired(), NumberRange(min=1, max=30)],
                                description='Manually set the current competition day')
+
+
+class CountryForm(FlaskForm):
+    code = StringField('Country Code',
+                       validators=[DataRequired(), Length(min=3, max=3)],
+                       description='3-letter country code (ISO 3166-1 alpha-3)')
+
+    name = StringField('Country Name',
+                       validators=[DataRequired(), Length(max=100)],
+                       description='Full country name')
+
+    continent = SelectField('Continent',
+                            choices=[
+                                ('Africa', 'Africa'),
+                                ('Asia', 'Asia'),
+                                ('Europe', 'Europe'),
+                                ('North America', 'North America'),
+                                ('South America', 'South America'),
+                                ('Oceania', 'Oceania'),
+                                ('Antarctica', 'Antarctica')
+                            ],
+                            validators=[DataRequired()],
+                            description='Continent where the country is located')
+
+    flag_available = BooleanField('Flag Available',
+                                  default=False,
+                                  description='Whether a flag image is available for this country')

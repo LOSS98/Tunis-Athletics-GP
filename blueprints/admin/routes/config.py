@@ -1,9 +1,10 @@
-from flask import render_template, redirect, url_for, flash, request
+from flask import render_template, redirect, url_for, flash, request, jsonify
 from flask_login import current_user
 from ..auth import loc_required
-from ..config_forms import ConfigForm, StatsConfigForm, CompetitionDayForm, CurrentDayForm
+from ..config_forms import ConfigForm, StatsConfigForm, CompetitionDayForm, CurrentDayForm, CountryForm
 from database.config_manager import ConfigManager, clear_config_cache
 from database.db_manager import execute_one
+
 
 def register_routes(bp):
     @bp.route('/config')
@@ -12,49 +13,69 @@ def register_routes(bp):
         configs = ConfigManager.get_all_config()
         days = ConfigManager.get_competition_days()
         current_day = ConfigManager.get_current_competition_day()
+        countries = ConfigManager.get_countries()
 
         return render_template('admin/config/index.html',
-                           configs=configs,
-                           days=days,
-                           current_day=current_day)
+                               configs=configs,
+                               days=days,
+                               current_day=current_day,
+                               countries=countries)
 
     @bp.route('/config/general', methods=['GET', 'POST'])
     @loc_required
     def config_general():
-        form = ConfigForm()
+        configs = ConfigManager.get_all_config()
+        return render_template('admin/config/general.html', configs=configs)
 
-        if form.validate_on_submit():
-            try:
-                ConfigManager.set_config('classes', form.classes.data, 'list',
-                                        'Available disability classes', current_user.id)
-                ConfigManager.set_config('record_types', form.record_types.data, 'list',
-                                        'Available record types', current_user.id)
-                ConfigManager.set_config('result_special_values', form.result_special_values.data, 'list',
-                                        'Special result values', current_user.id)
-                ConfigManager.set_config('field_events', form.field_events.data, 'list',
-                                        'Field events', current_user.id)
-                ConfigManager.set_config('track_events', form.track_events.data, 'list',
-                                        'Track events', current_user.id)
-                ConfigManager.set_config('wind_affected_field_events', form.wind_affected_field_events.data, 'list',
-                                        'Wind-affected field events', current_user.id)
+    @bp.route('/config/api/add-tag', methods=['POST'])
+    @loc_required
+    def config_add_tag():
+        try:
+            data = request.get_json()
+            if not data:
+                return jsonify({'error': 'No data provided'}), 400
 
+            config_key = data.get('config_key')
+            tag_value = data.get('tag_value')
+
+            if not config_key or not tag_value:
+                return jsonify({'error': 'Missing config_key or tag_value'}), 400
+
+            tag_value = tag_value.strip()
+            if not tag_value:
+                return jsonify({'error': 'Tag value cannot be empty'}), 400
+
+            if ConfigManager.add_config_tag(config_key, tag_value):
                 clear_config_cache()
+                return jsonify({'success': True, 'message': 'Tag added successfully'})
+            else:
+                return jsonify({'error': 'Tag already exists or could not be added'}), 400
 
-                flash('General configuration updated successfully', 'success')
-                return redirect(url_for('admin.config_index'))
-            except Exception as e:
-                flash(f'Error updating configuration: {str(e)}', 'danger')
+        except Exception as e:
+            print(f"Error adding tag: {e}")
+            return jsonify({'error': 'Server error occurred'}), 500
 
-        elif request.method == 'GET':
-            configs = ConfigManager.get_all_config()
-            form.classes.data = ','.join(configs.get('classes', []))
-            form.record_types.data = ','.join(configs.get('record_types', []))
-            form.result_special_values.data = ','.join(configs.get('result_special_values', []))
-            form.field_events.data = ','.join(configs.get('field_events', []))
-            form.track_events.data = ','.join(configs.get('track_events', []))
-            form.wind_affected_field_events.data = ','.join(configs.get('wind_affected_field_events', []))
+    @bp.route('/config/api/remove-tag', methods=['POST'])
+    @loc_required
+    def config_remove_tag():
+        try:
+            data = request.get_json()
+            if not data:
+                return jsonify({'error': 'No data provided'}), 400
 
-        return render_template('admin/config/general.html', form=form)
+            config_key = data.get('config_key')
+            tag_value = data.get('tag_value')
+
+            if not config_key or not tag_value:
+                return jsonify({'error': 'Missing config_key or tag_value'}), 400
+
+            ConfigManager.remove_config_tag(config_key, tag_value)
+            clear_config_cache()
+            return jsonify({'success': True, 'message': 'Tag removed successfully'})
+
+        except Exception as e:
+            print(f"Error removing tag: {e}")
+            return jsonify({'error': 'Server error occurred'}), 500
 
     @bp.route('/config/stats', methods=['GET', 'POST'])
     @loc_required
@@ -64,15 +85,15 @@ def register_routes(bp):
         if form.validate_on_submit():
             try:
                 ConfigManager.set_config('countries_count', form.countries_count.data, 'integer',
-                                        'Number of participating countries', current_user.id)
+                                         'Number of participating countries', current_user.id)
                 ConfigManager.set_config('athletes_count', form.athletes_count.data, 'integer',
-                                        'Number of registered athletes', current_user.id)
+                                         'Number of registered athletes', current_user.id)
                 ConfigManager.set_config('volunteers_count', form.volunteers_count.data, 'integer',
-                                        'Number of volunteers', current_user.id)
+                                         'Number of volunteers', current_user.id)
                 ConfigManager.set_config('loc_count', form.loc_count.data, 'integer',
-                                        'Number of LOC members', current_user.id)
+                                         'Number of LOC members', current_user.id)
                 ConfigManager.set_config('officials_count', form.officials_count.data, 'integer',
-                                        'Number of officials', current_user.id)
+                                         'Number of officials', current_user.id)
 
                 clear_config_cache()
                 flash('Statistics updated successfully', 'success')
@@ -89,6 +110,89 @@ def register_routes(bp):
             form.officials_count.data = configs.get('officials_count', 80)
 
         return render_template('admin/config/stats.html', form=form)
+
+    @bp.route('/config/countries')
+    @loc_required
+    def config_countries():
+        countries = ConfigManager.get_countries()
+        return render_template('admin/config/countries.html', countries=countries)
+
+    @bp.route('/config/countries/add', methods=['GET', 'POST'])
+    @loc_required
+    def config_country_add():
+        form = CountryForm()
+
+        if form.validate_on_submit():
+            try:
+                existing = ConfigManager.get_country_by_code(form.code.data.upper())
+                if existing:
+                    flash('Country code already exists', 'danger')
+                    return render_template('admin/config/country_form.html', form=form, title='Add Country')
+
+                ConfigManager.create_country(
+                    form.code.data.upper(),
+                    form.name.data,
+                    form.continent.data,
+                    form.flag_available.data
+                )
+                flash('Country added successfully', 'success')
+                return redirect(url_for('admin.config_countries'))
+            except Exception as e:
+                flash(f'Error adding country: {str(e)}', 'danger')
+
+        return render_template('admin/config/country_form.html', form=form, title='Add Country')
+
+    @bp.route('/config/countries/<int:country_id>/edit', methods=['GET', 'POST'])
+    @loc_required
+    def config_country_edit(country_id):
+        country = execute_one("SELECT * FROM countries WHERE id = %s", (country_id,))
+        if not country:
+            flash('Country not found', 'danger')
+            return redirect(url_for('admin.config_countries'))
+
+        form = CountryForm()
+
+        if form.validate_on_submit():
+            try:
+                existing = execute_one(
+                    "SELECT id FROM countries WHERE code = %s AND id != %s",
+                    (form.code.data.upper(), country_id)
+                )
+                if existing:
+                    flash('Country code already exists', 'danger')
+                    return render_template('admin/config/country_form.html', form=form, title='Edit Country',
+                                           country=country)
+
+                ConfigManager.update_country(
+                    country_id,
+                    form.code.data.upper(),
+                    form.name.data,
+                    form.continent.data,
+                    form.flag_available.data
+                )
+                flash('Country updated successfully', 'success')
+                return redirect(url_for('admin.config_countries'))
+            except Exception as e:
+                flash(f'Error updating country: {str(e)}', 'danger')
+
+        elif request.method == 'GET':
+            form.code.data = country['code']
+            form.name.data = country['name']
+            form.continent.data = country['continent']
+            form.flag_available.data = country['flag_available']
+
+        return render_template('admin/config/country_form.html', form=form, title='Edit Country', country=country)
+
+    @bp.route('/config/countries/<int:country_id>/delete', methods=['POST'])
+    @loc_required
+    def config_country_delete(country_id):
+        try:
+            ConfigManager.delete_country(country_id)
+            flash('Country deleted successfully', 'success')
+        except Exception as e:
+            flash(f'Error deleting country: {str(e)}', 'danger')
+
+        return redirect(url_for('admin.config_countries'))
 
     @bp.route('/config/days')
     @loc_required
@@ -173,7 +277,7 @@ def register_routes(bp):
         if form.validate_on_submit():
             try:
                 ConfigManager.set_config('current_day', form.current_day.data, 'integer',
-                                        'Manually set current day', current_user.id)
+                                         'Manually set current day', current_user.id)
                 clear_config_cache()
                 flash('Current day updated successfully', 'success')
                 return redirect(url_for('admin.config_index'))

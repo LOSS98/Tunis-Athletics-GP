@@ -17,9 +17,7 @@ class ConfigManager:
         value = result['setting_value']
         setting_type = result['setting_type']
 
-        if setting_type == 'list':
-            return [item.strip() for item in value.split(',') if item.strip()]
-        elif setting_type == 'integer':
+        if setting_type == 'integer':
             try:
                 return int(value)
             except ValueError:
@@ -31,9 +29,7 @@ class ConfigManager:
 
     @staticmethod
     def set_config(key, value, setting_type='string', description=None, user_id=None):
-        if setting_type == 'list' and isinstance(value, list):
-            value = ','.join(str(v) for v in value)
-        elif setting_type in ['integer', 'boolean']:
+        if setting_type in ['integer', 'boolean']:
             value = str(value)
 
         existing = execute_one(
@@ -53,6 +49,51 @@ class ConfigManager:
             )
 
     @staticmethod
+    def get_config_tags(key):
+        """Get tags for a configuration key"""
+        tags = execute_query(
+            "SELECT tag_value FROM config_tags WHERE config_key = %s ORDER BY tag_value",
+            (key,),
+            fetch=True
+        )
+        return [tag['tag_value'] for tag in tags] if tags else []
+
+    @staticmethod
+    def add_config_tag(key, tag_value):
+        """Add a tag to a configuration key"""
+        try:
+            execute_query(
+                "INSERT INTO config_tags (config_key, tag_value) VALUES (%s, %s)",
+                (key, tag_value)
+            )
+            return True
+        except:
+            return False
+
+    @staticmethod
+    def remove_config_tag(key, tag_value):
+        """Remove a tag from a configuration key"""
+        execute_query(
+            "DELETE FROM config_tags WHERE config_key = %s AND tag_value = %s",
+            (key, tag_value)
+        )
+
+    @staticmethod
+    def set_config_tags(key, tags):
+        """Set all tags for a configuration key (replaces existing)"""
+        execute_query(
+            "DELETE FROM config_tags WHERE config_key = %s",
+            (key,)
+        )
+
+        for tag in tags:
+            if tag.strip():
+                execute_query(
+                    "INSERT INTO config_tags (config_key, tag_value) VALUES (%s, %s)",
+                    (key, tag.strip())
+                )
+
+    @staticmethod
     def get_all_config():
         configs = execute_query(
             "SELECT * FROM competition_config ORDER BY setting_key",
@@ -65,9 +106,7 @@ class ConfigManager:
             value = config['setting_value']
             setting_type = config['setting_type']
 
-            if setting_type == 'list':
-                result[key] = [item.strip() for item in value.split(',') if item.strip()]
-            elif setting_type == 'integer':
+            if setting_type == 'integer':
                 try:
                     result[key] = int(value)
                 except ValueError:
@@ -76,6 +115,11 @@ class ConfigManager:
                 result[key] = value.lower() in ('true', '1', 'yes', 'on')
             else:
                 result[key] = value
+
+        tag_configs = ['classes', 'record_types', 'result_special_values', 'field_events', 'track_events',
+                       'wind_affected_field_events', 'weight_field_events']
+        for key in tag_configs:
+            result[key] = ConfigManager.get_config_tags(key)
 
         return result
 
@@ -125,9 +169,50 @@ class ConfigManager:
             (day_number,)
         )
 
+    @staticmethod
+    def get_countries():
+        """Get all countries"""
+        return execute_query(
+            "SELECT * FROM countries ORDER BY name",
+            fetch=True
+        )
+
+    @staticmethod
+    def get_country_by_code(code):
+        """Get country by code"""
+        return execute_one(
+            "SELECT * FROM countries WHERE code = %s",
+            (code,)
+        )
+
+    @staticmethod
+    def create_country(code, name, continent, flag_available=False):
+        """Create a new country"""
+        execute_query(
+            "INSERT INTO countries (code, name, continent, flag_available) VALUES (%s, %s, %s, %s)",
+            (code.upper(), name, continent, flag_available)
+        )
+
+    @staticmethod
+    def update_country(country_id, code, name, continent, flag_available=False):
+        """Update a country"""
+        execute_query(
+            "UPDATE countries SET code = %s, name = %s, continent = %s, flag_available = %s WHERE id = %s",
+            (code.upper(), name, continent, flag_available, country_id)
+        )
+
+    @staticmethod
+    def delete_country(country_id):
+        """Delete a country"""
+        execute_query(
+            "DELETE FROM countries WHERE id = %s",
+            (country_id,)
+        )
+
 
 _config_cache = {}
 _cache_timestamp = None
+
 
 def get_cached_config(key, default=None, cache_duration=300):
     global _config_cache, _cache_timestamp
@@ -139,6 +224,7 @@ def get_cached_config(key, default=None, cache_duration=300):
         _cache_timestamp = now
 
     return _config_cache.get(key, default)
+
 
 def clear_config_cache():
     global _config_cache, _cache_timestamp

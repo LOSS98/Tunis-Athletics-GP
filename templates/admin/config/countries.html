@@ -1,0 +1,160 @@
+{% extends "admin/base_admin.html" %}
+
+{% block page_title %}Countries Management{% endblock %}
+
+{% block content %}
+<div class="mb-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h2 class="text-2xl font-bold">Countries Management</h2>
+            <p class="text-gray-600 mt-1">Manage participating countries and their flags</p>
+        </div>
+        <div class="flex space-x-2">
+            <a href="{{ url_for('admin.config_country_add') }}" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                <i class="fas fa-plus mr-2"></i>Add Country
+            </a>
+            <a href="{{ url_for('admin.config_index') }}" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+                <i class="fas fa-arrow-left mr-2"></i>Back
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-lg shadow p-4 text-center">
+        <div class="text-2xl font-bold text-blue-600">{{ countries|length }}</div>
+        <div class="text-sm text-gray-600">Total Countries</div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4 text-center">
+        <div class="text-2xl font-bold text-green-600">{{ countries|selectattr('flag_available')|list|length }}</div>
+        <div class="text-sm text-gray-600">With Flags</div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4 text-center">
+        <div class="text-2xl font-bold text-orange-600">{{ countries|rejectattr('flag_available')|list|length }}</div>
+        <div class="text-sm text-gray-600">Missing Flags</div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4 text-center">
+        <div class="text-2xl font-bold text-purple-600">{{ countries|map(attribute='continent')|unique|list|length }}</div>
+        <div class="text-sm text-gray-600">Continents</div>
+    </div>
+</div>
+
+<div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="p-6 border-b">
+        <h3 class="text-lg font-bold">Countries List</h3>
+    </div>
+
+    {% if countries %}
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Flag</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Continent</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Flag Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for country in countries %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if country.flag_available %}
+                            <img src="/static/images/flags/{{ country.code }}.svg"
+                                 alt="{{ country.name }}"
+                                 class="w-8 h-5 border border-gray-200 rounded"
+                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                            <div class="w-8 h-5 bg-gray-200 border border-gray-300 rounded flex items-center justify-center text-xs text-gray-500" style="display: none;">
+                                ?
+                            </div>
+                        {% else %}
+                            <div class="w-8 h-5 bg-gray-200 border border-gray-300 rounded flex items-center justify-center text-xs text-gray-500">
+                                <i class="fas fa-ban"></i>
+                            </div>
+                        {% endif %}
+                    </td>
+
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {{ country.code }}
+                        </span>
+                    </td>
+
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium text-gray-900">{{ country.name }}</div>
+                    </td>
+
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                            {% if country.continent == 'Africa' %}bg-orange-100 text-orange-800
+                            {% elif country.continent == 'Asia' %}bg-red-100 text-red-800
+                            {% elif country.continent == 'Europe' %}bg-blue-100 text-blue-800
+                            {% elif country.continent == 'North America' %}bg-green-100 text-green-800
+                            {% elif country.continent == 'South America' %}bg-yellow-100 text-yellow-800
+                            {% elif country.continent == 'Oceania' %}bg-purple-100 text-purple-800
+                            {% else %}bg-gray-100 text-gray-800{% endif %}">
+                            {{ country.continent }}
+                        </span>
+                    </td>
+
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if country.flag_available %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                <i class="fas fa-check mr-1"></i>Available
+                            </span>
+                        {% else %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                <i class="fas fa-times mr-1"></i>Missing
+                            </span>
+                        {% endif %}
+                    </td>
+
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <div class="flex space-x-2">
+                            <a href="{{ url_for('admin.config_country_edit', country_id=country.id) }}"
+                               class="text-indigo-600 hover:text-indigo-900" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <form method="POST" action="{{ url_for('admin.config_country_delete', country_id=country.id) }}"
+                                  class="inline" onsubmit="return confirm('Are you sure you want to delete {{ country.name }}?');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="text-red-600 hover:text-red-900" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="p-8 text-center">
+        <div class="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+            <i class="fas fa-globe text-4xl text-gray-300"></i>
+        </div>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">No Countries</h3>
+        <p class="text-gray-500 mb-6">Add countries to manage participating nations.</p>
+        <a href="{{ url_for('admin.config_country_add') }}" class="bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600">
+            <i class="fas fa-plus mr-2"></i>Add First Country
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+    <h4 class="font-bold text-blue-900 mb-2">
+        <i class="fas fa-info-circle mr-2"></i>Flag Management
+    </h4>
+    <div class="text-sm text-blue-800 space-y-2">
+        <p><strong>Flag Files:</strong> Place SVG flag files in <code>/static/images/flags/</code> with the country code as filename (e.g., <code>TUN.svg</code>)</p>
+        <p><strong>Country Codes:</strong> Use 3-letter ISO codes or common Olympic codes (e.g., TUN, FRA, USA, GBR)</p>
+        <p><strong>Flag Status:</strong> Enable "Flag Available" only when the actual flag file exists</p>
+        <p><strong>Continents:</strong> Used for grouping and filtering countries in reports</p>
+    </div>
+</div>
+
+{% endblock %}
