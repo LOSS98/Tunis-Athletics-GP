@@ -3,6 +3,7 @@ name: Deploy to Production
 on:
   push:
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -16,6 +17,12 @@ jobs:
         username: ${{ secrets.USERNAME }}
         password: ${{ secrets.PASSWORD }}
         port: 6534
+        timeout: 300s
         script: |
           cd /home/khalil/tunis-gp25
-          ./deploy.sh
+          git pull origin main --force
+          docker-compose down
+          docker-compose build --no-cache
+          docker-compose up -d
+          sleep 15
+          docker-compose ps
