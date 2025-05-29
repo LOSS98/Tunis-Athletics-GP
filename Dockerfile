@@ -14,9 +14,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 RUN chmod -R 755 static/
-RUN chmod -R 755 uploads/
-RUN chmod -R 755 uploads/results/
-RUN chmod -R 755 uploads/startlists/
 EXPOSE 5000
 
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
