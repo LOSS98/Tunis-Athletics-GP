@@ -152,6 +152,7 @@ def init_db():
             start_file VARCHAR(255),
             result_file VARCHAR(255),
             wind_velocity double precision DEFAULT 0.0,
+            wpa_points BOOLEAN DEFAULT FALSE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )""",
 
@@ -162,9 +163,11 @@ def init_db():
             rank VARCHAR(10),
             value VARCHAR(20) NOT NULL,
             raza_score double precision,
+            raza_score_precise double precision,
             wind_velocity double precision,
             weight double precision,
             record VARCHAR(10),
+            final_order INTEGER,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE,
             UNIQUE (game_id, athlete_bib)
@@ -186,7 +189,9 @@ def init_db():
             attempt_number INTEGER NOT NULL,
             value VARCHAR(20),
             raza_score double precision,
+            raza_score_precise double precision,
             wind_velocity double precision,
+            height double precision,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (result_id) REFERENCES results(id) ON DELETE CASCADE,
             UNIQUE (result_id, attempt_number)
@@ -237,6 +242,7 @@ def init_db():
             conn.commit()
             print("✓ Database initialization completed successfully")
 
+        add_missing_columns()
         insert_default_config()
         insert_default_countries()
         insert_default_record_types()
@@ -244,6 +250,31 @@ def init_db():
     except Exception as e:
         print(f"✗ Critical error during database initialization: {e}")
         raise
+
+def add_missing_columns():
+    missing_columns = [
+        ("games", "wpa_points", "ALTER TABLE games ADD COLUMN wpa_points BOOLEAN DEFAULT FALSE"),
+        ("results", "raza_score_precise", "ALTER TABLE results ADD COLUMN raza_score_precise double precision"),
+        ("results", "final_order", "ALTER TABLE results ADD COLUMN final_order INTEGER"),
+        ("attempts", "raza_score_precise", "ALTER TABLE attempts ADD COLUMN raza_score_precise double precision"),
+        ("attempts", "height", "ALTER TABLE attempts ADD COLUMN height double precision")
+    ]
+
+    try:
+        with get_db_connection() as conn:
+            with conn.cursor() as cursor:
+                for table, column, alter_query in missing_columns:
+                    cursor.execute(f"""
+                        SELECT column_name 
+                        FROM information_schema.columns 
+                        WHERE table_name='{table}' AND column_name='{column}'
+                    """)
+                    if not cursor.fetchone():
+                        cursor.execute(alter_query)
+                        print(f"✓ Added column {column} to {table}")
+            conn.commit()
+    except Exception as e:
+        print(f"Error adding missing columns: {e}")
 
 
 def insert_default_config():

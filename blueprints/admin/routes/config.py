@@ -81,7 +81,7 @@ def register_routes(bp):
             if not config_key or not tag_value:
                 return jsonify({'error': 'Missing config_key or tag_value'}), 400
 
-            execute_query(
+            result = execute_query(
                 "DELETE FROM config_tags WHERE config_key = %s AND tag_value = %s",
                 (config_key, tag_value)
             )

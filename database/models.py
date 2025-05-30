@@ -4,6 +4,7 @@ from database.db_manager import execute_query, execute_one
 from datetime import datetime, timedelta
 from config import Config
 import re
+from utils.raza_calculation import calculate_raza, verify_combination
 
 
 class User(UserMixin):
@@ -257,6 +258,136 @@ class Game:
         count = execute_one("SELECT COUNT(*) as count FROM results WHERE game_id = %s", (game_id,))
         return count['count'] > 0 if count else False
 
+    @staticmethod
+    def auto_rank_results(game_id):
+        game = Game.get_by_id(game_id)
+        if not game:
+            return False
+
+        results = execute_query("""
+            SELECT r.*, a.gender as athlete_gender, a.class as athlete_class
+            FROM results r
+            JOIN athletes a ON r.athlete_bib = a.bib
+            WHERE r.game_id = %s
+        """, (game_id,), fetch=True)
+
+        if not results:
+            return False
+
+        is_track = game['event'] in Config.get_track_events()
+        is_field = game['event'] in Config.get_field_events()
+        has_wpa_points = game.get('wpa_points', False)
+        special_values = Config.get_result_special_values()
+
+        valid_results = []
+        for result in results:
+            if result['value'] in special_values:
+                continue
+            valid_results.append(result)
+
+        if is_track:
+            if has_wpa_points:
+                valid_results.sort(key=lambda x: (
+                    x['raza_score'] or 0,
+                    x['raza_score_decimal'] or 0,
+                    -float(x['value']) if x['value'] not in special_values else float('inf')
+                ), reverse=True)
+            else:
+                valid_results.sort(
+                    key=lambda x: float(x['value']) if x['value'] not in special_values else float('inf'))
+
+        elif is_field:
+            if has_wpa_points:
+                for result in valid_results:
+                    result['attempts'] = Attempt.get_by_result(result['id'])
+                    result['best_attempt_value'] = 0
+                    result['attempt_sequence'] = []
+
+                    for attempt in result['attempts']:
+                        if attempt['value'] and attempt['value'] not in ['X', '-', 'O', '']:
+                            try:
+                                val = float(attempt['value'])
+                                result['attempt_sequence'].append(val)
+                                if val > result['best_attempt_value']:
+                                    result['best_attempt_value'] = val
+                            except ValueError:
+                                continue
+
+                    while len(result['attempt_sequence']) < 6:
+                        result['attempt_sequence'].append(0)
+
+                valid_results.sort(key=lambda x: (
+                    x['raza_score'] or 0,
+                    x['raza_score_decimal'] or 0,
+                    x['best_attempt_value'],
+                    x['attempt_sequence'][0],
+                    x['attempt_sequence'][1],
+                    x['attempt_sequence'][2],
+                    x['attempt_sequence'][3],
+                    x['attempt_sequence'][4],
+                    x['attempt_sequence'][5]
+                ), reverse=True)
+            else:
+                for result in valid_results:
+                    result['attempts'] = Attempt.get_by_result(result['id'])
+                    result['best_attempt_value'] = 0
+                    result['attempt_sequence'] = []
+
+                    for attempt in result['attempts']:
+                        if attempt['value'] and attempt['value'] not in ['X', '-', 'O', '']:
+                            try:
+                                val = float(attempt['value'])
+                                result['attempt_sequence'].append(val)
+                                if val > result['best_attempt_value']:
+                                    result['best_attempt_value'] = val
+                            except ValueError:
+                                continue
+
+                    while len(result['attempt_sequence']) < 6:
+                        result['attempt_sequence'].append(0)
+
+                valid_results.sort(key=lambda x: (
+                    x['best_attempt_value'],
+                    x['attempt_sequence'][0],
+                    x['attempt_sequence'][1],
+                    x['attempt_sequence'][2],
+                    x['attempt_sequence'][3],
+                    x['attempt_sequence'][4],
+                    x['attempt_sequence'][5]
+                ), reverse=True)
+
+        current_rank = 1
+        previous_key = None
+        rank_increment = 1
+
+        for i, result in enumerate(valid_results):
+            if is_track:
+                if has_wpa_points:
+                    current_key = (result['raza_score'] or 0, result['raza_score_decimal'] or 0, result['value'])
+                else:
+                    current_key = result['value']
+            else:
+                if has_wpa_points:
+                    current_key = (
+                    result['raza_score'] or 0, result['raza_score_decimal'] or 0, tuple(result['attempt_sequence']))
+                else:
+                    current_key = tuple(result['attempt_sequence'])
+
+            if previous_key is not None and current_key != previous_key:
+                current_rank += rank_increment
+                rank_increment = 1
+            else:
+                rank_increment += 1
+
+            execute_query("UPDATE results SET rank = %s WHERE id = %s", (str(current_rank), result['id']))
+            previous_key = current_key
+
+        for result in results:
+            if result['value'] in special_values:
+                execute_query("UPDATE results SET rank = %s WHERE id = %s", ('-', result['id']))
+
+        return True
+
 
 class Result:
     @staticmethod
@@ -426,6 +557,29 @@ class StartList:
         count = execute_one("SELECT COUNT(*) as count FROM startlist WHERE game_id = %s", (game_id,))
         return count['count'] if count else 0
 
+    @staticmethod
+    def update_order_for_long_jump(game_id):
+        game = Game.get_by_id(game_id)
+        if not game or game['event'] != 'Long Jump':
+            return False
+
+        results = execute_query("""
+            SELECT r.athlete_bib, MAX(CAST(a.value AS DECIMAL)) as best_attempt
+            FROM results r
+            JOIN attempts a ON r.id = a.result_id
+            WHERE r.game_id = %s AND a.value ~ '^[0-9]+\.?[0-9]*
+            GROUP BY r.athlete_bib
+            ORDER BY best_attempt ASC
+        """, (game_id,), fetch=True)
+
+        for i, result in enumerate(results):
+            execute_query(
+                "UPDATE results SET final_order = %s WHERE game_id = %s AND athlete_bib = %s",
+                (i + 1, game_id, result['athlete_bib'])
+            )
+
+        return True
+
 
 class Attempt:
     @staticmethod
@@ -436,33 +590,112 @@ class Attempt:
         )
 
     @staticmethod
-    def create(result_id, attempt_number, value, wind_velocity=None, raza_score=None):
+    def create(result_id, attempt_number, value, wind_velocity=None, raza_score=None, raza_score_decimal=None,
+               height=None):
         if wind_velocity is not None:
             wind_velocity = float(Config.format_wind(wind_velocity))
 
         return execute_query(
-            "INSERT INTO attempts (result_id, attempt_number, value, raza_score, wind_velocity) VALUES (%s, %s, %s, %s, %s)",
-            (result_id, attempt_number, value, raza_score, wind_velocity)
+            "INSERT INTO attempts (result_id, attempt_number, value, raza_score, raza_score_decimal, wind_velocity, height) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+            (result_id, attempt_number, value, raza_score, raza_score_decimal, wind_velocity, height)
         )
 
     @staticmethod
     def create_multiple(result_id, attempts=None):
         if attempts is None:
             return False
-        query = "INSERT INTO attempts (result_id, attempt_number, value, raza_score, wind_velocity) VALUES "
-        params = ()
-        for attempt in attempts:
-            attempt_number = attempt
-            value = attempts[attempt]['value']
-            raza = attempts[attempt]['raza_score']
-            wind = attempts[attempt].get('wind_velocity', None)
-            if wind is not None:
-                wind = float(Config.format_wind(wind))
-            query += "(%s, %s, %s, %s, %s), "
-            params += (result_id, attempt_number, value, raza, wind)
-        query = query.rstrip(', ')
-        return execute_query(query, params)
+
+        for attempt_number, attempt_data in attempts.items():
+            value = attempt_data.get('value')
+            if not value:
+                continue
+
+            raza_score = attempt_data.get('raza_score')
+            raza_score_decimal = attempt_data.get('raza_score_decimal')
+            wind_velocity = attempt_data.get('wind_velocity')
+            height = attempt_data.get('height')
+
+            if wind_velocity is not None:
+                wind_velocity = float(Config.format_wind(wind_velocity))
+
+            execute_query(
+                "INSERT INTO attempts (result_id, attempt_number, value, raza_score, raza_score_decimal, wind_velocity, height) VALUES (%s, %s, %s, %s, %s, %s, %s) ON CONFLICT (result_id, attempt_number) DO UPDATE SET value = EXCLUDED.value, raza_score = EXCLUDED.raza_score, raza_score_decimal = EXCLUDED.raza_score_decimal, wind_velocity = EXCLUDED.wind_velocity, height = EXCLUDED.height",
+                (result_id, attempt_number, value, raza_score, raza_score_decimal, wind_velocity, height)
+            )
+
+        return True
+
+    @staticmethod
+    def update_partial(result_id, attempts_data):
+        for attempt_number, attempt_data in attempts_data.items():
+            value = attempt_data.get('value')
+            if not value:
+                continue
+
+            existing = execute_one(
+                "SELECT id FROM attempts WHERE result_id = %s AND attempt_number = %s",
+                (result_id, attempt_number)
+            )
+
+            raza_score = attempt_data.get('raza_score')
+            raza_score_decimal = attempt_data.get('raza_score_decimal')
+            wind_velocity = attempt_data.get('wind_velocity')
+            height = attempt_data.get('height')
+
+            if wind_velocity is not None:
+                wind_velocity = float(Config.format_wind(wind_velocity))
+
+            if existing:
+                execute_query(
+                    "UPDATE attempts SET value = %s, raza_score = %s, raza_score_decimal = %s, wind_velocity = %s, height = %s WHERE result_id = %s AND attempt_number = %s",
+                    (value, raza_score, raza_score_decimal, wind_velocity, height, result_id, attempt_number)
+                )
+            else:
+                execute_query(
+                    "INSERT INTO attempts (result_id, attempt_number, value, raza_score, raza_score_decimal, wind_velocity, height) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                    (result_id, attempt_number, value, raza_score, raza_score_decimal, wind_velocity, height)
+                )
+
+        return True
 
     @staticmethod
     def delete_by_result(result_id):
         return execute_query("DELETE FROM attempts WHERE result_id = %s", (result_id,))
+
+    @staticmethod
+    def add_long_jump_attempt(result_id, value, height=None, wind_velocity=None):
+        existing_attempts = execute_query(
+            "SELECT MAX(attempt_number) as max_num FROM attempts WHERE result_id = %s",
+            (result_id,), fetch=True
+        )
+
+        next_attempt = 1
+        if existing_attempts and existing_attempts[0]['max_num']:
+            next_attempt = existing_attempts[0]['max_num'] + 1
+
+        raza_score = None
+        raza_score_decimal = None
+
+        result = execute_one("SELECT * FROM results WHERE id = %s", (result_id,))
+        if result:
+            game = Game.get_by_id(result['game_id'])
+            if game and game.get('wpa_points', False):
+                athlete = execute_one("SELECT * FROM athletes WHERE bib = %s", (result['athlete_bib'],))
+                if athlete and verify_combination(athlete['gender'], game['event'], athlete['class']):
+                    try:
+                        raza_result = calculate_raza(
+                            gender=athlete['gender'],
+                            event=game['event'],
+                            athlete_class=athlete['class'],
+                            performance=float(value)
+                        )
+                        if isinstance(raza_result, tuple):
+                            response, status = raza_result
+                            if status == 200:
+                                raza_data = response.get_json()
+                                raza_score = int(raza_data.get('raza_score', 0))
+                                raza_score_decimal = round(float(raza_data.get('raza_score', 0)), 3)
+                    except Exception as e:
+                        print(f"Error calculating RAZA for attempt: {e}")
+
+        return Attempt.create(result_id, next_attempt, value, wind_velocity, raza_score, raza_score_decimal, height)

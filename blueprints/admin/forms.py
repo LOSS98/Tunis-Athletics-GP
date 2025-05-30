@@ -67,6 +67,7 @@ class GameForm(FlaskForm):
         ('cancelled', 'Cancelled')
     ], validators=[DataRequired()])
     published = BooleanField('Published')
+    wpa_points = BooleanField('Use WPA Points (RAZA Scoring)')
     start_file = FileField('Start List File', validators=[FileAllowed(['pdf', 'txt'])])
     result_file = FileField('Results File', validators=[FileAllowed(['pdf', 'txt'])])
 
@@ -88,8 +89,6 @@ class GameForm(FlaskForm):
             for cls in classes:
                 if cls and cls not in valid_classes:
                     raise ValidationError(f'Invalid class: {cls}')
-
-
 class AttemptForm(FlaskForm):
     value = StringField('Value', validators=[Optional()])
 
