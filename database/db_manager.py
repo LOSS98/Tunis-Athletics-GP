@@ -278,31 +278,9 @@ def add_missing_columns():
                         cursor.execute(alter_query)
                         print(f"✓ Added column {column} to {table}")
 
-                cursor.execute("""
-                    SELECT data_type 
-                    FROM information_schema.columns 
-                    WHERE table_name='results' AND column_name='raza_score'
-                """)
-                result = cursor.fetchone()
-                if result and result['data_type'] != 'integer':
-                    cursor.execute("ALTER TABLE results ALTER COLUMN raza_score TYPE INTEGER USING raza_score::INTEGER")
-                    print("✓ Changed raza_score column type to INTEGER in results")
-
-                cursor.execute("""
-                    SELECT data_type 
-                    FROM information_schema.columns 
-                    WHERE table_name='attempts' AND column_name='raza_score'
-                """)
-                result = cursor.fetchone()
-                if result and result['data_type'] != 'integer':
-                    cursor.execute(
-                        "ALTER TABLE attempts ALTER COLUMN raza_score TYPE INTEGER USING raza_score::INTEGER")
-                    print("✓ Changed raza_score column type to INTEGER in attempts")
-
             conn.commit()
     except Exception as e:
         print(f"Error adding missing columns: {e}")
-
 
 def insert_default_config():
     default_configs = [

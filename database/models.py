@@ -284,77 +284,58 @@ class Game:
             valid_results = []
             for result in results:
                 if result['value'] not in special_values:
+                    if is_field:
+                        attempts = Attempt.get_by_result(result['id'])
+                        result['attempts_list'] = []
+                        for attempt in attempts:
+                            if attempt['value'] and attempt['value'] not in special_values:
+                                try:
+                                    result['attempts_list'].append(float(attempt['value']))
+                                except ValueError:
+                                    pass
+                        result['attempts_list'].sort(reverse=True)
                     valid_results.append(result)
 
             if not valid_results:
                 return True
 
-            if is_track:
+            def compare_results(result):
                 if use_wpa_points:
-                    valid_results.sort(key=lambda x: (
-                        -(x.get('raza_score') or 0),
-                        -(x.get('raza_score_precise') or 0),
-                        float(x['value']) if x['value'] not in special_values else float('inf')
-                    ))
+                    primary_key = -(result.get('raza_score') or 0)
+                    secondary_key = -(result.get('raza_score_precise') or 0)
                 else:
                     try:
-                        valid_results.sort(
-                            key=lambda x: float(x['value']) if x['value'] not in special_values else float('inf'))
+                        if is_track:
+                            primary_key = float(result['value'])
+                            secondary_key = 0
+                        else:
+                            primary_key = -float(result['value'])
+                            secondary_key = 0
                     except ValueError:
-                        return False
+                        primary_key = float('inf') if is_track else 0
+                        secondary_key = 0
 
-            elif is_field:
-                if game['event'] == 'High Jump':
-                    if use_wpa_points:
-                        valid_results.sort(key=lambda x: (
-                            -(x.get('raza_score') or 0),
-                            -(x.get('raza_score_precise') or 0),
-                            -(float(x['value']) if x['value'] not in special_values else 0)
-                        ))
-                    else:
-                        try:
-                            valid_results.sort(
-                                key=lambda x: -(float(x['value']) if x['value'] not in special_values else 0))
-                        except ValueError:
-                            return False
-                else:
-                    for result in valid_results:
-                        try:
-                            result['best_attempt_value'] = float(result['value']) if result[
-                                                                                         'value'] not in special_values else 0
-                        except ValueError:
-                            result['best_attempt_value'] = 0
+                tie_breakers = []
+                if is_field and 'attempts_list' in result:
+                    tie_breakers = result['attempts_list'][:6]
+                    while len(tie_breakers) < 6:
+                        tie_breakers.append(0)
 
-                    if use_wpa_points:
-                        valid_results.sort(key=lambda x: (
-                            -(x.get('raza_score') or 0),
-                            -(x.get('raza_score_precise') or 0),
-                            -x['best_attempt_value']
-                        ))
-                    else:
-                        valid_results.sort(key=lambda x: -x['best_attempt_value'])
+                return (primary_key, secondary_key, *tie_breakers)
+
+            valid_results.sort(key=compare_results)
 
             current_rank = 1
-            previous_value = None
+            previous_comparison = None
 
             for i, result in enumerate(valid_results):
-                if is_track:
-                    if use_wpa_points:
-                        current_value = (result.get('raza_score') or 0, result.get('raza_score_precise') or 0)
-                    else:
-                        current_value = result['value']
-                elif is_field:
-                    if use_wpa_points:
-                        current_value = (result.get('raza_score') or 0, result.get('raza_score_precise') or 0)
-                    else:
-                        current_value = result['best_attempt_value'] if 'best_attempt_value' in result else float(
-                            result['value'])
+                current_comparison = compare_results(result)
 
-                if i > 0 and current_value != previous_value:
+                if i > 0 and current_comparison != previous_comparison:
                     current_rank = i + 1
 
                 execute_query("UPDATE results SET rank = %s WHERE id = %s", (str(current_rank), result['id']))
-                previous_value = current_value
+                previous_comparison = current_comparison
 
             for result in results:
                 if result['value'] in special_values:
@@ -367,6 +348,67 @@ class Game:
             import traceback
             traceback.print_exc()
             return False
+
+    @staticmethod
+    def update_field_event_progression(game_id):
+        game = Game.get_by_id(game_id)
+        if not game or game['event'] in ['High Jump'] or game['event'] not in Config.get_field_events():
+            return False
+
+        results = execute_query("""
+            SELECT r.id, r.athlete_bib, r.value, 
+                   COUNT(DISTINCT a.attempt_number) as attempt_count
+            FROM results r
+            LEFT JOIN attempts a ON r.id = a.result_id AND a.attempt_number <= 3
+            WHERE r.game_id = %s AND r.value NOT IN %s
+            GROUP BY r.id, r.athlete_bib, r.value
+            HAVING COUNT(DISTINCT a.attempt_number) >= 3
+        """, (game_id, tuple(Config.get_result_special_values())), fetch=True)
+
+        if len(results) <= 8:
+            return False
+
+        sorted_results = sorted(results, key=lambda x: float(x['value']), reverse=True)
+
+        top_8 = sorted_results[:8]
+
+        final_order_results = sorted(top_8, key=lambda x: float(x['value']))
+
+        for i, result in enumerate(final_order_results):
+            execute_query(
+                "UPDATE results SET final_order = %s WHERE id = %s",
+                (i + 1, result['id'])
+            )
+
+        for result in sorted_results[8:]:
+            execute_query(
+                "UPDATE results SET final_order = NULL WHERE id = %s",
+                (result['id'],)
+            )
+
+        return True
+
+    @staticmethod
+    def check_and_update_progression(game_id):
+        game = Game.get_by_id(game_id)
+        if not game or game['event'] in ['High Jump'] or game['event'] not in Config.get_field_events():
+            return
+
+        results_with_3_attempts = execute_query("""
+            SELECT COUNT(*) as count
+            FROM results r
+            WHERE r.game_id = %s 
+            AND r.value NOT IN %s
+            AND (
+                SELECT COUNT(DISTINCT attempt_number) 
+                FROM attempts a 
+                WHERE a.result_id = r.id 
+                AND a.attempt_number <= 3
+            ) >= 3
+        """, (game_id, tuple(Config.get_result_special_values())), fetch=True)
+
+        if results_with_3_attempts and results_with_3_attempts[0]['count'] >= 8:
+            Game.update_field_event_progression(game_id)
 
 
 class Result:

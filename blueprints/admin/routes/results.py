@@ -478,6 +478,77 @@ def register_routes(bp):
         except Exception as e:
             return jsonify({'error': str(e)}), 500
 
+    @bp.route('/results/<int:result_id>/update-attempts', methods=['POST'])
+    @admin_required
+    def update_attempts(result_id):
+        try:
+            result = Result.get_by_id(result_id)
+            if not result:
+                return jsonify({'error': 'Result not found'}), 404
+
+            game = Game.get_by_id(result['game_id'])
+            if not game or game['event'] not in Config.get_field_events():
+                return jsonify({'error': 'Not a field event'}), 400
+
+            attempts_data = request.json.get('attempts', {})
+            athlete = Athlete.get_by_bib(result['athlete_bib'])
+
+            if not athlete:
+                return jsonify({'error': 'Athlete not found'}), 404
+
+            valid_attempts = []
+            all_attempts = {}
+
+            for attempt_num, attempt_info in attempts_data.items():
+                attempt_value = attempt_info.get('value', '').strip()
+                if not attempt_value:
+                    continue
+
+                attempt_num = int(attempt_num)
+                raza_score = 0
+                raza_score_precise = 0.0
+
+                if attempt_value not in Config.get_result_special_values():
+                    try:
+                        attempt_float = float(attempt_value)
+                        valid_attempts.append(attempt_float)
+
+                        raza_score, raza_score_precise = calculate_and_store_raza(athlete, game, attempt_float)
+                    except ValueError:
+                        pass
+
+                all_attempts[attempt_num] = {
+                    'value': attempt_value,
+                    'raza_score': raza_score,
+                    'raza_score_precise': raza_score_precise
+                }
+
+            Attempt.update_partial(result_id, all_attempts)
+
+            if valid_attempts:
+                best_performance = max(valid_attempts)
+                max_raza_score = 0
+                max_raza_score_precise = 0.0
+
+                if game.get('wpa_points', False):
+                    max_raza_score, max_raza_score_precise = calculate_and_store_raza(athlete, game, best_performance)
+
+                Result.update(
+                    result_id,
+                    value=best_performance,
+                    best_attempt=f"{best_performance:.2f}",
+                    raza_score=max_raza_score,
+                    raza_score_precise=max_raza_score_precise
+                )
+
+            Game.check_and_update_progression(game['id'])
+
+            return jsonify({'success': True})
+
+        except Exception as e:
+            print(f"Error updating attempts: {e}")
+            traceback.print_exc()
+            return jsonify({'error': str(e)}), 500
 
 def update_final_order_after_three_attempts(game_id):
     try:
@@ -514,3 +585,5 @@ def update_final_order_after_three_attempts(game_id):
 
     except Exception as e:
         print(f"Error updating final order: {e}")
+
+

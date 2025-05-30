@@ -31,7 +31,11 @@ def register_routes(bp):
     @loc_required
     def config_add_tag():
         try:
-            data = request.get_json()
+            if request.is_json:
+                data = request.get_json()
+            else:
+                data = request.form.to_dict()
+
             config_key = data.get('config_key')
             tag_value = data.get('tag_value')
 
@@ -57,7 +61,11 @@ def register_routes(bp):
     @loc_required
     def config_remove_tag():
         try:
-            data = request.get_json()
+            if request.is_json:
+                data = request.get_json()
+            else:
+                data = request.form.to_dict()
+
             config_key = data.get('config_key')
             tag_value = data.get('tag_value')
 

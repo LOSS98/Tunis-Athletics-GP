@@ -33,3 +33,4 @@ def register_routes(bp):
                             game=game,
                             results=results,
                             startlist=startlist)
+

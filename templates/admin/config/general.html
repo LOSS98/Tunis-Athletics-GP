@@ -262,6 +262,9 @@ function getCSRFToken() {
     const input = document.querySelector('input[name="csrf_token"]');
     if (input) return input.value;
 
+    const csrfToken = document.querySelector('[name="csrf_token"]');
+    if (csrfToken) return csrfToken.value;
+
     return '';
 }
 
@@ -275,16 +278,14 @@ async function addTag(configKey) {
     }
 
     try {
+        const formData = new FormData();
+        formData.append('config_key', configKey);
+        formData.append('tag_value', tagValue);
+        formData.append('csrf_token', getCSRFToken());
+
         const response = await fetch('/admin/config/api/add-tag', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCSRFToken()
-            },
-            body: JSON.stringify({
-                config_key: configKey,
-                tag_value: tagValue
-            })
+            body: formData
         });
 
         const result = await response.json();
@@ -304,16 +305,14 @@ async function addTag(configKey) {
 
 async function addTagDirect(configKey, tagValue) {
     try {
+        const formData = new FormData();
+        formData.append('config_key', configKey);
+        formData.append('tag_value', tagValue);
+        formData.append('csrf_token', getCSRFToken());
+
         const response = await fetch('/admin/config/api/add-tag', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCSRFToken()
-            },
-            body: JSON.stringify({
-                config_key: configKey,
-                tag_value: tagValue
-            })
+            body: formData
         });
 
         const result = await response.json();
@@ -334,16 +333,14 @@ async function addTagDirect(configKey, tagValue) {
 
 async function removeTag(configKey, tagValue) {
     try {
+        const formData = new FormData();
+        formData.append('config_key', configKey);
+        formData.append('tag_value', tagValue);
+        formData.append('csrf_token', getCSRFToken());
+
         const response = await fetch('/admin/config/api/remove-tag', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCSRFToken()
-            },
-            body: JSON.stringify({
-                config_key: configKey,
-                tag_value: tagValue
-            })
+            body: formData
         });
 
         const result = await response.json();
