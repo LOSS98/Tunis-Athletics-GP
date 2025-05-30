@@ -162,12 +162,13 @@ def init_db():
             athlete_bib INTEGER NOT NULL,
             rank VARCHAR(10),
             value VARCHAR(20) NOT NULL,
-            raza_score double precision,
+            raza_score INTEGER,
             raza_score_precise double precision,
             wind_velocity double precision,
             weight double precision,
             record VARCHAR(10),
             final_order INTEGER,
+            best_attempt VARCHAR(20),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE,
             UNIQUE (game_id, athlete_bib)
@@ -178,6 +179,7 @@ def init_db():
             game_id INTEGER NOT NULL,
             athlete_bib INTEGER NOT NULL,
             lane_order INTEGER,
+            final_order INTEGER,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE,
             UNIQUE (game_id, athlete_bib)
@@ -188,7 +190,7 @@ def init_db():
             result_id INTEGER NOT NULL,
             attempt_number INTEGER NOT NULL,
             value VARCHAR(20),
-            raza_score double precision,
+            raza_score INTEGER,
             raza_score_precise double precision,
             wind_velocity double precision,
             height double precision,
@@ -251,11 +253,14 @@ def init_db():
         print(f"✗ Critical error during database initialization: {e}")
         raise
 
+
 def add_missing_columns():
     missing_columns = [
         ("games", "wpa_points", "ALTER TABLE games ADD COLUMN wpa_points BOOLEAN DEFAULT FALSE"),
         ("results", "raza_score_precise", "ALTER TABLE results ADD COLUMN raza_score_precise double precision"),
         ("results", "final_order", "ALTER TABLE results ADD COLUMN final_order INTEGER"),
+        ("results", "best_attempt", "ALTER TABLE results ADD COLUMN best_attempt VARCHAR(20)"),
+        ("startlist", "final_order", "ALTER TABLE startlist ADD COLUMN final_order INTEGER"),
         ("attempts", "raza_score_precise", "ALTER TABLE attempts ADD COLUMN raza_score_precise double precision"),
         ("attempts", "height", "ALTER TABLE attempts ADD COLUMN height double precision")
     ]
@@ -272,6 +277,28 @@ def add_missing_columns():
                     if not cursor.fetchone():
                         cursor.execute(alter_query)
                         print(f"✓ Added column {column} to {table}")
+
+                cursor.execute("""
+                    SELECT data_type 
+                    FROM information_schema.columns 
+                    WHERE table_name='results' AND column_name='raza_score'
+                """)
+                result = cursor.fetchone()
+                if result and result['data_type'] != 'integer':
+                    cursor.execute("ALTER TABLE results ALTER COLUMN raza_score TYPE INTEGER USING raza_score::INTEGER")
+                    print("✓ Changed raza_score column type to INTEGER in results")
+
+                cursor.execute("""
+                    SELECT data_type 
+                    FROM information_schema.columns 
+                    WHERE table_name='attempts' AND column_name='raza_score'
+                """)
+                result = cursor.fetchone()
+                if result and result['data_type'] != 'integer':
+                    cursor.execute(
+                        "ALTER TABLE attempts ALTER COLUMN raza_score TYPE INTEGER USING raza_score::INTEGER")
+                    print("✓ Changed raza_score column type to INTEGER in attempts")
+
             conn.commit()
     except Exception as e:
         print(f"Error adding missing columns: {e}")
@@ -303,7 +330,11 @@ def insert_default_config():
             print(f"✗ Warning: Could not insert config {key}: {e}")
 
     default_tags = [
-        ('classes', ['T11', 'T12', 'T13', 'T20', 'T33', 'T34', 'T35', 'T36', 'T37', 'T38', 'T40', 'T41', 'T42', 'T43', 'T44', 'T45', 'T46', 'T47', 'T51', 'T52', 'T53', 'T54', 'T61', 'T62', 'T63', 'T64', 'F11', 'F12', 'F13', 'F20', 'F31', 'F32', 'F33', 'F34', 'F35', 'F36', 'F37', 'F38', 'F40', 'F41', 'F42', 'F43', 'F44', 'F45', 'F46', 'F51', 'F52', 'F53', 'F54', 'F55', 'F56', 'F57', 'F61', 'F62', 'F63', 'F64']),
+        ('classes',
+         ['T11', 'T12', 'T13', 'T20', 'T33', 'T34', 'T35', 'T36', 'T37', 'T38', 'T40', 'T41', 'T42', 'T43', 'T44',
+          'T45', 'T46', 'T47', 'T51', 'T52', 'T53', 'T54', 'T61', 'T62', 'T63', 'T64', 'F11', 'F12', 'F13', 'F20',
+          'F31', 'F32', 'F33', 'F34', 'F35', 'F36', 'F37', 'F38', 'F40', 'F41', 'F42', 'F43', 'F44', 'F45', 'F46',
+          'F51', 'F52', 'F53', 'F54', 'F55', 'F56', 'F57', 'F61', 'F62', 'F63', 'F64']),
         ('record_types', ['WR', 'AR', 'CR', 'NR', 'PB', 'SB']),
         ('result_special_values', ['DNS', 'DNF', 'DSQ', 'NM', 'O', 'X', '-']),
         ('field_events', ['Javelin', 'Shot Put', 'Discus Throw', 'Club Throw', 'Long Jump', 'High Jump']),
@@ -358,7 +389,8 @@ def insert_default_config():
 def insert_default_record_types():
     default_record_types = [
         ('WR', 'World Record', 'world', None, 'Official World Para Athletics World Record'),
-        ('AR', 'Area Record', 'continental', 'Africa,Asia,Europe,North America,South America,Oceania', 'Continental area record'),
+        ('AR', 'Area Record', 'continental', 'Africa,Asia,Europe,North America,South America,Oceania',
+         'Continental area record'),
         ('CR', 'Championship Record', 'competition', None, 'Record for this specific competition'),
         ('NR', 'National Record', 'national', None, 'National record for athlete\'s country'),
         ('PB', 'Personal Best', 'personal', None, 'Athlete\'s personal best performance'),

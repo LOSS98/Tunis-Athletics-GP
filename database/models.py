@@ -163,7 +163,8 @@ class Game:
 
     @staticmethod
     def update_velocity(id, velocity_value):
-        print(f"Updating velocity for game {id} to {velocity_value}")
+        if velocity_value == 0:
+            velocity_value = None
         return execute_query("UPDATE games SET wind_velocity = %s WHERE id = %s", (velocity_value, id))
 
     @staticmethod
@@ -260,125 +261,112 @@ class Game:
 
     @staticmethod
     def auto_rank_results(game_id):
-        game = Game.get_by_id(game_id)
-        if not game:
-            return False
+        try:
+            game = Game.get_by_id(game_id)
+            if not game:
+                return False
 
-        results = execute_query("""
-            SELECT r.*, a.gender as athlete_gender, a.class as athlete_class
-            FROM results r
-            JOIN athletes a ON r.athlete_bib = a.bib
-            WHERE r.game_id = %s
-        """, (game_id,), fetch=True)
+            results = execute_query("""
+                SELECT r.*, a.gender as athlete_gender, a.class as athlete_class
+                FROM results r
+                JOIN athletes a ON r.athlete_bib = a.bib
+                WHERE r.game_id = %s
+            """, (game_id,), fetch=True)
 
-        if not results:
-            return False
+            if not results:
+                return False
 
-        is_track = game['event'] in Config.get_track_events()
-        is_field = game['event'] in Config.get_field_events()
-        has_wpa_points = game.get('wpa_points', False)
-        special_values = Config.get_result_special_values()
+            is_track = game['event'] in Config.get_track_events()
+            is_field = game['event'] in Config.get_field_events()
+            use_wpa_points = game.get('wpa_points', False)
+            special_values = Config.get_result_special_values()
 
-        valid_results = []
-        for result in results:
-            if result['value'] in special_values:
-                continue
-            valid_results.append(result)
+            valid_results = []
+            for result in results:
+                if result['value'] not in special_values:
+                    valid_results.append(result)
 
-        if is_track:
-            if has_wpa_points:
-                valid_results.sort(key=lambda x: (
-                    -(x['raza_score'] or 0),
-                    -(x['raza_score_precise'] or 0),
-                    float(x['value']) if x['value'] not in special_values else float('inf')
-                ))
-            else:
-                valid_results.sort(
-                    key=lambda x: float(x['value']) if x['value'] not in special_values else float('inf'))
+            if not valid_results:
+                return True
 
-        elif is_field:
-            for result in valid_results:
-                result['attempts'] = Attempt.get_by_result(result['id'])
-                result['best_attempt_value'] = 0
-                result['attempt_sequence'] = []
-
-                for attempt in result['attempts']:
-                    if attempt['value'] and attempt['value'] not in ['X', '-', 'O', '']:
-                        try:
-                            val = float(attempt['value'])
-                            result['attempt_sequence'].append(val)
-                            if val > result['best_attempt_value']:
-                                result['best_attempt_value'] = val
-                        except ValueError:
-                            continue
-
-                while len(result['attempt_sequence']) < 6:
-                    result['attempt_sequence'].append(0)
-
-            if has_wpa_points:
-                def sort_key(x):
-                    return (
-                        -(x['raza_score'] or 0),
-                        -(x['raza_score_precise'] or 0),
-                        -x['best_attempt_value'],
-                        -x['attempt_sequence'][0],
-                        -x['attempt_sequence'][1],
-                        -x['attempt_sequence'][2],
-                        -x['attempt_sequence'][3],
-                        -x['attempt_sequence'][4],
-                        -x['attempt_sequence'][5]
-                    )
-            else:
-                def sort_key(x):
-                    return (
-                        -x['best_attempt_value'],
-                        -x['attempt_sequence'][0],
-                        -x['attempt_sequence'][1],
-                        -x['attempt_sequence'][2],
-                        -x['attempt_sequence'][3],
-                        -x['attempt_sequence'][4],
-                        -x['attempt_sequence'][5]
-                    )
-
-            valid_results.sort(key=sort_key)
-
-        current_rank = 1
-        previous_key = None
-        tied_count = 0
-
-        for i, result in enumerate(valid_results):
             if is_track:
-                if has_wpa_points:
-                    current_key = (result['raza_score'] or 0, result['raza_score_precise'] or 0, result['value'])
+                if use_wpa_points:
+                    valid_results.sort(key=lambda x: (
+                        -(x.get('raza_score') or 0),
+                        -(x.get('raza_score_precise') or 0),
+                        float(x['value']) if x['value'] not in special_values else float('inf')
+                    ))
                 else:
-                    current_key = result['value']
-            else:
-                if has_wpa_points:
-                    current_key = (
-                        result['raza_score'] or 0,
-                        result['raza_score_precise'] or 0,
-                        tuple(result['attempt_sequence'])
-                    )
+                    try:
+                        valid_results.sort(
+                            key=lambda x: float(x['value']) if x['value'] not in special_values else float('inf'))
+                    except ValueError:
+                        return False
+
+            elif is_field:
+                if game['event'] == 'High Jump':
+                    if use_wpa_points:
+                        valid_results.sort(key=lambda x: (
+                            -(x.get('raza_score') or 0),
+                            -(x.get('raza_score_precise') or 0),
+                            -(float(x['value']) if x['value'] not in special_values else 0)
+                        ))
+                    else:
+                        try:
+                            valid_results.sort(
+                                key=lambda x: -(float(x['value']) if x['value'] not in special_values else 0))
+                        except ValueError:
+                            return False
                 else:
-                    current_key = tuple(result['attempt_sequence'])
+                    for result in valid_results:
+                        try:
+                            result['best_attempt_value'] = float(result['value']) if result[
+                                                                                         'value'] not in special_values else 0
+                        except ValueError:
+                            result['best_attempt_value'] = 0
 
-            if previous_key is not None and current_key != previous_key:
-                current_rank += tied_count + 1
-                tied_count = 0
-            else:
-                tied_count += 1
+                    if use_wpa_points:
+                        valid_results.sort(key=lambda x: (
+                            -(x.get('raza_score') or 0),
+                            -(x.get('raza_score_precise') or 0),
+                            -x['best_attempt_value']
+                        ))
+                    else:
+                        valid_results.sort(key=lambda x: -x['best_attempt_value'])
 
-            execute_query("UPDATE results SET rank = %s WHERE id = %s", (str(current_rank), result['id']))
-            previous_key = current_key
+            current_rank = 1
+            previous_value = None
 
-        for result in results:
-            if result['value'] in special_values:
-                execute_query("UPDATE results SET rank = %s WHERE id = %s", ('-', result['id']))
+            for i, result in enumerate(valid_results):
+                if is_track:
+                    if use_wpa_points:
+                        current_value = (result.get('raza_score') or 0, result.get('raza_score_precise') or 0)
+                    else:
+                        current_value = result['value']
+                elif is_field:
+                    if use_wpa_points:
+                        current_value = (result.get('raza_score') or 0, result.get('raza_score_precise') or 0)
+                    else:
+                        current_value = result['best_attempt_value'] if 'best_attempt_value' in result else float(
+                            result['value'])
 
-        if game['event'] == 'Long Jump':
-            StartList.update_order_for_long_jump(game_id)
+                if i > 0 and current_value != previous_value:
+                    current_rank = i + 1
 
-        return True
+                execute_query("UPDATE results SET rank = %s WHERE id = %s", (str(current_rank), result['id']))
+                previous_value = current_value
+
+            for result in results:
+                if result['value'] in special_values:
+                    execute_query("UPDATE results SET rank = %s WHERE id = %s", ('-', result['id']))
+
+            return True
+
+        except Exception as e:
+            print(f"Error in auto_rank_results: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
 
 
 class Result:
@@ -398,6 +386,7 @@ class Result:
                     query += f" AND r.{key} = %s"
                     params.append(value)
 
+        query += " ORDER BY CASE WHEN r.rank ~ '^[0-9]+' THEN CAST(r.rank AS INTEGER) ELSE 999 END, r.rank"
         results = execute_query(query, params, fetch=True)
 
         if results and filters.get('game_id'):
@@ -408,34 +397,8 @@ class Result:
                 if game['event'] in field_events:
                     for result in results:
                         result['attempts'] = Attempt.get_by_result(result['id'])
-                        result = Result._select_best_attempt(result, game)
 
         return results
-
-    @staticmethod
-    def _select_best_attempt(result, game):
-        special_values = Config.get_result_special_values()
-
-        if not result.get('attempts') or result['value'] in special_values:
-            return result
-
-        valid_attempts = []
-        for attempt in result['attempts']:
-            if attempt['value'] and attempt['value'] not in ['X', '-', 'O', '']:
-                try:
-                    value = float(attempt['value'])
-                    valid_attempts.append(value)
-                except ValueError:
-                    continue
-
-        if valid_attempts:
-            best_attempt = max(valid_attempts)
-            result['best_attempt'] = f"{best_attempt:.2f}"
-
-            if result['value'] != result['best_attempt']:
-                result['auto_performance'] = result['best_attempt']
-
-        return result
 
     @staticmethod
     def get_by_id(id):
@@ -497,21 +460,6 @@ class Result:
         """
         return execute_query(query, fetch=True)
 
-    @staticmethod
-    def validate_performance(value, event_type):
-        special_values = Config.get_result_special_values()
-        field_events = Config.get_field_events()
-
-        if value in special_values:
-            return True
-
-        if event_type in field_events:
-            pattern = "r'^\d+(\.\d{1,2})?"
-        else:
-            pattern = "r'^(\d{1,2}:)?\d{1,2}\.\d{1,4}"
-
-        return bool(re.match(pattern, value))
-
 
 class StartList:
     @staticmethod
@@ -521,7 +469,7 @@ class StartList:
             FROM startlist s
             JOIN athletes a ON s.athlete_bib = a.bib
             WHERE s.game_id = %s
-            ORDER BY s.lane_order, a.bib
+            ORDER BY s.final_order IS NULL, s.final_order, s.lane_order, a.bib
         """
         return execute_query(query, (game_id,), fetch=True)
 
@@ -550,6 +498,11 @@ class StartList:
         return count['count'] if count else 0
 
     @staticmethod
+    def athlete_in_startlist(game_id, athlete_bib):
+        result = execute_one("SELECT id FROM startlist WHERE game_id = %s AND athlete_bib = %s", (game_id, athlete_bib))
+        return result is not None
+
+    @staticmethod
     def update_order_for_long_jump(game_id):
         game = Game.get_by_id(game_id)
         if not game or game['event'] != 'Long Jump':
@@ -558,26 +511,57 @@ class StartList:
         results = execute_query("""
             SELECT r.athlete_bib, r.value as best_performance
             FROM results r
-            WHERE r.game_id = %s
-            ORDER BY CAST(r.value AS DECIMAL) ASC
+            WHERE r.game_id = %s AND r.value NOT IN ('DNS', 'DNF', 'DSQ', 'NM')
         """, (game_id,), fetch=True)
 
-        top_8_results = execute_query("""
-            SELECT r.athlete_bib, r.value as best_performance
-            FROM results r
-            WHERE r.game_id = %s
-            ORDER BY CAST(r.value AS DECIMAL) DESC
-            LIMIT 8
-        """, (game_id,), fetch=True)
-
-        if len(top_8_results) < 8:
+        if len(results) < 3:
             return False
 
-        top_8_results.reverse()
+        results.sort(key=lambda x: float(x['best_performance']))
 
-        for i, result in enumerate(top_8_results):
+        for i, result in enumerate(results):
             execute_query(
-                "UPDATE results SET final_order = %s WHERE game_id = %s AND athlete_bib = %s",
+                "UPDATE startlist SET final_order = %s WHERE game_id = %s AND athlete_bib = %s",
+                (i + 1, game_id, result['athlete_bib'])
+            )
+
+        return True
+
+    @staticmethod
+    def update_final_order_long_jump(game_id):
+        game = Game.get_by_id(game_id)
+        if not game or game['event'] != 'Long Jump':
+            return False
+
+        results = execute_query("""
+            SELECT r.athlete_bib, r.value as best_performance, r.best_attempt,
+                   a.firstname, a.lastname
+            FROM results r
+            JOIN athletes a ON r.athlete_bib = a.bib
+            WHERE r.game_id = %s AND r.value NOT IN ('DNS', 'DNF', 'DSQ', 'NM')
+        """, (game_id,), fetch=True)
+
+        if len(results) < 8:
+            return False
+
+        final_order_results = []
+        for result in results:
+            attempts_count = execute_one(
+                "SELECT COUNT(*) as count FROM attempts WHERE result_id = (SELECT id FROM results WHERE game_id = %s AND athlete_bib = %s)",
+                (game_id, result['athlete_bib'])
+            )
+
+            if attempts_count and attempts_count['count'] >= 3:
+                final_order_results.append(result)
+
+        if len(final_order_results) < 8:
+            return False
+
+        final_order_results.sort(key=lambda x: float(x['best_attempt'] or x['best_performance'] or 0))
+
+        for i, result in enumerate(final_order_results[:8]):
+            execute_query(
+                "UPDATE startlist SET final_order = %s WHERE game_id = %s AND athlete_bib = %s",
                 (i + 1, game_id, result['athlete_bib'])
             )
 
@@ -614,7 +598,7 @@ class Attempt:
                 continue
 
             raza_score = attempt_data.get('raza_score')
-            raza_score_decimal = attempt_data.get('raza_score_decimal')
+            raza_score_decimal = attempt_data.get('raza_score_precise')
             wind_velocity = attempt_data.get('wind_velocity')
             height = attempt_data.get('height')
 
@@ -635,18 +619,18 @@ class Attempt:
             if not value:
                 continue
 
-            existing = execute_one(
-                "SELECT id FROM attempts WHERE result_id = %s AND attempt_number = %s",
-                (result_id, attempt_number)
-            )
-
             raza_score = attempt_data.get('raza_score')
-            raza_score_decimal = attempt_data.get('raza_score_decimal')
+            raza_score_decimal = attempt_data.get('raza_score_precise')
             wind_velocity = attempt_data.get('wind_velocity')
             height = attempt_data.get('height')
 
             if wind_velocity is not None:
                 wind_velocity = float(Config.format_wind(wind_velocity))
+
+            existing = execute_one(
+                "SELECT id FROM attempts WHERE result_id = %s AND attempt_number = %s",
+                (result_id, attempt_number)
+            )
 
             if existing:
                 execute_query(

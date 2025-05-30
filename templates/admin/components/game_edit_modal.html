@@ -1,24 +1,23 @@
-<!-- Game Edit Modal -->
 <div id="gameEditModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
-        <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full max-h-screen overflow-y-auto">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full">
             <div class="p-6">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold">Edit Game</h2>
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold">Edit Game</h2>
                     <button onclick="closeGameEditModal()" class="text-gray-400 hover:text-gray-600">
-                        <i class="fas fa-times text-xl"></i>
+                        <i class="fas fa-times"></i>
                     </button>
                 </div>
 
-                <form id="gameEditForm" method="POST">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
-                    <input type="hidden" id="gameId" name="game_id">
+                <form id="gameEditForm">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" id="editGameId" name="game_id">
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-gray-700 text-sm font-bold mb-2">Event</label>
-                            <select id="modalEvent" name="event" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500" required>
-                                {% for event in config.FIELD_EVENTS + config.TRACK_EVENTS %}
+                            <select id="editEvent" name="event" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500" required>
+                                {% for event in config.get_field_events() + config.get_track_events() %}
                                 <option value="{{ event }}">{{ event }}</option>
                                 {% endfor %}
                             </select>
@@ -26,51 +25,45 @@
 
                         <div>
                             <label class="block text-gray-700 text-sm font-bold mb-2">Gender</label>
-                            <select id="modalGender" name="gender" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500" required>
+                            <select id="editGender" name="gender" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500" required>
                                 <option value="Male">Male</option>
                                 <option value="Female">Female</option>
                             </select>
                         </div>
 
-                        <div>
+                        <div class="md:col-span-2">
                             <label class="block text-gray-700 text-sm font-bold mb-2">Classes</label>
-                            <input type="text" id="modalClasses" name="classes" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500"
-                                   placeholder="e.g., T54,T53,T52" required>
-                            <p class="text-xs text-gray-500 mt-1">Separate multiple classes with commas</p>
+                            <input type="text" id="editClasses" name="classes" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500" required>
                         </div>
 
                         <div>
                             <label class="block text-gray-700 text-sm font-bold mb-2">Phase</label>
-                            <input type="text" id="modalPhase" name="phase" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500"
-                                   placeholder="e.g., Final, Heats">
+                            <input type="text" id="editPhase" name="phase" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500">
                         </div>
 
                         <div>
                             <label class="block text-gray-700 text-sm font-bold mb-2">Area</label>
-                            <input type="text" id="modalArea" name="area" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500"
-                                   placeholder="e.g., Track, Field">
+                            <input type="text" id="editArea" name="area" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500">
                         </div>
 
                         <div>
                             <label class="block text-gray-700 text-sm font-bold mb-2">Day</label>
-                            <input type="number" id="modalDay" name="day" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500"
-                                   min="1" max="8" required>
+                            <input type="number" id="editDay" name="day" min="1" max="8" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500" required>
                         </div>
 
                         <div>
                             <label class="block text-gray-700 text-sm font-bold mb-2">Time</label>
-                            <input type="time" id="modalTime" name="time" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500" required>
+                            <input type="time" id="editTime" name="time" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500" required>
                         </div>
 
                         <div>
                             <label class="block text-gray-700 text-sm font-bold mb-2">Number of Athletes</label>
-                            <input type="number" id="modalNbAthletes" name="nb_athletes" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500"
-                                   min="1" required>
+                            <input type="number" id="editNbAthletes" name="nb_athletes" min="1" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500" required>
                         </div>
 
                         <div>
                             <label class="block text-gray-700 text-sm font-bold mb-2">Status</label>
-                            <select id="modalStatus" name="status" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500" required>
+                            <select id="editStatus" name="status" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500" required>
                                 <option value="scheduled">Scheduled</option>
                                 <option value="started">Started</option>
                                 <option value="in_progress">In Progress</option>
@@ -80,19 +73,25 @@
                         </div>
 
                         <div class="md:col-span-2">
-                            <label class="flex items-center">
-                                <input type="checkbox" id="modalPublished" name="published" class="mr-2">
-                                <span class="text-gray-700 text-sm font-bold">Published</span>
-                            </label>
+                            <div class="flex items-center space-x-6">
+                                <label class="flex items-center">
+                                    <input type="checkbox" id="editPublished" name="published" class="mr-2">
+                                    <span class="text-sm font-medium text-gray-700">Published</span>
+                                </label>
+                                <label class="flex items-center">
+                                    <input type="checkbox" id="editWpaPoints" name="wpa_points" class="mr-2">
+                                    <span class="text-sm font-medium text-gray-700">Use RAZA Scoring</span>
+                                </label>
+                            </div>
                         </div>
                     </div>
 
                     <div class="mt-6 flex justify-end space-x-4">
-                        <button type="button" onclick="closeGameEditModal()" class="bg-gray-500 text-white px-6 py-2 rounded hover:bg-gray-600">
+                        <button type="button" onclick="closeGameEditModal()" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
                             Cancel
                         </button>
-                        <button type="submit" class="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600">
-                            <i class="fas fa-save mr-2"></i>Save Changes
+                        <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                            Update Game
                         </button>
                     </div>
                 </form>
@@ -103,61 +102,54 @@
 
 <script>
 function openGameEditModal(gameId, gameData) {
-    // Populate form with game data
-    document.getElementById('gameId').value = gameId;
-    document.getElementById('modalEvent').value = gameData.event;
-    document.getElementById('modalGender').value = gameData.gender;
-    document.getElementById('modalClasses').value = gameData.classes;
-    document.getElementById('modalPhase').value = gameData.phase || '';
-    document.getElementById('modalArea').value = gameData.area || '';
-    document.getElementById('modalDay').value = gameData.day;
-    document.getElementById('modalTime').value = gameData.time;
-    document.getElementById('modalNbAthletes').value = gameData.nb_athletes;
-    document.getElementById('modalStatus').value = gameData.status;
-    document.getElementById('modalPublished').checked = gameData.published || false;
+    document.getElementById('editGameId').value = gameId;
+    document.getElementById('editEvent').value = gameData.event;
+    document.getElementById('editGender').value = gameData.gender;
+    document.getElementById('editClasses').value = gameData.classes;
+    document.getElementById('editPhase').value = gameData.phase || '';
+    document.getElementById('editArea').value = gameData.area || '';
+    document.getElementById('editDay').value = gameData.day;
+    document.getElementById('editTime').value = gameData.time;
+    document.getElementById('editNbAthletes').value = gameData.nb_athletes;
+    document.getElementById('editStatus').value = gameData.status;
+    document.getElementById('editPublished').checked = gameData.published;
+    document.getElementById('editWpaPoints').checked = gameData.wpa_points;
 
-    // Set form action
-    document.getElementById('gameEditForm').action = `/admin/games/${gameId}/edit`;
-
-    // Show modal
     document.getElementById('gameEditModal').classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
 }
 
 function closeGameEditModal() {
     document.getElementById('gameEditModal').classList.add('hidden');
-    document.body.style.overflow = 'auto';
 }
 
-// Close modal when clicking outside
-document.getElementById('gameEditModal').addEventListener('click', function(e) {
-    if (e.target === this) {
-        closeGameEditModal();
-    }
-});
-
-// Handle form submission
-document.getElementById('gameEditForm').addEventListener('submit', async function(e) {
+document.getElementById('gameEditForm').addEventListener('submit', function(e) {
     e.preventDefault();
 
     const formData = new FormData(this);
-    const gameId = formData.get('game_id');
+    const gameId = document.getElementById('editGameId').value;
 
-    try {
-        const response = await fetch(`/admin/games/${gameId}/edit`, {
-            method: 'POST',
-            body: formData
-        });
-
-        if (response.ok) {
+    fetch(`/admin/games/${gameId}/edit`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
             closeGameEditModal();
-            location.reload(); // Refresh the page to show changes
+            location.reload();
         } else {
-            alert('Error updating game');
+            alert('Error: ' + (data.error || 'Unknown error'));
         }
-    } catch (error) {
+    })
+    .catch(error => {
         console.error('Error:', error);
         alert('Error updating game');
+    });
+});
+
+document.getElementById('gameEditModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeGameEditModal();
     }
 });
 </script>

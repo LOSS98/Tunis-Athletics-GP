@@ -46,7 +46,21 @@
             {% if game.classes_list|length > 1 %}
                 <span class="ml-2 text-sm bg-purple-100 text-purple-800 px-2 py-1 rounded">Multi-Class Event</span>
             {% endif %}
+            {% if game.wpa_points %}
+                <span class="ml-2 text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded">RAZA Scoring</span>
+            {% endif %}
         </h2>
+        {% if game.wind_velocity and game.wind_velocity != 0 %}
+        <div class="mt-2 text-sm text-gray-600">
+            <i class="fas fa-wind mr-1"></i>
+            Wind: {{ config.format_wind(game.wind_velocity) }} m/s
+            {% if game.wind_velocity > 2.0 %}
+                <span class="text-red-600 ml-1">(Wind-assisted)</span>
+            {% elif game.wind_velocity < -2.0 %}
+                <span class="text-blue-600 ml-1">(Strong headwind)</span>
+            {% endif %}
+        </div>
+        {% endif %}
     </div>
     <div class="overflow-x-auto">
         <table class="w-full">
@@ -62,14 +76,16 @@
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Country</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Performance</th>
-                    {% if game.classes_list|length > 1 %}
+                    {% if game.classes_list|length > 1 and game.wpa_points %}
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">RAZA Score</th>
+                    {% endif %}
+                    {% if game.event in config.weight_field_events %}
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Weight</th>
                     {% endif %}
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
                 {% for result in results %}
-                <!-- Main result row -->
                 <tr class="hover:bg-gray-50" id="result-row-{{ result.id }}">
                     {% if game.event in config.FIELD_EVENTS %}
                     <td class="px-6 py-4 whitespace-nowrap">
@@ -86,7 +102,7 @@
                     {% endif %}
 
                     <td class="px-6 py-4 whitespace-nowrap">
-                        {% set rank = result.auto_rank or result.rank %}
+                        {% set rank = result.rank %}
                         {% if rank == '1' %}
                             <span class="text-3xl">🥇</span>
                         {% elif rank == '2' %}
@@ -109,7 +125,7 @@
                     <td class="px-6 py-4 whitespace-nowrap font-medium">{{ result.firstname }} {{ result.lastname }}</td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <img src="/static/images/flags/{{ result.country }}.svg" alt="{{ result.country }}"
-                             class="inline w-8 h-5 mr-2">
+                             class="inline w-8 h-5 mr-2" onerror="this.style.display='none'">
                         {{ result.country }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
@@ -119,13 +135,16 @@
                         {% if result.value in config.RESULT_SPECIAL_VALUES %}
                             <span class="text-red-600">{{ result.value }}</span>
                         {% else %}
-                            {{ result.auto_performance or result.value }}
-                            {% if game.event in config.FIELD_EVENTS and result.value not in config.RESULT_SPECIAL_VALUES %}
-                                <span class="text-sm text-gray-500">m</span>
+                            {% if game.event in config.TRACK_EVENTS %}
+                                {{ config.format_time(result.value) }}
+                            {% elif game.event in config.FIELD_EVENTS %}
+                                {{ config.format_distance(result.value) }} m
+                            {% else %}
+                                {{ result.value }}
                             {% endif %}
                         {% endif %}
                     </td>
-                    {% if game.classes_list|length > 1 %}
+                    {% if game.classes_list|length > 1 and game.wpa_points %}
                     <td class="px-6 py-4 whitespace-nowrap">
                         {% if result.raza_score %}
                             <div class="text-lg font-bold text-purple-600 bg-purple-50 px-2 py-1 rounded text-center">
@@ -136,12 +155,22 @@
                         {% endif %}
                     </td>
                     {% endif %}
+                    {% if game.event in config.weight_field_events %}
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if result.weight %}
+                            <span class="px-2 py-1 text-xs bg-orange-100 text-orange-800 rounded">
+                                {{ config.format_weight(result.weight) }}
+                            </span>
+                        {% else %}
+                            <span class="text-gray-400">-</span>
+                        {% endif %}
+                    </td>
+                    {% endif %}
                 </tr>
 
-                <!-- Attempts row (initially hidden) -->
                 {% if game.event in config.FIELD_EVENTS and result.attempts and result.attempts|length > 0 %}
                 <tr class="hidden bg-blue-50" id="attempts-row-{{ result.id }}">
-                    <td colspan="{% if game.classes_list|length > 1 %}9{% else %}8{% endif %}" class="px-6 py-4">
+                    <td colspan="{% if game.classes_list|length > 1 and game.wpa_points %}{% if game.event in config.weight_field_events %}10{% else %}9{% endif %}{% else %}{% if game.event in config.weight_field_events %}9{% else %}8{% endif %}{% endif %}" class="px-6 py-4">
                         <div class="bg-white rounded-lg p-4 border-l-4 border-blue-500">
                             <h4 class="font-bold text-blue-900 mb-3 flex items-center">
                                 <i class="fas fa-bullseye mr-2"></i>
@@ -171,12 +200,22 @@
                                                 -
                                             {% endif %}
                                         </div>
-                                        {% if game.classes_list|length > 1 %}
+                                        {% if game.classes_list|length > 1 and game.wpa_points %}
                                             {% if attempt.raza_score %}
-                                                <div class="text-xs font-medium text-gray-600 mb-1">
+                                                <div class="text-xs font-medium text-purple-600 mb-1">
                                                     RAZA {{ attempt.raza_score }}
                                                 </div>
                                             {% endif %}
+                                        {% endif %}
+                                        {% if game.event in config.WIND_AFFECTED_FIELD_EVENTS and attempt.wind_velocity %}
+                                        <div class="text-xs text-gray-600">
+                                            Wind: {{ config.format_wind(attempt.wind_velocity) }} m/s
+                                        </div>
+                                        {% endif %}
+                                        {% if game.event == 'Long Jump' and attempt.height %}
+                                        <div class="text-xs text-blue-600">
+                                            Height: {{ attempt.height }}m
+                                        </div>
                                         {% endif %}
                                         {% if attempt.value == result.best_attempt %}
                                         <div class="text-xs text-green-600 font-medium mt-1">
@@ -198,6 +237,16 @@
                                         {{ result.best_attempt }} m
                                     </span>
                                 </div>
+                                {% if game.classes_list|length > 1 and game.wpa_points and result.raza_score %}
+                                <div class="flex items-center justify-between mt-2">
+                                    <span class="text-purple-800 font-medium">
+                                        <i class="fas fa-calculator mr-2"></i>RAZA Score:
+                                    </span>
+                                    <span class="text-purple-900 font-bold text-xl">
+                                        {{ result.raza_score }} points
+                                    </span>
+                                </div>
+                                {% endif %}
                             </div>
                             {% endif %}
 
@@ -207,6 +256,9 @@
                                     <div><span class="font-semibold">O:</span> Successful clearance</div>
                                     <div><span class="font-semibold">-:</span> Pass</div>
                                     <div><span class="font-semibold text-green-600">★:</span> Best attempt used for ranking</div>
+                                    {% if game.event == 'Long Jump' %}
+                                    <div><span class="font-semibold text-blue-600">Height:</span> Takeoff board height</div>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
@@ -234,7 +286,6 @@
 </div>
 {% endif %}
 
-<!-- Start List Section -->
 {% if startlist %}
 <div class="bg-white rounded-lg shadow overflow-hidden mb-6">
     <div class="p-6 border-b bg-gray-50">
@@ -249,7 +300,7 @@
         <table class="w-full">
             <thead class="bg-gray-50">
                 <tr>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lane/Order</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">BIB</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Country</th>
@@ -259,7 +310,19 @@
             <tbody class="divide-y divide-gray-200">
                 {% for entry in startlist[:10] %}
                 <tr class="hover:bg-gray-50">
-                    <td class="px-6 py-4 whitespace-nowrap">{{ entry.lane_order or '-' }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if entry.final_order %}
+                            <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-sm font-semibold">
+                                {{ entry.final_order }}
+                            </span>
+                        {% elif entry.lane_order %}
+                            <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-semibold">
+                                {{ entry.lane_order }}
+                            </span>
+                        {% else %}
+                            <span class="text-gray-400">-</span>
+                        {% endif %}
+                    </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <span class="bg-indigo-100 text-indigo-800 px-2 py-1 rounded text-sm font-semibold">
                             {{ entry.athlete_bib }}
@@ -268,7 +331,7 @@
                     <td class="px-6 py-4 whitespace-nowrap font-medium">{{ entry.firstname }} {{ entry.lastname }}</td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <img src="/static/images/flags/{{ entry.country }}.svg" alt="{{ entry.country }}"
-                             class="inline w-6 h-4 mr-1">
+                             class="inline w-6 h-4 mr-1" onerror="this.style.display='none'">
                         {{ entry.country }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
@@ -303,34 +366,36 @@
         <div><span class="font-semibold">X:</span> Failure</div>
         <div><span class="font-semibold">-:</span> Pass</div>
     </div>
-    {% if game.classes_list|length > 1 %}
+    {% if game.classes_list|length > 1 and game.wpa_points %}
     <div class="mt-3 p-2 bg-purple-50 rounded">
         <span class="font-semibold text-purple-800">RAZA Scoring:</span>
         <span class="text-purple-700 text-sm">Multi-class events use RAZA scores for fair comparison between different disability classes. Higher scores indicate better relative performance.</span>
     </div>
     {% endif %}
+    {% if game.event == 'Long Jump' %}
+    <div class="mt-3 p-2 bg-orange-50 rounded">
+        <span class="font-semibold text-orange-800">Long Jump Special Rules:</span>
+        <span class="text-orange-700 text-sm">Athletes can take unlimited attempts. Final order determined by best performance after initial rounds.</span>
+    </div>
+    {% endif %}
 </div>
 
-<!-- JavaScript for attempts toggle -->
 <script>
 function toggleAttempts(resultId) {
     const attemptsRow = document.getElementById(`attempts-row-${resultId}`);
     const icon = document.getElementById(`attempts-icon-${resultId}`);
 
     if (attemptsRow.classList.contains('hidden')) {
-        // Show attempts
         attemptsRow.classList.remove('hidden');
         icon.classList.remove('fa-plus-circle');
         icon.classList.add('fa-minus-circle');
 
-        // Add smooth animation
         attemptsRow.style.opacity = '0';
         setTimeout(() => {
             attemptsRow.style.transition = 'opacity 0.3s ease-in-out';
             attemptsRow.style.opacity = '1';
         }, 10);
     } else {
-        // Hide attempts
         attemptsRow.style.opacity = '0';
         setTimeout(() => {
             attemptsRow.classList.add('hidden');
@@ -340,12 +405,10 @@ function toggleAttempts(resultId) {
     }
 }
 
-// Close all attempts when clicking outside
 document.addEventListener('click', function(event) {
     if (!event.target.closest('[onclick*="toggleAttempts"]') &&
         !event.target.closest('[id*="attempts-row"]')) {
 
-        // Close all open attempts
         document.querySelectorAll('[id*="attempts-row"]:not(.hidden)').forEach(row => {
             const resultId = row.id.replace('attempts-row-', '');
             const icon = document.getElementById(`attempts-icon-${resultId}`);

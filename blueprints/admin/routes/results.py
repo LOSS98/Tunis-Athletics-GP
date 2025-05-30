@@ -1,3 +1,4 @@
+import traceback
 from flask import render_template, redirect, url_for, flash, request, jsonify
 from utils.raza_calculation import calculate_raza, verify_combination
 from ..auth import admin_required
@@ -6,11 +7,13 @@ from database.models import Game, Result, Athlete, Attempt, StartList
 from database.db_manager import execute_one, execute_query
 from config import Config
 import re
-import traceback
 
 
 def parse_time_to_seconds(time_str):
     time_str = time_str.strip()
+
+    if not time_str:
+        return 0.0
 
     if ':' in time_str:
         parts = time_str.split(':')
@@ -23,38 +26,62 @@ def parse_time_to_seconds(time_str):
         if '.' in seconds_part:
             sec_parts = seconds_part.split('.')
             seconds = int(sec_parts[0])
-            decimal_part = sec_parts[1]
-            decimal_part = decimal_part.ljust(4, '0')[:4]
-            milliseconds = int(decimal_part)
+            decimal_part = sec_parts[1].ljust(4, '0')[:4]
         else:
             seconds = int(seconds_part)
-            milliseconds = 0
+            decimal_part = '0000'
 
-        total_seconds = minutes * 60 + seconds + (milliseconds / 10000)
+        total_seconds = minutes * 60 + seconds + (int(decimal_part) / 10000)
     else:
         if '.' in time_str:
             sec_parts = time_str.split('.')
             seconds = int(sec_parts[0])
-            decimal_part = sec_parts[1]
-            decimal_part = decimal_part.ljust(4, '0')[:4]
-            milliseconds = int(decimal_part)
+            decimal_part = sec_parts[1].ljust(4, '0')[:4]
         else:
             seconds = int(time_str)
-            milliseconds = 0
+            decimal_part = '0000'
 
-        total_seconds = seconds + (milliseconds / 10000)
+        total_seconds = seconds + (int(decimal_part) / 10000)
 
     return total_seconds
 
 
 def format_time_output(seconds):
+    if seconds == 0:
+        return "0:00.0000"
+
     minutes = int(seconds // 60)
     remaining_seconds = seconds % 60
 
     if minutes > 0:
-        return f"{minutes:02d}:{remaining_seconds:06.3f}"
+        return f"{minutes}:{remaining_seconds:06.3f}"
     else:
         return f"{remaining_seconds:06.3f}"
+
+
+def calculate_and_store_raza(athlete, game, performance_value):
+    raza_score = 0
+    raza_score_precise = 0.0
+
+    if verify_combination(athlete['gender'], game['event'], athlete['class']):
+        try:
+            result = calculate_raza(
+                gender=athlete['gender'],
+                event=game['event'],
+                athlete_class=athlete['class'],
+                performance=float(performance_value)
+            )
+
+            response, status = result if isinstance(result, tuple) else (result, 200)
+            if status == 200:
+                raza_data = response.get_json()
+                raza_score = int(raza_data.get('raza_score', 0))
+                raza_score_precise = float(raza_data.get('raza_score_precise', 0.0))
+        except Exception as e:
+            print(f"Error calculating RAZA: {e}")
+
+    return raza_score, raza_score_precise
+
 
 
 def register_routes(bp):
@@ -70,8 +97,24 @@ def register_routes(bp):
         startlist = StartList.get_by_game(id)
         form = ResultForm()
 
+        game_json = {
+            'id': game['id'],
+            'event': game['event'],
+            'gender': game['gender'],
+            'classes': game['classes'],
+            'phase': game.get('phase'),
+            'area': game.get('area'),
+            'day': game['day'],
+            'time': str(game['time']),
+            'nb_athletes': game['nb_athletes'],
+            'status': game['status'],
+            'published': game.get('published', False),
+            'wpa_points': game.get('wpa_points', False)
+        }
+
         return render_template('admin/results/manage.html',
                                game=game,
+                               game_json=game_json,
                                results=results,
                                startlist=startlist,
                                form=form,
@@ -91,6 +134,7 @@ def register_routes(bp):
             value = request.form.get('value', '').strip() if request.form.get('value') else ''
             weight_raw = request.form.get('weight')
             weight = weight_raw.strip() if weight_raw else None
+            record = request.form.get('record', '').strip()
 
             attempts = []
             wind_attempts = []
@@ -126,8 +170,8 @@ def register_routes(bp):
                 if not value:
                     errors.append('Performance value is required for track events')
                 elif value not in Config.get_result_special_values():
-                    if not re.match(r'^(\d{1,2}:)?\d{1,2}\.\d{1,4}$', value):
-                        errors.append('Invalid time format. Use MM:SS.SSSS or SS.SSSS')
+                    if not re.match(r'^(\d{1,2}:)?\d{1,2}(\.\d{1,4})?$', value):
+                        errors.append('Invalid time format. Use MM:SS.SSSS, MM:SS, SS.SSSS, or SS')
 
             if errors:
                 for error in errors:
@@ -136,122 +180,30 @@ def register_routes(bp):
 
             existing_result = Result.get_by_game_athlete(game_id, athlete_bib)
             if existing_result:
-                if game['event'] in Config.get_field_events():
-                    attempts_data = {}
-                    for i, attempt_value in enumerate(attempts):
-                        if attempt_value:
-                            raza_score = 0
-                            raza_score_decimal = 0
-
-                            if attempt_value.upper() not in Config.get_result_special_values():
-                                try:
-                                    attempt_float = float(attempt_value)
-
-                                    if game.get('wpa_points', False) and verify_combination(gender=athlete['gender'], event=game['event'], athlete_class=athlete['class']):
-                                        result = calculate_raza(
-                                            gender=athlete['gender'],
-                                            event=game['event'],
-                                            athlete_class=athlete['class'],
-                                            performance=attempt_float
-                                        )
-
-                                        response, status = result if isinstance(result, tuple) else (result, 200)
-                                        raza_score = int(response.get_json().get('raza_score', 0))
-                                        raza_score_decimal = round(response.get_json().get('raza_score', 0), 3)
-                                except (ValueError, TypeError) as e:
-                                    print(f"Error processing attempt {i + 1}: {e}")
-
-                            wind_velocity = None
-                            if i < len(wind_attempts) and wind_attempts[i]:
-                                try:
-                                    wind_velocity = float(wind_attempts[i])
-                                except (ValueError, TypeError):
-                                    wind_velocity = None
-
-                            height_value = None
-                            if i < len(heights) and heights[i]:
-                                try:
-                                    height_value = float(heights[i])
-                                except (ValueError, TypeError):
-                                    height_value = None
-
-                            attempts_data[i + 1] = {
-                                'value': attempt_value,
-                                'raza_score': raza_score,
-                                'raza_score_decimal': raza_score_decimal,
-                                'wind_velocity': wind_velocity,
-                                'height': height_value
-                            }
-
-                    Attempt.update_partial(existing_result['id'], attempts_data)
-
-                    valid_attempts = []
-                    raza_scores = []
-                    for attempt_value in attempts:
-                        if attempt_value and attempt_value.upper() not in Config.get_result_special_values():
-                            try:
-                                attempt_float = float(attempt_value)
-                                valid_attempts.append(attempt_float)
-
-                                if game.get('wpa_points', False) and verify_combination(gender=athlete['gender'], event=game['event'], athlete_class=athlete['class']):
-                                    result = calculate_raza(
-                                        gender=athlete['gender'],
-                                        event=game['event'],
-                                        athlete_class=athlete['class'],
-                                        performance=attempt_float
-                                    )
-
-                                    response, status = result if isinstance(result, tuple) else (result, 200)
-                                    raza_scores.append(int(response.get_json().get('raza_score', 0)))
-                            except (ValueError, TypeError):
-                                continue
-
-                    performance_value = max(valid_attempts) if valid_attempts else 0.0
-                    max_raza_score = max(raza_scores) if raza_scores else 0
-
-                    update_data = {
-                        'value': performance_value,
-                        'raza_score': max_raza_score,
-                        'raza_score_decimal': round(max_raza_score, 3) if max_raza_score else None
-                    }
-
-                    if weight:
-                        try:
-                            update_data['weight'] = float(weight)
-                        except (ValueError, TypeError):
-                            pass
-
-                    Result.update(existing_result['id'], **update_data)
-                    flash('Result updated successfully', 'success')
-                else:
-                    flash('Cannot update track event result with attempts', 'danger')
+                flash('Result already exists for this athlete. Please delete the existing result first.', 'warning')
                 return redirect(url_for('admin.game_results', id=game_id))
+
+            if not StartList.athlete_in_startlist(game_id, athlete_bib):
+                flash(f'Warning: Athlete BIB {athlete_bib} is not in the start list. Add to start list?', 'warning')
 
             if game['event'] in Config.get_field_events():
                 valid_attempts = []
                 raza_scores = []
                 attempts_data = {}
+                all_attempt_values = []
 
                 for i, attempt_value in enumerate(attempts):
                     raza_score = 0
-                    raza_score_decimal = 0
+                    raza_score_precise = 0.0
 
                     if attempt_value and attempt_value.upper() not in Config.get_result_special_values():
                         try:
                             attempt_float = float(attempt_value)
                             valid_attempts.append(attempt_float)
+                            all_attempt_values.append(attempt_float)
 
-                            if game.get('wpa_points', False) and verify_combination(gender=athlete['gender'], event=game['event'], athlete_class=athlete['class']):
-                                result = calculate_raza(
-                                    gender=athlete['gender'],
-                                    event=game['event'],
-                                    athlete_class=athlete['class'],
-                                    performance=attempt_float
-                                )
-
-                                response, status = result if isinstance(result, tuple) else (result, 200)
-                                raza_score = int(response.get_json().get('raza_score', 0))
-                                raza_score_decimal = round(response.get_json().get('raza_score', 0), 3)
+                            raza_score, raza_score_precise = calculate_and_store_raza(athlete, game, attempt_float)
+                            if raza_score > 0:
                                 raza_scores.append(raza_score)
                         except (ValueError, TypeError) as e:
                             print(f"Error processing attempt {i + 1}: {e}")
@@ -274,20 +226,33 @@ def register_routes(bp):
                         attempts_data[i + 1] = {
                             'value': attempt_value,
                             'raza_score': raza_score,
-                            'raza_score_decimal': raza_score_decimal,
+                            'raza_score_precise': raza_score_precise,
                             'wind_velocity': wind_velocity,
                             'height': height_value
                         }
 
-                performance_value = max(valid_attempts) if valid_attempts else 0.0
-                max_raza_score = max(raza_scores) if raza_scores else 0
+                if not valid_attempts:
+                    performance_value = "NM"
+                    max_raza_score = 0
+                    max_raza_score_precise = 0.0
+                else:
+                    performance_value = max(valid_attempts)
+                    max_raza_score = max(raza_scores) if raza_scores else 0
+                    max_raza_score_precise = 0.0
+                    if raza_scores:
+                        for i, attempt_value in enumerate(all_attempt_values):
+                            if attempt_value == performance_value:
+                                raza_score, raza_score_precise = calculate_and_store_raza(athlete, game, attempt_value)
+                                max_raza_score_precise = raza_score_precise
+                                break
 
                 result_data = {
                     'game_id': game_id,
                     'athlete_bib': athlete_bib,
                     'value': performance_value,
+                    'best_attempt': f"{performance_value:.2f}" if performance_value != "NM" else None,
                     'raza_score': max_raza_score,
-                    'raza_score_decimal': round(max_raza_score, 3) if max_raza_score else None
+                    'raza_score_precise': max_raza_score_precise
                 }
 
                 if weight:
@@ -296,45 +261,33 @@ def register_routes(bp):
                     except (ValueError, TypeError):
                         pass
 
+                if record and record != '':
+                    result_data['record'] = record
+
                 result_id = Result.create(**result_data)
 
                 if not result_id:
                     flash('Failed to create result', 'danger')
                     return redirect(url_for('admin.game_results', id=game_id))
 
-                Attempt.create_multiple(result_id=result_id, attempts=attempts_data)
+                if attempts_data:
+                    Attempt.create_multiple(result_id=result_id, attempts=attempts_data)
 
-                if game['event'] == 'Long Jump':
-                    StartList.update_order_for_long_jump(game_id)
+                if game['event'] not in ['High Jump'] and len(attempts_data) >= 3:
+                    update_final_order_after_three_attempts(game_id)
 
             elif game['event'] in Config.get_track_events():
-                max_raza_score = 0
-                max_raza_score_decimal = 0
-
                 if value.upper() in Config.get_result_special_values():
                     performance_value = value.upper()
+                    max_raza_score = 0
+                    max_raza_score_precise = 0.0
                 else:
                     try:
-                        performance_value = parse_time_to_seconds(value)
-                        formatted_value = format_time_output(performance_value)
+                        performance_seconds = parse_time_to_seconds(value)
+                        performance_value = format_time_output(performance_seconds)
 
-                        if game.get('wpa_points', False) and verify_combination(gender=athlete['gender'], event=game['event'], athlete_class=athlete['class']):
-                            try:
-                                result = calculate_raza(
-                                    gender=athlete['gender'],
-                                    event=game['event'],
-                                    athlete_class=athlete['class'],
-                                    performance=performance_value
-                                )
-
-                                response, status = result if isinstance(result, tuple) else (result, 200)
-                                max_raza_score = int(response.get_json().get('raza_score', 0))
-                                max_raza_score_decimal = round(response.get_json().get('raza_score', 0), 3)
-
-                            except Exception as e:
-                                print(f"Error calculating track raza score: {e}")
-
-                        performance_value = formatted_value
+                        max_raza_score, max_raza_score_precise = calculate_and_store_raza(athlete, game,
+                                                                                          performance_seconds)
 
                     except (ValueError, IndexError) as e:
                         flash('Invalid time format', 'danger')
@@ -345,8 +298,11 @@ def register_routes(bp):
                     'athlete_bib': athlete_bib,
                     'value': performance_value,
                     'raza_score': max_raza_score,
-                    'raza_score_decimal': max_raza_score_decimal
+                    'raza_score_precise': max_raza_score_precise
                 }
+
+                if record and record != '':
+                    result_data['record'] = record
 
                 result_id = Result.create(**result_data)
 
@@ -388,59 +344,173 @@ def register_routes(bp):
 
     @bp.route('/results/<int:result_id>/add-attempt', methods=['POST'])
     @admin_required
-    def add_long_jump_attempt(result_id):
+    def add_high_jump_attempt(result_id):
         try:
             result = Result.get_by_id(result_id)
             if not result:
                 return jsonify({'error': 'Result not found'}), 404
 
             game = Game.get_by_id(result['game_id'])
-            if not game or game['event'] != 'Long Jump':
-                return jsonify({'error': 'Only available for Long Jump events'}), 400
+            if not game or game['event'] != 'High Jump':
+                return jsonify({'error': 'Only available for High Jump events'}), 400
 
-            value = request.json.get('value')
             height = request.json.get('height')
-            wind_velocity = request.json.get('wind_velocity')
+            attempt_result = request.json.get('result', 'O')
 
-            if not value:
-                return jsonify({'error': 'Attempt value is required'}), 400
+            if not height:
+                return jsonify({'error': 'Height is required'}), 400
 
             try:
-                float(value)
+                height_float = float(height)
             except ValueError:
-                if value.upper() not in Config.get_result_special_values():
-                    return jsonify({'error': 'Invalid attempt value'}), 400
+                return jsonify({'error': 'Invalid height value'}), 400
 
-            Attempt.add_long_jump_attempt(result_id, value, height, wind_velocity)
+            athlete = Athlete.get_by_bib(result['athlete_bib'])
 
-            existing_attempts = Attempt.get_by_result(result_id)
-            valid_attempts = []
-            raza_scores = []
+            existing_attempts = execute_query(
+                "SELECT MAX(attempt_number) as max_num FROM attempts WHERE result_id = %s",
+                (result_id,), fetch=True
+            )
 
-            for attempt in existing_attempts:
-                if attempt['value'] and attempt['value'].upper() not in Config.get_result_special_values():
-                    try:
-                        attempt_float = float(attempt['value'])
-                        valid_attempts.append(attempt_float)
-                        if attempt['raza_score']:
-                            raza_scores.append(attempt['raza_score'])
-                    except (ValueError, TypeError):
-                        continue
+            next_attempt = 1
+            if existing_attempts and existing_attempts[0]['max_num']:
+                next_attempt = existing_attempts[0]['max_num'] + 1
 
-            if valid_attempts:
-                best_performance = max(valid_attempts)
-                best_raza = max(raza_scores) if raza_scores else 0
+            raza_score = 0
+            raza_score_precise = 0.0
 
-                Result.update(result_id,
-                             value=best_performance,
-                             raza_score=best_raza,
-                             raza_score_decimal=round(best_raza, 3) if best_raza else None)
+            if attempt_result == 'O' and athlete:
+                raza_score, raza_score_precise = calculate_and_store_raza(athlete, game, height_float)
 
-            StartList.update_order_for_long_jump(result['game_id'])
+            Attempt.create(result_id, next_attempt, attempt_result, None, raza_score, raza_score_precise, height_float)
+
+            if attempt_result == 'O':
+                current_best = execute_one(
+                    "SELECT MAX(height) as best_height FROM attempts WHERE result_id = %s AND value = 'O'",
+                    (result_id,)
+                )
+
+                if current_best and current_best['best_height']:
+                    best_height = current_best['best_height']
+                    best_raza_score, best_raza_score_precise = calculate_and_store_raza(athlete, game, best_height)
+
+                    Result.update(result_id,
+                                  value=best_height,
+                                  best_attempt=f"{best_height:.2f}",
+                                  raza_score=best_raza_score,
+                                  raza_score_precise=best_raza_score_precise)
 
             return jsonify({'success': True, 'message': 'Attempt added successfully'})
 
         except Exception as e:
-            print(f"Error adding Long Jump attempt: {e}")
+            print(f"Error adding High Jump attempt: {e}")
             traceback.print_exc()
             return jsonify({'error': 'Server error occurred'}), 500
+
+    @bp.route('/games/<int:game_id>/recalculate-raza', methods=['POST'])
+    @admin_required
+    def recalculate_raza_scores(game_id):
+        try:
+            game = Game.get_by_id(game_id)
+            if not game:
+                return jsonify({'error': 'Game not found'}), 404
+
+            results = execute_query("""
+                SELECT r.*, a.gender, a.class
+                FROM results r
+                JOIN athletes a ON r.athlete_bib = a.bib
+                WHERE r.game_id = %s
+            """, (game_id,), fetch=True)
+
+            updated_count = 0
+            for result in results:
+                if result['value'] not in Config.get_result_special_values():
+                    try:
+                        performance = float(result['value'])
+                        athlete_data = {'gender': result['gender'], 'class': result['class']}
+
+                        raza_score, raza_score_precise = calculate_and_store_raza(athlete_data, game, performance)
+
+                        Result.update(result['id'],
+                                      raza_score=raza_score,
+                                      raza_score_precise=raza_score_precise)
+                        updated_count += 1
+
+                        attempts = Attempt.get_by_result(result['id'])
+                        for attempt in attempts:
+                            if attempt['value'] and attempt['value'].upper() not in Config.get_result_special_values():
+                                try:
+                                    attempt_perf = float(attempt['value'])
+                                    attempt_raza, attempt_raza_precise = calculate_and_store_raza(athlete_data, game,
+                                                                                                  attempt_perf)
+
+                                    execute_query("""
+                                        UPDATE attempts 
+                                        SET raza_score = %s, raza_score_precise = %s 
+                                        WHERE id = %s
+                                    """, (attempt_raza, attempt_raza_precise, attempt['id']))
+                                except (ValueError, TypeError):
+                                    continue
+
+                    except (ValueError, TypeError):
+                        continue
+
+            return jsonify({'success': True, 'updated': updated_count})
+
+        except Exception as e:
+            print(f"Error recalculating RAZA scores: {e}")
+            traceback.print_exc()
+            return jsonify({'error': 'Server error occurred'}), 500
+
+    @bp.route('/startlist/add-from-result', methods=['POST'])
+    @admin_required
+    def add_to_startlist_from_result():
+        try:
+            game_id = request.json.get('game_id')
+            athlete_bib = request.json.get('athlete_bib')
+
+            if not game_id or not athlete_bib:
+                return jsonify({'error': 'Missing parameters'}), 400
+
+            StartList.create(game_id, athlete_bib, None)
+            return jsonify({'success': True})
+
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
+
+
+def update_final_order_after_three_attempts(game_id):
+    try:
+        results_with_three_attempts = execute_query("""
+            SELECT r.id, r.athlete_bib, r.value as best_performance
+            FROM results r
+            WHERE r.game_id = %s 
+            AND r.value != 'NM'
+            AND (
+                SELECT COUNT(*) 
+                FROM attempts a 
+                WHERE a.result_id = r.id 
+                AND a.attempt_number <= 3
+            ) >= 3
+        """, (game_id,), fetch=True)
+
+        if len(results_with_three_attempts) <= 8:
+            return
+
+        sorted_results = sorted(results_with_three_attempts,
+                                key=lambda x: float(x['best_performance']) if x['best_performance'] != 'NM' else 0,
+                                reverse=True)
+
+        top_8 = sorted_results[:8]
+
+        final_order_results = sorted(top_8,
+                                     key=lambda x: float(x['best_performance']) if x['best_performance'] != 'NM' else 0)
+
+        for i, result in enumerate(final_order_results):
+            execute_query(
+                "UPDATE startlist SET final_order = %s WHERE game_id = %s AND athlete_bib = %s",
+                (i + 1, game_id, result['athlete_bib'])
+            )
+
+    except Exception as e:
+        print(f"Error updating final order: {e}")

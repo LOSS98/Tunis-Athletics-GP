@@ -73,7 +73,7 @@ def register_routes(bp):
                 flash('Game not found', 'danger')
                 return redirect(url_for('admin.games_list'))
 
-            Game.update_velocity(game_id, 0.0)
+            Game.update_velocity(game_id, 0)
             flash('Wind velocity measurement removed for this event', 'success')
 
             return redirect(url_for('admin.game_results', id=game_id))
@@ -122,41 +122,33 @@ def register_routes(bp):
 
         return render_template('admin/games/create.html', form=form)
 
-    @bp.route('/games/<int:id>/edit', methods=['GET', 'POST'])
+    @bp.route('/games/<int:id>/edit', methods=['POST'])
     @admin_required
     def game_edit(id):
         game = Game.get_by_id(id)
         if not game:
-            flash('Game not found', 'danger')
-            return redirect(url_for('admin.games_list'))
+            return jsonify({'error': 'Game not found'}), 404
 
-        if request.method == 'POST':
+        try:
             data = {
                 'event': request.form.get('event'),
                 'gender': request.form.get('gender'),
                 'classes': request.form.get('classes'),
-                'phase': request.form.get('phase'),
-                'area': request.form.get('area'),
+                'phase': request.form.get('phase') if request.form.get('phase') else None,
+                'area': request.form.get('area') if request.form.get('area') else None,
                 'day': int(request.form.get('day')),
                 'time': request.form.get('time'),
                 'nb_athletes': int(request.form.get('nb_athletes')),
                 'status': request.form.get('status'),
-                'published': 'published' in request.form,
-                'wpa_points': 'wpa_points' in request.form
+                'published': bool(request.form.get('published')),
+                'wpa_points': bool(request.form.get('wpa_points'))
             }
 
-            try:
-                Game.update(id, **data)
-                if request.headers.get('Content-Type') == 'application/json':
-                    return jsonify({'success': True})
-                flash('Game updated successfully', 'success')
-                return redirect(url_for('admin.games_list'))
-            except Exception as e:
-                if request.headers.get('Content-Type') == 'application/json':
-                    return jsonify({'error': str(e)}), 500
-                flash(f'Error updating game: {str(e)}', 'danger')
+            Game.update(id, **data)
+            return jsonify({'success': True})
 
-        return redirect(url_for('admin.games_list'))
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
 
     @bp.route('/games/<int:id>/delete', methods=['POST'])
     @admin_required
