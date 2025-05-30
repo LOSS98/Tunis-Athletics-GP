@@ -288,96 +288,85 @@ class Game:
         if is_track:
             if has_wpa_points:
                 valid_results.sort(key=lambda x: (
-                    x['raza_score'] or 0,
-                    x['raza_score_decimal'] or 0,
-                    -float(x['value']) if x['value'] not in special_values else float('inf')
-                ), reverse=True)
+                    -(x['raza_score'] or 0),
+                    -(x['raza_score_precise'] or 0),
+                    float(x['value']) if x['value'] not in special_values else float('inf')
+                ))
             else:
                 valid_results.sort(
                     key=lambda x: float(x['value']) if x['value'] not in special_values else float('inf'))
 
         elif is_field:
+            for result in valid_results:
+                result['attempts'] = Attempt.get_by_result(result['id'])
+                result['best_attempt_value'] = 0
+                result['attempt_sequence'] = []
+
+                for attempt in result['attempts']:
+                    if attempt['value'] and attempt['value'] not in ['X', '-', 'O', '']:
+                        try:
+                            val = float(attempt['value'])
+                            result['attempt_sequence'].append(val)
+                            if val > result['best_attempt_value']:
+                                result['best_attempt_value'] = val
+                        except ValueError:
+                            continue
+
+                while len(result['attempt_sequence']) < 6:
+                    result['attempt_sequence'].append(0)
+
             if has_wpa_points:
-                for result in valid_results:
-                    result['attempts'] = Attempt.get_by_result(result['id'])
-                    result['best_attempt_value'] = 0
-                    result['attempt_sequence'] = []
-
-                    for attempt in result['attempts']:
-                        if attempt['value'] and attempt['value'] not in ['X', '-', 'O', '']:
-                            try:
-                                val = float(attempt['value'])
-                                result['attempt_sequence'].append(val)
-                                if val > result['best_attempt_value']:
-                                    result['best_attempt_value'] = val
-                            except ValueError:
-                                continue
-
-                    while len(result['attempt_sequence']) < 6:
-                        result['attempt_sequence'].append(0)
-
-                valid_results.sort(key=lambda x: (
-                    x['raza_score'] or 0,
-                    x['raza_score_decimal'] or 0,
-                    x['best_attempt_value'],
-                    x['attempt_sequence'][0],
-                    x['attempt_sequence'][1],
-                    x['attempt_sequence'][2],
-                    x['attempt_sequence'][3],
-                    x['attempt_sequence'][4],
-                    x['attempt_sequence'][5]
-                ), reverse=True)
+                def sort_key(x):
+                    return (
+                        -(x['raza_score'] or 0),
+                        -(x['raza_score_precise'] or 0),
+                        -x['best_attempt_value'],
+                        -x['attempt_sequence'][0],
+                        -x['attempt_sequence'][1],
+                        -x['attempt_sequence'][2],
+                        -x['attempt_sequence'][3],
+                        -x['attempt_sequence'][4],
+                        -x['attempt_sequence'][5]
+                    )
             else:
-                for result in valid_results:
-                    result['attempts'] = Attempt.get_by_result(result['id'])
-                    result['best_attempt_value'] = 0
-                    result['attempt_sequence'] = []
+                def sort_key(x):
+                    return (
+                        -x['best_attempt_value'],
+                        -x['attempt_sequence'][0],
+                        -x['attempt_sequence'][1],
+                        -x['attempt_sequence'][2],
+                        -x['attempt_sequence'][3],
+                        -x['attempt_sequence'][4],
+                        -x['attempt_sequence'][5]
+                    )
 
-                    for attempt in result['attempts']:
-                        if attempt['value'] and attempt['value'] not in ['X', '-', 'O', '']:
-                            try:
-                                val = float(attempt['value'])
-                                result['attempt_sequence'].append(val)
-                                if val > result['best_attempt_value']:
-                                    result['best_attempt_value'] = val
-                            except ValueError:
-                                continue
-
-                    while len(result['attempt_sequence']) < 6:
-                        result['attempt_sequence'].append(0)
-
-                valid_results.sort(key=lambda x: (
-                    x['best_attempt_value'],
-                    x['attempt_sequence'][0],
-                    x['attempt_sequence'][1],
-                    x['attempt_sequence'][2],
-                    x['attempt_sequence'][3],
-                    x['attempt_sequence'][4],
-                    x['attempt_sequence'][5]
-                ), reverse=True)
+            valid_results.sort(key=sort_key)
 
         current_rank = 1
         previous_key = None
-        rank_increment = 1
+        tied_count = 0
 
         for i, result in enumerate(valid_results):
             if is_track:
                 if has_wpa_points:
-                    current_key = (result['raza_score'] or 0, result['raza_score_decimal'] or 0, result['value'])
+                    current_key = (result['raza_score'] or 0, result['raza_score_precise'] or 0, result['value'])
                 else:
                     current_key = result['value']
             else:
                 if has_wpa_points:
                     current_key = (
-                    result['raza_score'] or 0, result['raza_score_decimal'] or 0, tuple(result['attempt_sequence']))
+                        result['raza_score'] or 0,
+                        result['raza_score_precise'] or 0,
+                        tuple(result['attempt_sequence'])
+                    )
                 else:
                     current_key = tuple(result['attempt_sequence'])
 
             if previous_key is not None and current_key != previous_key:
-                current_rank += rank_increment
-                rank_increment = 1
+                current_rank += tied_count + 1
+                tied_count = 0
             else:
-                rank_increment += 1
+                tied_count += 1
 
             execute_query("UPDATE results SET rank = %s WHERE id = %s", (str(current_rank), result['id']))
             previous_key = current_key
@@ -385,6 +374,9 @@ class Game:
         for result in results:
             if result['value'] in special_values:
                 execute_query("UPDATE results SET rank = %s WHERE id = %s", ('-', result['id']))
+
+        if game['event'] == 'Long Jump':
+            StartList.update_order_for_long_jump(game_id)
 
         return True
 
@@ -514,9 +506,9 @@ class Result:
             return True
 
         if event_type in field_events:
-            pattern = r'^\d+(\.\d{1,2})?$'
+            pattern = "r'^\d+(\.\d{1,2})?"
         else:
-            pattern = r'^(\d{1,2}:)?\d{1,2}\.\d{1,4}$'
+            pattern = "r'^(\d{1,2}:)?\d{1,2}\.\d{1,4}"
 
         return bool(re.match(pattern, value))
 
@@ -564,15 +556,26 @@ class StartList:
             return False
 
         results = execute_query("""
-            SELECT r.athlete_bib, MAX(CAST(a.value AS DECIMAL)) as best_attempt
+            SELECT r.athlete_bib, r.value as best_performance
             FROM results r
-            JOIN attempts a ON r.id = a.result_id
-            WHERE r.game_id = %s AND a.value ~ '^[0-9]+\.?[0-9]*
-            GROUP BY r.athlete_bib
-            ORDER BY best_attempt ASC
+            WHERE r.game_id = %s
+            ORDER BY CAST(r.value AS DECIMAL) ASC
         """, (game_id,), fetch=True)
 
-        for i, result in enumerate(results):
+        top_8_results = execute_query("""
+            SELECT r.athlete_bib, r.value as best_performance
+            FROM results r
+            WHERE r.game_id = %s
+            ORDER BY CAST(r.value AS DECIMAL) DESC
+            LIMIT 8
+        """, (game_id,), fetch=True)
+
+        if len(top_8_results) < 8:
+            return False
+
+        top_8_results.reverse()
+
+        for i, result in enumerate(top_8_results):
             execute_query(
                 "UPDATE results SET final_order = %s WHERE game_id = %s AND athlete_bib = %s",
                 (i + 1, game_id, result['athlete_bib'])
@@ -596,7 +599,7 @@ class Attempt:
             wind_velocity = float(Config.format_wind(wind_velocity))
 
         return execute_query(
-            "INSERT INTO attempts (result_id, attempt_number, value, raza_score, raza_score_decimal, wind_velocity, height) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+            "INSERT INTO attempts (result_id, attempt_number, value, raza_score, raza_score_precise, wind_velocity, height) VALUES (%s, %s, %s, %s, %s, %s, %s)",
             (result_id, attempt_number, value, raza_score, raza_score_decimal, wind_velocity, height)
         )
 
@@ -619,7 +622,7 @@ class Attempt:
                 wind_velocity = float(Config.format_wind(wind_velocity))
 
             execute_query(
-                "INSERT INTO attempts (result_id, attempt_number, value, raza_score, raza_score_decimal, wind_velocity, height) VALUES (%s, %s, %s, %s, %s, %s, %s) ON CONFLICT (result_id, attempt_number) DO UPDATE SET value = EXCLUDED.value, raza_score = EXCLUDED.raza_score, raza_score_decimal = EXCLUDED.raza_score_decimal, wind_velocity = EXCLUDED.wind_velocity, height = EXCLUDED.height",
+                "INSERT INTO attempts (result_id, attempt_number, value, raza_score, raza_score_precise, wind_velocity, height) VALUES (%s, %s, %s, %s, %s, %s, %s) ON CONFLICT (result_id, attempt_number) DO UPDATE SET value = EXCLUDED.value, raza_score = EXCLUDED.raza_score, raza_score_precise = EXCLUDED.raza_score_precise, wind_velocity = EXCLUDED.wind_velocity, height = EXCLUDED.height",
                 (result_id, attempt_number, value, raza_score, raza_score_decimal, wind_velocity, height)
             )
 
@@ -647,12 +650,12 @@ class Attempt:
 
             if existing:
                 execute_query(
-                    "UPDATE attempts SET value = %s, raza_score = %s, raza_score_decimal = %s, wind_velocity = %s, height = %s WHERE result_id = %s AND attempt_number = %s",
+                    "UPDATE attempts SET value = %s, raza_score = %s, raza_score_precise = %s, wind_velocity = %s, height = %s WHERE result_id = %s AND attempt_number = %s",
                     (value, raza_score, raza_score_decimal, wind_velocity, height, result_id, attempt_number)
                 )
             else:
                 execute_query(
-                    "INSERT INTO attempts (result_id, attempt_number, value, raza_score, raza_score_decimal, wind_velocity, height) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                    "INSERT INTO attempts (result_id, attempt_number, value, raza_score, raza_score_precise, wind_velocity, height) VALUES (%s, %s, %s, %s, %s, %s, %s)",
                     (result_id, attempt_number, value, raza_score, raza_score_decimal, wind_velocity, height)
                 )
 

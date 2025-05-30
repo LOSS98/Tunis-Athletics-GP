@@ -35,17 +35,17 @@ def register_routes(bp):
         try:
             data = request.get_json()
             if not data:
-                return jsonify({'error': 'No data provided'}), 400
+                return jsonify({'success': False, 'error': 'No data provided'}), 400
 
             config_key = data.get('config_key')
             tag_value = data.get('tag_value')
 
             if not config_key or not tag_value:
-                return jsonify({'error': 'Missing config_key or tag_value'}), 400
+                return jsonify({'success': False, 'error': 'Missing config_key or tag_value'}), 400
 
             tag_value = tag_value.strip()
             if not tag_value:
-                return jsonify({'error': 'Tag value cannot be empty'}), 400
+                return jsonify({'success': False, 'error': 'Tag value cannot be empty'}), 400
 
             existing = execute_one(
                 "SELECT id FROM config_tags WHERE config_key = %s AND tag_value = %s",
@@ -53,7 +53,7 @@ def register_routes(bp):
             )
 
             if existing:
-                return jsonify({'error': 'Tag already exists'}), 400
+                return jsonify({'success': False, 'error': 'Tag already exists'}), 400
 
             execute_query(
                 "INSERT INTO config_tags (config_key, tag_value) VALUES (%s, %s)",
@@ -65,7 +65,7 @@ def register_routes(bp):
 
         except Exception as e:
             print(f"Error adding tag: {e}")
-            return jsonify({'error': 'Server error occurred'}), 500
+            return jsonify({'success': False, 'error': 'Server error occurred'}), 500
 
     @bp.route('/config/api/remove-tag', methods=['POST'])
     @loc_required
@@ -73,15 +73,15 @@ def register_routes(bp):
         try:
             data = request.get_json()
             if not data:
-                return jsonify({'error': 'No data provided'}), 400
+                return jsonify({'success': False, 'error': 'No data provided'}), 400
 
             config_key = data.get('config_key')
             tag_value = data.get('tag_value')
 
             if not config_key or not tag_value:
-                return jsonify({'error': 'Missing config_key or tag_value'}), 400
+                return jsonify({'success': False, 'error': 'Missing config_key or tag_value'}), 400
 
-            result = execute_query(
+            execute_query(
                 "DELETE FROM config_tags WHERE config_key = %s AND tag_value = %s",
                 (config_key, tag_value)
             )
@@ -91,7 +91,7 @@ def register_routes(bp):
 
         except Exception as e:
             print(f"Error removing tag: {e}")
-            return jsonify({'error': 'Server error occurred'}), 500
+            return jsonify({'success': False, 'error': 'Server error occurred'}), 500
 
     @bp.route('/config/stats', methods=['GET', 'POST'])
     @loc_required

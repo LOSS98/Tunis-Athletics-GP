@@ -99,7 +99,8 @@ def register_routes(bp):
                 'time': form.time.data,
                 'nb_athletes': form.nb_athletes.data,
                 'status': form.status.data,
-                'published': form.published.data
+                'published': form.published.data,
+                'wpa_points': form.wpa_points.data
             }
 
             if form.start_file.data:
@@ -140,7 +141,8 @@ def register_routes(bp):
                 'time': request.form.get('time'),
                 'nb_athletes': int(request.form.get('nb_athletes')),
                 'status': request.form.get('status'),
-                'published': 'published' in request.form
+                'published': 'published' in request.form,
+                'wpa_points': 'wpa_points' in request.form
             }
 
             try:
@@ -190,14 +192,14 @@ def register_routes(bp):
             if not game:
                 return jsonify({'error': 'Game not found'}), 404
 
-            results = Result.get_all(game_id=id)
-
-            for result in results:
-                if result.get('auto_rank'):
-                    Result.update(result['id'], rank=result['auto_rank'])
-
-            return jsonify({'success': True})
+            success = Game.auto_rank_results(id)
+            if success:
+                return jsonify({'success': True})
+            else:
+                return jsonify({'error': 'Failed to auto-rank results'}), 500
         except Exception as e:
+            print(f"Error in auto-rank: {e}")
+            traceback.print_exc()
             return jsonify({'error': str(e)}), 500
 
     @bp.route('/games/<int:id>/publish', methods=['POST'])
