@@ -6,11 +6,11 @@ from contextlib import contextmanager
 
 @contextmanager
 def get_db_connection():
-    """Context manager for database connections with proper error handling"""
     connection = None
     try:
         connection = psycopg2.connect(
             host=Config.DB_HOST,
+            port=Config.DB_PORT,
             user=Config.DB_USER,
             password=Config.DB_PASSWORD,
             database=Config.DB_NAME,
@@ -28,7 +28,6 @@ def get_db_connection():
 
 
 def clean_params(params):
-    """Clean parameters by converting empty strings and 'None' strings to None"""
     if not params:
         return params
 
@@ -42,7 +41,6 @@ def clean_params(params):
 
 
 def execute_query(query, params=None, fetch=False):
-    """Execute a query and optionally fetch results"""
     try:
         if params:
             params = clean_params(params)
@@ -78,7 +76,6 @@ def execute_query(query, params=None, fetch=False):
 
 
 def execute_one(query, params=None):
-    """Execute a query and return one result"""
     try:
         if params:
             params = clean_params(params)
@@ -100,7 +97,6 @@ def execute_one(query, params=None):
 
 
 def init_db():
-    """Initialize database tables with proper error handling"""
     queries = [
         """CREATE TABLE IF NOT EXISTS users (
             id SERIAL PRIMARY KEY,
@@ -116,6 +112,16 @@ def init_db():
             name VARCHAR(100) NOT NULL,
             continent VARCHAR(50) NOT NULL,
             flag_available BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )""",
+
+        """CREATE TABLE IF NOT EXISTS record_types (
+            id SERIAL PRIMARY KEY,
+            abbreviation VARCHAR(10) UNIQUE NOT NULL,
+            full_name VARCHAR(100) NOT NULL,
+            scope_type VARCHAR(20) NOT NULL,
+            scope_values TEXT,
+            description TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )""",
 
@@ -233,6 +239,7 @@ def init_db():
 
         insert_default_config()
         insert_default_countries()
+        insert_default_record_types()
 
     except Exception as e:
         print(f"✗ Critical error during database initialization: {e}")
@@ -240,7 +247,6 @@ def init_db():
 
 
 def insert_default_config():
-    """Insert default configuration if not exists"""
     default_configs = [
         ('current_day', '1', 'integer', 'Current competition day'),
         ('countries_count', '61', 'integer', 'Number of participating countries'),
@@ -318,8 +324,38 @@ def insert_default_config():
             print(f"✗ Warning: Could not insert day {day_num}: {e}")
 
 
+def insert_default_record_types():
+    default_record_types = [
+        ('WR', 'World Record', 'world', None, 'Official World Para Athletics World Record'),
+        ('AR', 'Area Record', 'continental', 'Africa,Asia,Europe,North America,South America,Oceania', 'Continental area record'),
+        ('CR', 'Championship Record', 'competition', None, 'Record for this specific competition'),
+        ('NR', 'National Record', 'national', None, 'National record for athlete\'s country'),
+        ('PB', 'Personal Best', 'personal', None, 'Athlete\'s personal best performance'),
+        ('SB', 'Season Best', 'seasonal', None, 'Athlete\'s best performance this season'),
+        ('ER', 'European Record', 'continental', 'Europe', 'European continental record'),
+        ('AmR', 'Americas Record', 'continental', 'North America,South America', 'Americas continental record'),
+        ('AsR', 'Asian Record', 'continental', 'Asia', 'Asian continental record'),
+        ('AfR', 'African Record', 'continental', 'Africa', 'African continental record'),
+        ('OR', 'Oceania Record', 'continental', 'Oceania', 'Oceania continental record'),
+    ]
+
+    for abbr, full_name, scope_type, scope_values, description in default_record_types:
+        try:
+            existing = execute_one(
+                "SELECT id FROM record_types WHERE abbreviation = %s",
+                (abbr,)
+            )
+            if not existing:
+                execute_query(
+                    "INSERT INTO record_types (abbreviation, full_name, scope_type, scope_values, description) VALUES (%s, %s, %s, %s, %s)",
+                    (abbr, full_name, scope_type, scope_values, description)
+                )
+                print(f"✓ Default record type inserted: {abbr}")
+        except Exception as e:
+            print(f"✗ Warning: Could not insert record type {abbr}: {e}")
+
+
 def insert_default_countries():
-    """Insert default countries if not exists"""
     default_countries = [
         ('TUN', 'Tunisia', 'Africa', True),
         ('FRA', 'France', 'Europe', True),
@@ -402,7 +438,6 @@ def insert_default_countries():
 
 
 def test_connection():
-    """Test database connection"""
     try:
         with get_db_connection() as conn:
             with conn.cursor() as cursor:
@@ -416,10 +451,9 @@ def test_connection():
 
 
 def check_tables():
-    """Check if all required tables exist"""
     required_tables = [
         'users', 'countries', 'athletes', 'games', 'results',
-        'startlist', 'attempts', 'competition_config', 'competition_days', 'config_tags'
+        'startlist', 'attempts', 'competition_config', 'competition_days', 'config_tags', 'record_types'
     ]
 
     try:

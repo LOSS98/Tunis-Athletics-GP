@@ -33,7 +33,7 @@
             </div>
 
             <div class="flex gap-2">
-                <button onclick="openGameEditModal({{ game.id }}, {{ game|tojson }})"
+                <button onclick="openGameEditModal({{ game.id }}, {{ game_json|safe }})"
                         class="bg-blue-500 text-white px-3 py-1 rounded text-sm hover:bg-blue-600">
                     <i class="fas fa-edit mr-1"></i>Edit Game
                 </button>
@@ -58,8 +58,8 @@
                 <!-- Publish Button -->
                 {% if current_user.is_loc() %}
                 <button onclick="togglePublish({{ game.id }}, event)"
-                        class="px-3 py-1 rounded text-white text-sm {% if game.get('published', False) %}bg-red-500 hover:bg-red-600{% else %}bg-green-500 hover:bg-green-600{% endif %}">
-                    {% if game.get('published', False) %}Unpublish{% else %}Publish{% endif %}
+                        class="px-3 py-1 rounded text-white text-sm {% if game.published %}bg-red-500 hover:bg-red-600{% else %}bg-green-500 hover:bg-green-600{% endif %}">
+                    {% if game.published %}Unpublish{% else %}Publish{% endif %}
                 </button>
                 {% endif %}
 
@@ -230,7 +230,7 @@
                 </div>
 
                 <!-- Weight -->
-                {% if is_field_event and game.event in config.get('weight_field_events', []) %}
+                {% if is_field_event and config.weight_field_events and game.event in config.weight_field_events %}
                 <div>
                     <label class="block text-gray-700 text-sm font-bold mb-2">Weight</label>
                     {% if form and form.weight %}
@@ -329,7 +329,7 @@
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Country</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class</th>
-                    {% if is_field_event and game.event in config.get('weight_field_events', []) %}
+                    {% if is_field_event and config.weight_field_events and game.event in config.weight_field_events %}
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Weight</th>
                     {% endif %}
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -401,7 +401,7 @@
                     </td>
 
                     <!-- Weight -->
-                    {% if is_field_event and game.event in config.get('weight_field_events', []) %}
+                    {% if is_field_event and config.weight_field_events and game.event in config.weight_field_events %}
                     <td class="px-6 py-4 whitespace-nowrap">
                         <span class="px-2 py-1 text-xs bg-red-100 text-red-800 rounded">{{ config.format_weight(result.weight) or '-' }}</span>
                     </td>
@@ -511,7 +511,7 @@
         <span class="text-purple-700 text-sm">Multi-class events use RAZA scores for fair comparison between different disability classes.</span>
     </div>
     {% endif %}
-    {% if is_field_event and game.event in config.get('weight_field_events', []) %}
+    {% if is_field_event and config.weight_field_events and game.event in config.weight_field_events %}
     <div class="mt-3 p-2 bg-orange-50 rounded">
         <span class="font-semibold text-orange-800">Weight Events:</span>
         <span class="text-orange-700 text-sm">Different implement weights may be used for different classes in this event.</span>

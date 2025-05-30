@@ -50,7 +50,6 @@ class ConfigManager:
 
     @staticmethod
     def get_config_tags(key):
-        """Get tags for a configuration key"""
         tags = execute_query(
             "SELECT tag_value FROM config_tags WHERE config_key = %s ORDER BY tag_value",
             (key,),
@@ -60,7 +59,6 @@ class ConfigManager:
 
     @staticmethod
     def add_config_tag(key, tag_value):
-        """Add a tag to a configuration key"""
         try:
             execute_query(
                 "INSERT INTO config_tags (config_key, tag_value) VALUES (%s, %s)",
@@ -72,7 +70,6 @@ class ConfigManager:
 
     @staticmethod
     def remove_config_tag(key, tag_value):
-        """Remove a tag from a configuration key"""
         execute_query(
             "DELETE FROM config_tags WHERE config_key = %s AND tag_value = %s",
             (key, tag_value)
@@ -80,7 +77,6 @@ class ConfigManager:
 
     @staticmethod
     def set_config_tags(key, tags):
-        """Set all tags for a configuration key (replaces existing)"""
         execute_query(
             "DELETE FROM config_tags WHERE config_key = %s",
             (key,)
@@ -171,7 +167,6 @@ class ConfigManager:
 
     @staticmethod
     def get_countries():
-        """Get all countries"""
         return execute_query(
             "SELECT * FROM countries ORDER BY name",
             fetch=True
@@ -179,7 +174,6 @@ class ConfigManager:
 
     @staticmethod
     def get_country_by_code(code):
-        """Get country by code"""
         return execute_one(
             "SELECT * FROM countries WHERE code = %s",
             (code,)
@@ -187,7 +181,6 @@ class ConfigManager:
 
     @staticmethod
     def create_country(code, name, continent, flag_available=False):
-        """Create a new country"""
         execute_query(
             "INSERT INTO countries (code, name, continent, flag_available) VALUES (%s, %s, %s, %s)",
             (code.upper(), name, continent, flag_available)
@@ -195,7 +188,6 @@ class ConfigManager:
 
     @staticmethod
     def update_country(country_id, code, name, continent, flag_available=False):
-        """Update a country"""
         execute_query(
             "UPDATE countries SET code = %s, name = %s, continent = %s, flag_available = %s WHERE id = %s",
             (code.upper(), name, continent, flag_available, country_id)
@@ -203,10 +195,44 @@ class ConfigManager:
 
     @staticmethod
     def delete_country(country_id):
-        """Delete a country"""
         execute_query(
             "DELETE FROM countries WHERE id = %s",
             (country_id,)
+        )
+
+    @staticmethod
+    def get_record_types_with_details():
+        return execute_query(
+            "SELECT * FROM record_types ORDER BY abbreviation",
+            fetch=True
+        )
+
+    @staticmethod
+    def create_record_type(abbreviation, full_name, scope_type, scope_values=None, description=None):
+        execute_query(
+            "INSERT INTO record_types (abbreviation, full_name, scope_type, scope_values, description) VALUES (%s, %s, %s, %s, %s)",
+            (abbreviation, full_name, scope_type, scope_values, description)
+        )
+
+    @staticmethod
+    def update_record_type(record_type_id, abbreviation, full_name, scope_type, scope_values=None, description=None):
+        execute_query(
+            "UPDATE record_types SET abbreviation = %s, full_name = %s, scope_type = %s, scope_values = %s, description = %s WHERE id = %s",
+            (abbreviation, full_name, scope_type, scope_values, description, record_type_id)
+        )
+
+    @staticmethod
+    def delete_record_type(record_type_id):
+        execute_query(
+            "DELETE FROM record_types WHERE id = %s",
+            (record_type_id,)
+        )
+
+    @staticmethod
+    def get_record_type_by_abbreviation(abbreviation):
+        return execute_one(
+            "SELECT * FROM record_types WHERE abbreviation = %s",
+            (abbreviation,)
         )
 
 

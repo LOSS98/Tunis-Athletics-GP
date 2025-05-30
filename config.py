@@ -13,6 +13,7 @@ class Config:
         DB_USER = DATABASE_URL.split('://')[1].split(':')[0]
         DB_PASSWORD = DATABASE_URL.split('://')[1].split(':')[1].split('@')[0]
         DB_NAME = DATABASE_URL.split('/')[-1]
+        DB_PORT = os.getenv('DATABASE_PORT', '5432')
     else:
         DB_HOST = 'localhost'
         DB_USER = 'root'
