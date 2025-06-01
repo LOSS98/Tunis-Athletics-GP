@@ -111,7 +111,8 @@ def register_routes(bp):
             'published': game.get('published', False),
             'wpa_points': game.get('wpa_points', False)
         }
-
+        selected_r1 = [r for r in results if r['final_order'] is not None]
+        total_selected_r1 = len(selected_r1)
         return render_template('admin/results/manage.html',
                                game=game,
                                game_json=game_json,
@@ -119,7 +120,8 @@ def register_routes(bp):
                                startlist=startlist,
                                form=form,
                                is_field_event=game['event'] in Config.get_field_events(),
-                               is_track_event=game['event'] in Config.get_track_events())
+                               is_track_event=game['event'] in Config.get_track_events(),
+                               total_selected_r1 = total_selected_r1,)
 
     @bp.route('/games/<int:game_id>/results/add', methods=['POST'])
     @admin_required
@@ -509,24 +511,23 @@ def register_routes(bp):
                 ORDER BY best_of_three DESC NULLS LAST
             """, (tuple(Config.get_result_special_values()), game_id,), fetch=True)
 
-            if len(results) < 8:
-                return jsonify({
-                    'error': f'Not enough athletes with 3 attempts. Found {len(results)}, need at least 8.'
-                }), 400
+            # Prend les 8 meilleurs si >= 8, sinon tous ceux qui ont 3 essais
+            n = min(8, len(results))
+            if n == 0:
+                return jsonify({'error': "No athlete with 3 valid attempts found."}), 400
 
-            # Take top 8 and reverse order (worst to best)
-            top_8 = results[:8]
-            top_8.reverse()  # Now worst is first, best is last
+            top = results[:n]
+            top.reverse()  # Du pire au meilleur
 
-            # Update final_order in results table
-            for i, result in enumerate(top_8):
+            # Update final_order pour les sélectionnés
+            for i, result in enumerate(top):
                 execute_query(
                     "UPDATE results SET final_order = %s WHERE id = %s",
                     (i + 1, result['id'])
                 )
 
-            # Clear final_order for athletes not in top 8
-            for result in results[8:]:
+            # Clear final_order pour les autres
+            for result in results[n:]:
                 execute_query(
                     "UPDATE results SET final_order = NULL WHERE id = %s",
                     (result['id'],)
@@ -534,7 +535,7 @@ def register_routes(bp):
 
             return jsonify({
                 'success': True,
-                'message': f'Top 8 athletes selected. Order: {top_8[0]["athlete_bib"]} (worst) to {top_8[-1]["athlete_bib"]} (best)'
+                'message': f'{n} athletes selected for final. Order: {top[0]["athlete_bib"]} (worst) to {top[-1]["athlete_bib"]} (best)'
             })
 
         except Exception as e:
@@ -751,4 +752,41 @@ def update_final_order_after_three_attempts(game_id):
     except Exception as e:
         print(f"Error updating final order: {e}")
 
+def check_and_update_long_jump_progression(attempts):
+    """
+    Vérifie et met à jour la progression des essais en saut en longueur.
+    - attempts : liste de chaînes (ex : ["5.66", "5.78", "X", "5.50", "", ""])
+    Retourne (best_valid, progression, is_valid)
+      - best_valid : meilleure marque valide (float ou None)
+      - progression : liste d'essais nettoyés (valeur float ou None, "X" ou "F" pour raté)
+      - is_valid : True si la progression est valide (max 6 essais, formats ok, pas de doublons incohérents...)
+    """
+    special_values = {"X", "F", "NM", "DNS", "DNF"}  # valeurs d'échec ou spéciales
+    cleaned_attempts = []
+    best_valid = None
+
+    for val in attempts:
+        val = val.strip() if val else ""
+        if not val:
+            cleaned_attempts.append(None)
+            continue
+        if val.upper() in special_values:
+            cleaned_attempts.append(val.upper())
+            continue
+        try:
+            jump = float(val.replace(',', '.'))  # accepter aussi "5,55"
+            cleaned_attempts.append(jump)
+            if best_valid is None or jump > best_valid:
+                best_valid = jump
+        except Exception:
+            # Valeur non reconnue, on considère la progression invalide
+            return None, [], False
+
+    # Validation règle concours : max 6 essais
+    if len(cleaned_attempts) > 6:
+        return None, cleaned_attempts, False
+
+    # Option : on peut ici vérifier des règles métiers supplémentaires
+
+    return best_valid, cleaned_attempts, True
 
