@@ -244,7 +244,6 @@ def init_db():
             conn.commit()
             print("✓ Database initialization completed successfully")
 
-        add_missing_columns()
         insert_default_config()
         insert_default_countries()
         insert_default_record_types()
@@ -253,34 +252,6 @@ def init_db():
         print(f"✗ Critical error during database initialization: {e}")
         raise
 
-
-def add_missing_columns():
-    missing_columns = [
-        ("games", "wpa_points", "ALTER TABLE games ADD COLUMN wpa_points BOOLEAN DEFAULT FALSE"),
-        ("results", "raza_score_precise", "ALTER TABLE results ADD COLUMN raza_score_precise double precision"),
-        ("results", "final_order", "ALTER TABLE results ADD COLUMN final_order INTEGER"),
-        ("results", "best_attempt", "ALTER TABLE results ADD COLUMN best_attempt VARCHAR(20)"),
-        ("startlist", "final_order", "ALTER TABLE startlist ADD COLUMN final_order INTEGER"),
-        ("attempts", "raza_score_precise", "ALTER TABLE attempts ADD COLUMN raza_score_precise double precision"),
-        ("attempts", "height", "ALTER TABLE attempts ADD COLUMN height double precision")
-    ]
-
-    try:
-        with get_db_connection() as conn:
-            with conn.cursor() as cursor:
-                for table, column, alter_query in missing_columns:
-                    cursor.execute(f"""
-                        SELECT column_name 
-                        FROM information_schema.columns 
-                        WHERE table_name='{table}' AND column_name='{column}'
-                    """)
-                    if not cursor.fetchone():
-                        cursor.execute(alter_query)
-                        print(f"✓ Added column {column} to {table}")
-
-            conn.commit()
-    except Exception as e:
-        print(f"Error adding missing columns: {e}")
 
 def insert_default_config():
     default_configs = [
@@ -307,18 +278,71 @@ def insert_default_config():
         except Exception as e:
             print(f"✗ Warning: Could not insert config {key}: {e}")
 
+    # CLASSES - Classification officielle World Para Athletics 2024-2025
+    track_classes = [
+        # Vision impairment
+        'T11', 'T12', 'T13',
+        # Intellectual impairment
+        'T20',
+        # Co-ordination impairments - Wheelchair racing
+        'T32', 'T33', 'T34',
+        # Co-ordination impairments - Running/Jumping
+        'T35', 'T36', 'T37', 'T38',
+        # Short stature
+        'T40', 'T41',
+        # Lower limb without prosthesis
+        'T42', 'T43', 'T44',
+        # Upper limb impairments
+        'T45', 'T46', 'T47',
+        # Wheelchair racing - Limb impairments
+        'T51', 'T52', 'T53', 'T54',
+        # Lower limb with prosthesis
+        'T61', 'T62', 'T63', 'T64',
+        # Frame Running
+        'T71', 'T72'
+    ]
+
+    field_classes = [
+        # Vision impairment
+        'F11', 'F12', 'F13',
+        # Intellectual impairment
+        'F20',
+        # Co-ordination impairments - Seated throws
+        'F31', 'F32', 'F33', 'F34',
+        # Co-ordination impairments - Standing throws
+        'F35', 'F36', 'F37', 'F38',
+        # Short stature
+        'F40', 'F41',
+        # Lower limb without prosthesis
+        'F42', 'F43', 'F44',
+        # Upper limb impairments
+        'F45', 'F46',
+        # Seated throws - Limb impairments
+        'F51', 'F52', 'F53', 'F54', 'F55', 'F56', 'F57',
+        # Lower limb with prosthesis
+        'F61', 'F62', 'F63', 'F64'
+    ]
+
+    all_classes = sorted(track_classes + field_classes)
+
     default_tags = [
-        ('classes',
-         ['T11', 'T12', 'T13', 'T20', 'T33', 'T34', 'T35', 'T36', 'T37', 'T38', 'T40', 'T41', 'T42', 'T43', 'T44',
-          'T45', 'T46', 'T47', 'T51', 'T52', 'T53', 'T54', 'T61', 'T62', 'T63', 'T64', 'F11', 'F12', 'F13', 'F20',
-          'F31', 'F32', 'F33', 'F34', 'F35', 'F36', 'F37', 'F38', 'F40', 'F41', 'F42', 'F43', 'F44', 'F45', 'F46',
-          'F51', 'F52', 'F53', 'F54', 'F55', 'F56', 'F57', 'F61', 'F62', 'F63', 'F64']),
-        ('record_types', ['WR', 'AR', 'CR', 'NR', 'PB', 'SB']),
-        ('result_special_values', ['DNS', 'DNF', 'DSQ', 'NM', 'O', 'X', '-']),
-        ('field_events', ['Javelin', 'Shot Put', 'Discus Throw', 'Club Throw', 'Long Jump', 'High Jump']),
-        ('track_events', ['100m', '200m', '400m', '800m', '1500m', '5000m', '4x100m', 'Universal Relay']),
-        ('wind_affected_field_events', ['Long Jump']),
-        ('weight_field_events', ['Shot Put', 'Discus Throw', 'Javelin', 'Club Throw'])
+        ('classes', all_classes),
+        ('record_types', ['WR', 'AR', 'ER', 'CR', 'NR', 'PB', 'SB', 'WL', 'AL']),
+        ('result_special_values', ['DNS', 'DNF', 'DSQ', 'NM', 'NH', 'O', 'X', '-', 'DQ']),
+        ('field_events', [
+            'Shot Put', 'Discus Throw', 'Javelin Throw', 'Hammer Throw',
+            'Club Throw', 'Weight Throw'
+        ]),
+        ('track_events', [
+            '100m', '200m', '400m', '800m', '1500m', '5000m', '10000m',
+            'Marathon', '4x100m Relay', '4x400m Relay', 'Universal Relay',
+            'Long Jump', 'High Jump', 'Triple Jump', 'Pole Vault'
+        ]),
+        ('wind_affected_field_events', ['Long Jump', 'Triple Jump', '100m', '200m']),
+        ('weight_field_events', [
+            'Shot Put', 'Discus Throw', 'Javelin Throw', 'Hammer Throw',
+            'Club Throw', 'Weight Throw'
+        ])
     ]
 
     for key, tags in default_tags:
@@ -333,19 +357,20 @@ def insert_default_config():
                         "INSERT INTO config_tags (config_key, tag_value) VALUES (%s, %s)",
                         (key, tag)
                     )
-                print(f"✓ Default tags inserted for: {key}")
+                print(f"✓ Default tags inserted for: {key} ({len(tags)} items)")
         except Exception as e:
             print(f"✗ Warning: Could not insert tags for {key}: {e}")
 
+    # Competition days - Tunis GP 2025
     default_days = [
         (1, '2025-06-12', '2025-06-12', 'Day 1 - Opening Events'),
-        (2, '2025-06-13', '2025-06-13', 'Day 2'),
-        (3, '2025-06-14', '2025-06-14', 'Day 3'),
-        (4, '2025-06-15', '2025-06-15', 'Day 4'),
-        (5, '2025-06-16', '2025-06-16', 'Day 5'),
-        (6, '2025-06-17', '2025-06-17', 'Day 6'),
-        (7, '2025-06-18', '2025-06-18', 'Day 7'),
-        (8, '2025-06-19', '2025-06-19', 'Day 8 - Finals'),
+        (2, '2025-06-13', '2025-06-13', 'Day 2 - Track & Field'),
+        (3, '2025-06-14', '2025-06-14', 'Day 3 - Track & Field'),
+        (4, '2025-06-15', '2025-06-15', 'Day 4 - Track & Field'),
+        (5, '2025-06-16', '2025-06-16', 'Day 5 - Track & Field'),
+        (6, '2025-06-17', '2025-06-17', 'Day 6 - Track & Field'),
+        (7, '2025-06-18', '2025-06-18', 'Day 7 - Semi-Finals'),
+        (8, '2025-06-19', '2025-06-19', 'Day 8 - Finals & Closing'),
     ]
 
     for day_num, start_date, end_date, desc in default_days:

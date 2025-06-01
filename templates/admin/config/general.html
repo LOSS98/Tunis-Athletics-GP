@@ -3,6 +3,10 @@
 {% block page_title %}General Configuration{% endblock %}
 
 {% block content %}
+<form id="csrf-form" style="display: none;">
+    {{ csrf_token() }}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
 <div class="max-w-6xl mx-auto">
     <div class="mb-6">
         <div class="flex items-center justify-between">
@@ -255,15 +259,22 @@
 </div>
 
 <script>
+// Fix for templates/admin/config/general.html - Updated JavaScript section
+
 function getCSRFToken() {
+    // Try multiple methods to get CSRF token
     const meta = document.querySelector('meta[name="csrf-token"]');
     if (meta) return meta.getAttribute('content');
 
     const input = document.querySelector('input[name="csrf_token"]');
     if (input) return input.value;
 
-    const csrfToken = document.querySelector('[name="csrf_token"]');
-    if (csrfToken) return csrfToken.value;
+    // Try to find any form's CSRF token
+    const forms = document.querySelectorAll('form');
+    for (let form of forms) {
+        const csrfInput = form.querySelector('input[name="csrf_token"]');
+        if (csrfInput) return csrfInput.value;
+    }
 
     return '';
 }
@@ -278,17 +289,25 @@ async function addTag(configKey) {
     }
 
     try {
-        const formData = new FormData();
-        formData.append('config_key', configKey);
-        formData.append('tag_value', tagValue);
-        formData.append('csrf_token', getCSRFToken());
+        const csrfToken = getCSRFToken();
+        console.log('CSRF Token:', csrfToken); // Debug
 
         const response = await fetch('/admin/config/api/add-tag', {
             method: 'POST',
-            body: formData
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+                config_key: configKey,
+                tag_value: tagValue,
+                csrf_token: csrfToken
+            })
         });
 
+        console.log('Response status:', response.status); // Debug
         const result = await response.json();
+        console.log('Response data:', result); // Debug
 
         if (response.ok && result.success) {
             addTagToDOM(configKey, tagValue);
@@ -299,20 +318,25 @@ async function addTag(configKey) {
         }
     } catch (error) {
         console.error('Error:', error);
-        showMessage('Error adding tag', 'error');
+        showMessage('Error adding tag: ' + error.message, 'error');
     }
 }
 
 async function addTagDirect(configKey, tagValue) {
     try {
-        const formData = new FormData();
-        formData.append('config_key', configKey);
-        formData.append('tag_value', tagValue);
-        formData.append('csrf_token', getCSRFToken());
+        const csrfToken = getCSRFToken();
 
         const response = await fetch('/admin/config/api/add-tag', {
             method: 'POST',
-            body: formData
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+                config_key: configKey,
+                tag_value: tagValue,
+                csrf_token: csrfToken
+            })
         });
 
         const result = await response.json();
@@ -327,20 +351,25 @@ async function addTagDirect(configKey, tagValue) {
         }
     } catch (error) {
         console.error('Error:', error);
-        showMessage('Error adding tag', 'error');
+        showMessage('Error adding tag: ' + error.message, 'error');
     }
 }
 
 async function removeTag(configKey, tagValue) {
     try {
-        const formData = new FormData();
-        formData.append('config_key', configKey);
-        formData.append('tag_value', tagValue);
-        formData.append('csrf_token', getCSRFToken());
+        const csrfToken = getCSRFToken();
 
         const response = await fetch('/admin/config/api/remove-tag', {
             method: 'POST',
-            body: formData
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+                config_key: configKey,
+                tag_value: tagValue,
+                csrf_token: csrfToken
+            })
         });
 
         const result = await response.json();
@@ -353,10 +382,11 @@ async function removeTag(configKey, tagValue) {
         }
     } catch (error) {
         console.error('Error:', error);
-        showMessage('Error removing tag', 'error');
+        showMessage('Error removing tag: ' + error.message, 'error');
     }
 }
 
+// Rest of the functions remain the same...
 function addTagToDOM(configKey, tagValue) {
     const tagsContainer = document.getElementById(`${configKey}-tags`);
     const colors = {

@@ -27,10 +27,13 @@ def register_routes(bp):
         configs = ConfigManager.get_all_config()
         return render_template('admin/config/general.html', configs=configs)
 
+    # Fix for blueprints/admin/routes/config.py - Updated API routes
+
     @bp.route('/config/api/add-tag', methods=['POST'])
     @loc_required
     def config_add_tag():
         try:
+            # Handle both JSON and form data
             if request.is_json:
                 data = request.get_json()
             else:
@@ -42,25 +45,34 @@ def register_routes(bp):
             if not config_key or not tag_value:
                 return jsonify({'success': False, 'error': 'Missing parameters'}), 400
 
+            # Validate CSRF token
+            csrf_token = data.get('csrf_token') or request.headers.get('X-CSRFToken')
+            if not csrf_token:
+                return jsonify({'success': False, 'error': 'CSRF token missing'}), 400
+
+            # Check if tag already exists
             existing_tags = ConfigManager.get_config_tags(config_key)
             if tag_value in existing_tags:
                 return jsonify({'success': False, 'error': 'Tag already exists'}), 400
 
+            # Add the tag
             success = ConfigManager.add_config_tag(config_key, tag_value)
             clear_config_cache()
 
             if success:
-                return jsonify({'success': True})
+                return jsonify({'success': True, 'message': 'Tag added successfully'})
             else:
                 return jsonify({'success': False, 'error': 'Failed to add tag'}), 500
 
         except Exception as e:
+            print(f"Error in config_add_tag: {str(e)}")
             return jsonify({'success': False, 'error': str(e)}), 500
 
     @bp.route('/config/api/remove-tag', methods=['POST'])
     @loc_required
     def config_remove_tag():
         try:
+            # Handle both JSON and form data
             if request.is_json:
                 data = request.get_json()
             else:
@@ -72,12 +84,19 @@ def register_routes(bp):
             if not config_key or not tag_value:
                 return jsonify({'success': False, 'error': 'Missing parameters'}), 400
 
+            # Validate CSRF token
+            csrf_token = data.get('csrf_token') or request.headers.get('X-CSRFToken')
+            if not csrf_token:
+                return jsonify({'success': False, 'error': 'CSRF token missing'}), 400
+
+            # Remove the tag
             ConfigManager.remove_config_tag(config_key, tag_value)
             clear_config_cache()
 
-            return jsonify({'success': True})
+            return jsonify({'success': True, 'message': 'Tag removed successfully'})
 
         except Exception as e:
+            print(f"Error in config_remove_tag: {str(e)}")
             return jsonify({'success': False, 'error': str(e)}), 500
 
     @bp.route('/config/stats', methods=['GET', 'POST'])

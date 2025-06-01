@@ -35,14 +35,52 @@ class Config:
             from database.config_manager import ConfigManager
             return ConfigManager.get_config_tags('classes')
         except (ImportError, Exception):
-            return ['T11', 'T12', 'T13', 'T20', 'T33', 'T34', 'T35', 'T36', 'T37', 'T38', 'T40', 'T41', 'T42', 'T43',
-                    'T44', 'T45', 'T46', 'T47', 'T51', 'T52', 'T53', 'T54', 'T61', 'T62', 'T63', 'T64', 'F11', 'F12',
-                    'F13', 'F20', 'F31', 'F32', 'F33', 'F34', 'F35', 'F36', 'F37', 'F38', 'F40', 'F41', 'F42', 'F43',
-                    'F44', 'F45', 'F46', 'F51', 'F52', 'F53', 'F54', 'F55', 'F56', 'F57', 'F61', 'F62', 'F63', 'F64']
+            # Classification officielle World Para Athletics 2024-2025
+            track_classes = [
+                # Vision impairment
+                'T11', 'T12', 'T13',
+                # Intellectual impairment
+                'T20',
+                # Co-ordination impairments - Wheelchair racing
+                'T32', 'T33', 'T34',
+                # Co-ordination impairments - Running/Jumping
+                'T35', 'T36', 'T37', 'T38',
+                # Short stature
+                'T40', 'T41',
+                # Lower limb without prosthesis
+                'T42', 'T43', 'T44',
+                # Upper limb impairments
+                'T45', 'T46', 'T47',
+                # Wheelchair racing - Limb impairments
+                'T51', 'T52', 'T53', 'T54',
+                # Lower limb with prosthesis
+                'T61', 'T62', 'T63', 'T64',
+                # Frame Running
+                'T71', 'T72'
+            ]
 
-    @staticmethod
-    def get_genders():
-        return ['Male', 'Female']
+            field_classes = [
+                # Vision impairment
+                'F11', 'F12', 'F13',
+                # Intellectual impairment
+                'F20',
+                # Co-ordination impairments - Seated throws
+                'F31', 'F32', 'F33', 'F34',
+                # Co-ordination impairments - Standing throws
+                'F35', 'F36', 'F37', 'F38',
+                # Short stature
+                'F40', 'F41',
+                # Lower limb without prosthesis
+                'F42', 'F43', 'F44',
+                # Upper limb impairments
+                'F45', 'F46',
+                # Seated throws - Limb impairments
+                'F51', 'F52', 'F53', 'F54', 'F55', 'F56', 'F57',
+                # Lower limb with prosthesis
+                'F61', 'F62', 'F63', 'F64'
+            ]
+
+            return sorted(track_classes + field_classes)
 
     @staticmethod
     def get_record_types():
@@ -50,7 +88,7 @@ class Config:
             from database.config_manager import ConfigManager
             return ConfigManager.get_config_tags('record_types')
         except (ImportError, Exception):
-            return ['WR', 'AR', 'CR', 'NR', 'PB', 'SB']
+            return ['WR', 'AR', 'ER', 'CR', 'NR', 'PB', 'SB', 'WL', 'AL']
 
     @staticmethod
     def get_result_special_values():
@@ -58,7 +96,7 @@ class Config:
             from database.config_manager import ConfigManager
             return ConfigManager.get_config_tags('result_special_values')
         except (ImportError, Exception):
-            return ['DNS', 'DNF', 'DSQ', 'NM', 'O', 'X', '-']
+            return ['DNS', 'DNF', 'DSQ', 'NM', 'NH', 'O', 'X', '-', 'DQ']
 
     @staticmethod
     def get_field_events():
@@ -66,7 +104,7 @@ class Config:
             from database.config_manager import ConfigManager
             return ConfigManager.get_config_tags('field_events')
         except (ImportError, Exception):
-            return ['Javelin', 'Shot Put', 'Discus Throw', 'Club Throw', 'Long Jump', 'High Jump']
+            return ['Shot Put', 'Discus Throw', 'Javelin Throw', 'Hammer Throw', 'Club Throw', 'Weight Throw']
 
     @staticmethod
     def get_track_events():
@@ -74,7 +112,9 @@ class Config:
             from database.config_manager import ConfigManager
             return ConfigManager.get_config_tags('track_events')
         except (ImportError, Exception):
-            return ['100m', '200m', '400m', '800m', '1500m', '5000m', '4x100m', 'Universal Relay']
+            return ['100m', '200m', '400m', '800m', '1500m', '5000m', '10000m', 'Marathon',
+                    '4x100m Relay', '4x400m Relay', 'Universal Relay', 'Long Jump', 'High Jump',
+                    'Triple Jump', 'Pole Vault']
 
     @staticmethod
     def get_wind_affected_field_events():
@@ -82,7 +122,7 @@ class Config:
             from database.config_manager import ConfigManager
             return ConfigManager.get_config_tags('wind_affected_field_events')
         except (ImportError, Exception):
-            return ['Long Jump']
+            return ['Long Jump', 'Triple Jump', '100m', '200m']
 
     @staticmethod
     def get_weight_field_events():
@@ -90,7 +130,7 @@ class Config:
             from database.config_manager import ConfigManager
             return ConfigManager.get_config_tags('weight_field_events')
         except (ImportError, Exception):
-            return ['Shot Put', 'Discus Throw', 'Javelin', 'Club Throw']
+            return ['Shot Put', 'Discus Throw', 'Javelin Throw', 'Hammer Throw', 'Club Throw', 'Weight Throw']
 
     @staticmethod
     def get_current_day():
