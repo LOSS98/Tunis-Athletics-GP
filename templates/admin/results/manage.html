@@ -965,7 +965,7 @@ document.getElementById('resultForm').addEventListener('submit', function(e) {
     const athleteBib = formData.get('athlete_bib');
 
     // Check if result already exists
-    fetch(`/admin/games/${game.id}/check-result/${athleteBib}`)
+    fetch(`/admin/games/{{ game.id }}/check-result/${athleteBib}`)
         .then(response => response.json())
         .then(data => {
             if (data.exists) {
