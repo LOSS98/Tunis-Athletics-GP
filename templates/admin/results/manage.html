@@ -65,6 +65,14 @@
                     <i class="fas fa-sort-numeric-down"></i> Auto Rank
                 </button>
 
+                {% if game.event == 'Long Jump' %}
+                <button onclick="autoRankRound1({{ game.id }})"
+                        class="bg-orange-500 text-white px-3 py-1 rounded text-sm hover:bg-orange-600"
+                        title="Auto-rank Round 1 (top 8 athletes)">
+                    <i class="fas fa-trophy"></i> Auto Rank R1
+                </button>
+                {% endif %}
+
                 <button onclick="recalculateRaza({{ game.id }})"
                         class="bg-orange-500 text-white px-3 py-1 rounded text-sm hover:bg-orange-600"
                         title="Recalculate all RAZA scores">
@@ -338,6 +346,11 @@
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Performance {% if is_field_event %}📏{% else %}⏱️{% endif %}
                     </th>
+                    {% if game.event == 'Long Jump' %}
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        R1 Order
+                    </th>
+                    {% endif %}
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">RAZA Score 🧮</th>
                     {% if is_field_event %}
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Attempts</th>
@@ -416,6 +429,18 @@
                             {% endif %}
                         </div>
                     </td>
+                    {% if game.event == 'Long Jump' %}
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            {% if result.final_order %}
+                                <span class="bg-orange-100 text-orange-800 px-2 py-1 rounded text-sm font-semibold">
+                                    {{ result.final_order }}/8
+                                </span>
+                            {% else %}
+                                <span class="text-gray-400">-</span>
+                            {% endif %}
+                        </td>
+                    {% endif %}
+
 
                     <td class="px-6 py-4 whitespace-nowrap">
                         {% if result.raza_score %}
@@ -512,8 +537,12 @@
                     <div>
                         <label class="block text-sm font-medium mb-2">Result</label>
                         <select id="attemptResult" class="w-full px-3 py-2 border rounded-lg">
-                            <option value="O">O (Clearance)</option>
-                            <option value="X">X (Failure)</option>
+                            <option value="O">O</option>
+                            <option value="XO">XO</option>
+                            <option value="XXO">XXO</option>
+                            <option value="XXX">XXX</option>
+                            <option value="XX">XX</option>
+                            <option value="X">X</option>
                             <option value="-">- (Pass)</option>
                         </select>
                     </div>
@@ -557,6 +586,38 @@
                     </button>
                     <button onclick="addToStartlistFromAlert()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
                         Add to Start List
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<!-- High Jump Heights Configuration Modal -->
+<div id="highJumpConfigModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full">
+            <div class="p-6">
+                <h2 class="text-xl font-bold mb-4">Configure High Jump Heights</h2>
+
+                <div class="mb-4">
+                    <label class="block text-sm font-medium mb-2">Heights (meters)</label>
+                    <input type="text" id="hjHeights"
+                           placeholder="1.70, 1.75, 1.80, 1.85, 1.90"
+                           class="w-full px-3 py-2 border rounded-lg">
+                </div>
+
+                <div id="hjAthleteResults" class="mt-4">
+                    <!-- Athletes and their results will be displayed here -->
+                </div>
+
+                <div class="mt-6 flex justify-end space-x-4">
+                    <button onclick="closeHighJumpConfig()"
+                            class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+                        Cancel
+                    </button>
+                    <button onclick="saveHighJumpResults()"
+                            class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                        Save Results
                     </button>
                 </div>
             </div>
@@ -892,6 +953,86 @@ function recalculateRaza(gameId) {
             alert('Error recalculating RAZA scores');
             button.innerHTML = originalText;
             button.disabled = false;
+        });
+    }
+}
+// Replace the existing attempts form submission handler
+document.getElementById('resultForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const formData = new FormData(this);
+    const athleteBib = formData.get('athlete_bib');
+
+    // Check if result already exists
+    fetch(`/admin/games/${game.id}/check-result/${athleteBib}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.exists) {
+                if (confirm(`Result already exists for athlete BIB ${athleteBib}. Do you want to update it?`)) {
+                    // Update existing result
+                    updateExistingResult(data.result_id, formData);
+                }
+            } else {
+                // Submit new result
+                this.submit();
+            }
+        });
+});
+
+function updateExistingResult(resultId, formData) {
+    // Prepare attempts data
+    const attempts = {};
+    for (let i = 1; i <= 6; i++) {
+        const value = formData.get(`attempt-${i}-value`);
+        if (value) {
+            attempts[i] = {
+                value: value,
+                wind_velocity: formData.get(`wind-attempt-${i}-value`),
+                height: formData.get(`height-attempt-${i}-value`)
+            };
+        }
+    }
+
+    fetch(`/admin/results/${resultId}/update-attempts`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken()
+        },
+        body: JSON.stringify({
+            attempts: attempts,
+            record: formData.get('record'),
+            weight: formData.get('weight')
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('Result updated successfully!');
+            location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'Unknown error'));
+        }
+    });
+}
+
+function autoRankRound1(gameId) {
+    if (confirm('Auto-rank Round 1? This will select top 8 athletes and set their order for final attempts.')) {
+        fetch(`/admin/games/${gameId}/auto-rank-round1`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Round 1 ranking complete! ' + data.message);
+                location.reload();
+            } else {
+                alert('Error: ' + (data.error || 'Unknown error'));
+            }
         });
     }
 }

@@ -140,4 +140,9 @@ class ResultForm(FlaskForm):
 
 class StartListForm(FlaskForm):
     athlete_bib = IntegerField('Athlete BIB', validators=[DataRequired()])
-    lane_order = IntegerField('Lane/Order', validators=[Optional(), NumberRange(min=1)])
+    lane_order = IntegerField('Lane/Order', validators=[Optional(), NumberRange(min=1)])\
+
+class HighJumpHeightsForm(FlaskForm):
+    heights = StringField('Heights (comma-separated)',
+                         validators=[DataRequired()],
+                         render_kw={"placeholder": "1.50, 1.55, 1.60, 1.65, 1.70, 1.75, 1.80"})

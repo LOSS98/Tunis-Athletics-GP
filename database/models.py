@@ -1,3 +1,5 @@
+import traceback
+
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
 from database.db_manager import execute_query, execute_one
@@ -502,6 +504,104 @@ class Result:
         """
         return execute_query(query, fetch=True)
 
+    @staticmethod
+    def auto_rank_results(game_id):
+        try:
+            game = Game.get_by_id(game_id)
+            if not game:
+                return False
+
+            results = execute_query("""
+                SELECT r.*, a.gender as athlete_gender, a.class as athlete_class
+                FROM results r
+                JOIN athletes a ON r.athlete_bib = a.bib
+                WHERE r.game_id = %s
+            """, (game_id,), fetch=True)
+
+            if not results:
+                return False
+
+            is_track = game['event'] in Config.get_track_events()
+            is_field = game['event'] in Config.get_field_events()
+            use_wpa_points = game.get('wpa_points', False)
+            special_values = Config.get_result_special_values()
+
+            # Process valid results
+            valid_results = []
+            for result in results:
+                if result['value'] not in special_values:
+                    # Get all attempts for field events
+                    if is_field:
+                        attempts = Attempt.get_by_result(result['id'])
+                        result['attempts_list'] = []
+
+                        # Sort attempts by value (descending for field events)
+                        for attempt in sorted(attempts, key=lambda x: x['attempt_number']):
+                            if attempt['value'] and attempt['value'] not in special_values:
+                                try:
+                                    result['attempts_list'].append(float(attempt['value']))
+                                except ValueError:
+                                    pass
+
+                    valid_results.append(result)
+
+            if not valid_results:
+                return True
+
+            def compare_results(result):
+                # Primary comparison: RAZA score or performance
+                if use_wpa_points:
+                    primary_key = -(result.get('raza_score_precise') or result.get('raza_score') or 0)
+                else:
+                    try:
+                        if is_track:
+                            primary_key = float(result['value'])
+                        else:
+                            primary_key = -float(result['value'])
+                    except ValueError:
+                        primary_key = float('inf') if is_track else 0
+
+                # Secondary comparison: subsequent attempts for field events
+                tie_breakers = []
+                if is_field and 'attempts_list' in result:
+                    # Sort attempts in descending order
+                    sorted_attempts = sorted(result['attempts_list'], reverse=True)
+                    # Use all attempts as tie breakers
+                    tie_breakers = sorted_attempts + [0] * (6 - len(sorted_attempts))
+
+                return (primary_key, *tie_breakers)
+
+            # Sort results
+            valid_results.sort(key=compare_results)
+
+            # Assign ranks
+            current_rank = 1
+            previous_comparison = None
+
+            for i, result in enumerate(valid_results):
+                current_comparison = compare_results(result)
+
+                # Check if this result is truly different from the previous
+                if i > 0 and current_comparison != previous_comparison:
+                    current_rank = i + 1
+
+                execute_query("UPDATE results SET rank = %s WHERE id = %s",
+                              (str(current_rank), result['id']))
+                previous_comparison = current_comparison
+
+            # Handle special values
+            for result in results:
+                if result['value'] in special_values:
+                    execute_query("UPDATE results SET rank = %s WHERE id = %s",
+                                  ('-', result['id']))
+
+            return True
+
+        except Exception as e:
+            print(f"Error in auto_rank_results: {e}")
+            traceback.print_exc()
+            return False
+
 
 class StartList:
     @staticmethod
@@ -628,6 +728,13 @@ class Attempt:
             "INSERT INTO attempts (result_id, attempt_number, value, raza_score, raza_score_precise, wind_velocity, height) VALUES (%s, %s, %s, %s, %s, %s, %s)",
             (result_id, attempt_number, value, raza_score, raza_score_decimal, wind_velocity, height)
         )
+
+    @staticmethod
+    def update(attempt_id, **data):
+        set_clause = ', '.join([f"{k} = %s" for k in data.keys()])
+        query = f"UPDATE attempts SET {set_clause} WHERE id = %s"
+        params = list(data.values()) + [attempt_id]
+        return execute_query(query, params)
 
     @staticmethod
     def create_multiple(result_id, attempts=None):
