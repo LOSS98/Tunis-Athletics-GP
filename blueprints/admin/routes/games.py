@@ -1,9 +1,12 @@
 import traceback
 
-from flask import render_template, redirect, url_for, flash, request, jsonify
+from flask import render_template, redirect, url_for, flash, request, jsonify, send_file
+
+from config import Config
+from utils.pdf_generator import PDFGenerator
 from ..auth import admin_required, loc_required
 from ..forms import GameForm
-from database.models import Game, Result
+from database.models import Game, Result, Attempt
 from utils.helpers import save_uploaded_file
 
 def register_routes(bp):
@@ -113,6 +116,11 @@ def register_routes(bp):
                 if filename:
                     data['result_file'] = filename
 
+            if form.photo_finish.data:
+                filename = save_uploaded_file(form.photo_finish.data, 'photo_finish')
+                if filename:
+                    data['photo_finish'] = filename
+
             try:
                 Game.create(**data)
                 flash('Game created successfully', 'success')
@@ -122,33 +130,69 @@ def register_routes(bp):
 
         return render_template('admin/games/create.html', form=form)
 
-    @bp.route('/games/<int:id>/edit', methods=['POST'])
+    @bp.route('/games/<int:id>/edit', methods=['GET', 'POST'])
     @admin_required
     def game_edit(id):
         game = Game.get_by_id(id)
         if not game:
             return jsonify({'error': 'Game not found'}), 404
 
-        try:
-            data = {
-                'event': request.form.get('event'),
-                'gender': request.form.get('gender'),
-                'classes': request.form.get('classes'),
-                'phase': request.form.get('phase') if request.form.get('phase') else None,
-                'area': request.form.get('area') if request.form.get('area') else None,
-                'day': int(request.form.get('day')),
-                'time': request.form.get('time'),
-                'nb_athletes': int(request.form.get('nb_athletes')),
-                'status': request.form.get('status'),
-                'published': bool(request.form.get('published')),
-                'wpa_points': bool(request.form.get('wpa_points'))
-            }
+        if request.method == 'GET':
+            # Retourner la page d'édition
+            from ..forms import GameForm
+            form = GameForm()
 
-            Game.update(id, **data)
-            return jsonify({'success': True})
+            # Pré-remplir le formulaire
+            form.event.data = game['event']
+            form.gender.data = game['gender']
+            form.classes.data = game['classes']
+            form.phase.data = game.get('phase')
+            form.area.data = game.get('area')
+            form.day.data = game['day']
+            form.time.data = game['time']
+            form.nb_athletes.data = game['nb_athletes']
+            form.status.data = game['status']
+            form.published.data = game.get('published', False)
+            form.wpa_points.data = game.get('wpa_points', False)
+            if form.photo_finish.data:
+                filename = save_uploaded_file(form.photo_finish.data, 'photo_finish')
+                if filename:
+                    game['photo_finish'] = filename
 
-        except Exception as e:
-            return jsonify({'error': str(e)}), 500
+            return render_template('admin/games/edit.html', form=form, game=game)
+
+        elif request.method == 'POST':
+            try:
+                data = {
+                    'event': request.form.get('event'),
+                    'gender': request.form.get('gender'),
+                    'classes': request.form.get('classes'),
+                    'phase': request.form.get('phase') if request.form.get('phase') else None,
+                    'area': request.form.get('area') if request.form.get('area') else None,
+                    'day': int(request.form.get('day')),
+                    'time': request.form.get('time'),
+                    'nb_athletes': int(request.form.get('nb_athletes')),
+                    'status': request.form.get('status'),
+                    'published': bool(request.form.get('published')),
+                    'wpa_points': bool(request.form.get('wpa_points'))
+                }
+
+                Game.update(id, **data)
+
+
+
+                if request.headers.get('Content-Type') == 'application/json':
+                    return jsonify({'success': True})
+                else:
+                    flash('Game updated successfully', 'success')
+                    return redirect(url_for('admin.games_list'))
+
+            except Exception as e:
+                if request.headers.get('Content-Type') == 'application/json':
+                    return jsonify({'error': str(e)}), 500
+                else:
+                    flash(f'Error updating game: {str(e)}', 'danger')
+                    return redirect(url_for('admin.games_list'))
 
     @bp.route('/games/<int:id>/delete', methods=['POST'])
     @admin_required
@@ -202,3 +246,36 @@ def register_routes(bp):
             return jsonify({'published': new_status})
         except Exception as e:
             return jsonify({'error': str(e)}), 500
+
+    @bp.route('/games/<int:game_id>/generate-pdf')
+    @admin_required
+    def generate_game_pdf(game_id):
+        try:
+            game = Game.get_by_id(game_id)
+            if not game:
+                flash('Game not found', 'danger')
+                return redirect(url_for('admin.games_list'))
+
+            results = Result.get_all(game_id=game_id)
+
+            # Charger les tentatives pour les épreuves de terrain
+            if game['event'] in Config.get_field_events():
+                for result in results:
+                    result['attempts'] = Attempt.get_by_result(result['id'])
+
+            generator = PDFGenerator()
+            pdf_buffer = generator.generate_results_pdf(game, results)
+
+            filename = f"results_{game['event']}_{game['gender']}_{game['day']}.pdf"
+
+            return send_file(
+                pdf_buffer,
+                as_attachment=False,
+                download_name=filename,
+                mimetype='application/pdf'
+            )
+
+        except Exception as e:
+            print(f"Error generating PDF: {e}")
+            flash(f'Error generating PDF: {str(e)}', 'danger')
+            return redirect(url_for('admin.game_results', id=game_id))

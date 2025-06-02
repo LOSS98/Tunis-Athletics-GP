@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Admin - World Para Athletics{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         .gradient-text {
@@ -130,10 +132,24 @@
         });
 
         function getCSRFToken() {
-            return document.querySelector('meta[name=csrf-token]')?.getAttribute('content') ||
-                   document.querySelector('input[name=csrf_token]')?.value;
+            // Essayer plusieurs méthodes pour obtenir le token CSRF
+            const meta = document.querySelector('meta[name="csrf-token"]');
+            if (meta) return meta.getAttribute('content');
+
+            const input = document.querySelector('input[name="csrf_token"]');
+            if (input) return input.value;
+
+            // Essayer de trouver le token dans n'importe quel formulaire
+            const forms = document.querySelectorAll('form');
+            for (let form of forms) {
+                const csrfInput = form.querySelector('input[name="csrf_token"]');
+                if (csrfInput) return csrfInput.value;
+            }
+
+            return '';
         }
 
+        // Fonction pour tous les appels AJAX
         function ajaxRequest(url, options = {}) {
             const defaults = {
                 headers: {

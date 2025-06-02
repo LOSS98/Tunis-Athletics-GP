@@ -279,6 +279,10 @@
                                class="text-indigo-600 hover:text-indigo-900 transition-colors" title="Edit Result">
                                 <i class="fas fa-edit"></i>
                             </a>
+                            <a href="{{ url_for('admin.generate_game_pdf', game_id=game.id) }}"
+                               class="text-red-600 hover:text-red-900 mr-2" title="Generate PDF">
+                                <i class="fas fa-file-pdf"></i>
+                            </a>
                             <button onclick="deleteResult({{ result.id }})"
                                     class="text-red-600 hover:text-red-900 transition-colors" title="Delete Result">
                                 <i class="fas fa-trash"></i>

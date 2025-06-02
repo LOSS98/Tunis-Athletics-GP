@@ -719,14 +719,14 @@ class Attempt:
         )
 
     @staticmethod
-    def create(result_id, attempt_number, value, wind_velocity=None, raza_score=None, raza_score_decimal=None,
+    def create(result_id, attempt_number, value, wind_velocity=None, raza_score=None, raza_score_precise=None,
                height=None):
         if wind_velocity is not None:
             wind_velocity = float(Config.format_wind(wind_velocity))
 
         return execute_query(
             "INSERT INTO attempts (result_id, attempt_number, value, raza_score, raza_score_precise, wind_velocity, height) VALUES (%s, %s, %s, %s, %s, %s, %s)",
-            (result_id, attempt_number, value, raza_score, raza_score_decimal, wind_velocity, height)
+            (result_id, attempt_number, value, raza_score, raza_score_precise, wind_velocity, height)
         )
 
     @staticmethod
@@ -830,8 +830,8 @@ class Attempt:
                             if status == 200:
                                 raza_data = response.get_json()
                                 raza_score = int(raza_data.get('raza_score', 0))
-                                raza_score_decimal = round(float(raza_data.get('raza_score', 0)), 3)
+                                raza_score_precise = float(raza_data.get('raza_score_precise', 0))
                     except Exception as e:
                         print(f"Error calculating RAZA for attempt: {e}")
 
-        return Attempt.create(result_id, next_attempt, value, wind_velocity, raza_score, raza_score_decimal, height)
+        return Attempt.create(result_id, next_attempt, value, wind_velocity, raza_score, raza_score_precise, height)

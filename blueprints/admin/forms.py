@@ -59,6 +59,7 @@ class GameForm(FlaskForm):
     day = IntegerField('Day', validators=[DataRequired(), NumberRange(min=1, max=8)])
     time = TimeField('Time', validators=[DataRequired()])
     nb_athletes = IntegerField('Number of Athletes', validators=[DataRequired(), NumberRange(min=1)])
+    photo_finish = FileField('Photo Finish', validators=[FileAllowed(['jpg', 'jpeg', 'png', 'pdf'])])
     status = SelectField('Status', choices=[
         ('scheduled', 'Scheduled'),
         ('started', 'Started'),
