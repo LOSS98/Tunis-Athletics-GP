@@ -135,33 +135,13 @@ def register_routes(bp):
     def game_edit(id):
         game = Game.get_by_id(id)
         if not game:
-            return jsonify({'error': 'Game not found'}), 404
+            if request.method == 'POST':
+                return {'error': 'Game not found'}, 404
+            else:
+                flash('Game not found', 'danger')
+                return redirect(url_for('admin.games_list'))
 
-        if request.method == 'GET':
-            # Retourner la page d'édition
-            from ..forms import GameForm
-            form = GameForm()
-
-            # Pré-remplir le formulaire
-            form.event.data = game['event']
-            form.gender.data = game['gender']
-            form.classes.data = game['classes']
-            form.phase.data = game.get('phase')
-            form.area.data = game.get('area')
-            form.day.data = game['day']
-            form.time.data = game['time']
-            form.nb_athletes.data = game['nb_athletes']
-            form.status.data = game['status']
-            form.published.data = game.get('published', False)
-            form.wpa_points.data = game.get('wpa_points', False)
-            if form.photo_finish.data:
-                filename = save_uploaded_file(form.photo_finish.data, 'photo_finish')
-                if filename:
-                    game['photo_finish'] = filename
-
-            return render_template('admin/games/edit.html', form=form, game=game)
-
-        elif request.method == 'POST':
+        if request.method == 'POST':
             try:
                 data = {
                     'event': request.form.get('event'),
@@ -179,20 +159,37 @@ def register_routes(bp):
 
                 Game.update(id, **data)
 
-
-
-                if request.headers.get('Content-Type') == 'application/json':
-                    return jsonify({'success': True})
-                else:
+                if request.headers.get('Content-Type', '').startswith('multipart/form-data'):
                     flash('Game updated successfully', 'success')
                     return redirect(url_for('admin.games_list'))
+                else:
+                    return '', 200
 
             except Exception as e:
-                if request.headers.get('Content-Type') == 'application/json':
-                    return jsonify({'error': str(e)}), 500
-                else:
+                if request.headers.get('Content-Type', '').startswith('multipart/form-data'):
                     flash(f'Error updating game: {str(e)}', 'danger')
                     return redirect(url_for('admin.games_list'))
+                else:
+                    return {'error': str(e)}, 500
+
+        # GET request - show edit form
+        from ..forms import GameForm
+        form = GameForm()
+
+        # Pre-populate form
+        form.event.data = game['event']
+        form.gender.data = game['gender']
+        form.classes.data = game['classes']
+        form.phase.data = game.get('phase')
+        form.area.data = game.get('area')
+        form.day.data = game['day']
+        form.time.data = game['time']
+        form.nb_athletes.data = game['nb_athletes']
+        form.status.data = game['status']
+        form.published.data = game.get('published', False)
+        form.wpa_points.data = game.get('wpa_points', False)
+
+        return render_template('admin/games/edit.html', form=form, game=game)
 
     @bp.route('/games/<int:id>/delete', methods=['POST'])
     @admin_required

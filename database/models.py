@@ -287,67 +287,78 @@ class Game:
             for result in results:
                 if result['value'] not in special_values:
                     if is_field:
+                        # Get all attempts for tie-breaking
                         attempts = Attempt.get_by_result(result['id'])
-                        result['attempts_list'] = []
+                        result['all_attempts'] = []
                         for attempt in attempts:
                             if attempt['value'] and attempt['value'] not in special_values:
                                 try:
-                                    result['attempts_list'].append(float(attempt['value']))
+                                    result['all_attempts'].append(float(attempt['value']))
                                 except ValueError:
                                     pass
-                        result['attempts_list'].sort(reverse=True)
+                        # Sort attempts in descending order for tie-breaking
+                        result['all_attempts'].sort(reverse=True)
+
+                        # Pad with zeros for consistent comparison
+                        while len(result['all_attempts']) < 6:
+                            result['all_attempts'].append(0.0)
+
                     valid_results.append(result)
 
             if not valid_results:
                 return True
 
-            def compare_results(result):
+            def get_sort_key(result):
                 if use_wpa_points:
-                    primary_key = -(result.get('raza_score') or 0)
-                    secondary_key = -(result.get('raza_score_precise') or 0)
+                    # For RAZA scoring, use precise score for tie-breaking
+                    primary = -(result.get('raza_score_precise') or result.get('raza_score') or 0)
+                    # Secondary tie-break still uses attempts for field events
+                    if is_field and 'all_attempts' in result:
+                        return (primary, *[-x for x in result['all_attempts']])
+                    return (primary,)
                 else:
+                    # Standard scoring
                     try:
                         if is_track:
-                            primary_key = float(result['value'])
-                            secondary_key = 0
+                            primary = float(result['value'])
                         else:
-                            primary_key = -float(result['value'])
-                            secondary_key = 0
+                            primary = -float(result['value'])
                     except ValueError:
-                        primary_key = float('inf') if is_track else 0
-                        secondary_key = 0
+                        primary = float('inf') if is_track else -float('inf')
 
-                tie_breakers = []
-                if is_field and 'attempts_list' in result:
-                    tie_breakers = result['attempts_list'][:6]
-                    while len(tie_breakers) < 6:
-                        tie_breakers.append(0)
+                        # Tie-breaking for field events
+                        if is_field and 'all_attempts' in result:
+                            return (primary, *[-x for x in result['all_attempts']])
+                        return (primary,)
 
-                return (primary_key, secondary_key, *tie_breakers)
+                        # Sort results
+                    valid_results.sort(key=get_sort_key)
 
-            valid_results.sort(key=compare_results)
+                    # Assign ranks with proper tie handling
+                    current_rank = 1
+                    previous_key = None
 
-            current_rank = 1
-            previous_comparison = None
+                    for i, result in enumerate(valid_results):
+                        current_key = get_sort_key(result)
 
-            for i, result in enumerate(valid_results):
-                current_comparison = compare_results(result)
+                        # Check for ties
+                        if i > 0 and current_key != previous_key:
+                            current_rank = i + 1
 
-                if i > 0 and current_comparison != previous_comparison:
-                    current_rank = i + 1
+                        execute_query("UPDATE results SET rank = %s WHERE id = %s",
+                                      (str(current_rank), result['id']))
+                        previous_key = current_key
 
-                execute_query("UPDATE results SET rank = %s WHERE id = %s", (str(current_rank), result['id']))
-                previous_comparison = current_comparison
+                    # Handle special values (DNS, DNF, etc.)
+                    for result in results:
+                        if result['value'] in special_values:
+                            execute_query("UPDATE results SET rank = %s WHERE id = %s",
+                                          ('-', result['id']))
 
-            for result in results:
-                if result['value'] in special_values:
-                    execute_query("UPDATE results SET rank = %s WHERE id = %s", ('-', result['id']))
-
-            return True
+                    return True
 
         except Exception as e:
             print(f"Error in auto_rank_results: {e}")
-            import traceback
             traceback.print_exc()
             return False
 

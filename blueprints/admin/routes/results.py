@@ -493,8 +493,9 @@ def register_routes(bp):
     def auto_rank_round1(game_id):
         try:
             game = Game.get_by_id(game_id)
-            if not game or game['event'] != 'Long Jump':
-                return jsonify({'error': 'Invalid game or not a Long Jump event'}), 400
+            if not game or game['event'] not in ['Long Jump', 'Triple Jump', 'Shot Put', 'Discus Throw',
+                                                 'Javelin Throw', 'Club Throw']:
+                return jsonify({'error': 'Invalid game or not a qualifying field event'}), 400
 
             # Get all results with at least 3 attempts
             results = execute_query("""
@@ -511,31 +512,40 @@ def register_routes(bp):
                 ORDER BY best_of_three DESC NULLS LAST
             """, (tuple(Config.get_result_special_values()), game_id,), fetch=True)
 
-            # Prend les 8 meilleurs si >= 8, sinon tous ceux qui ont 3 essais
-            n = min(8, len(results))
-            if n == 0:
-                return jsonify({'error': "No athlete with 3 valid attempts found."}), 400
+            if len(results) < 8:
+                # If fewer than 8 athletes, all advance
+                selected_count = len(results)
+            else:
+                selected_count = 8
 
-            top = results[:n]
-            top.reverse()  # Du pire au meilleur
+            if selected_count == 0:
+                return jsonify({'error': "No athletes with 3 valid attempts found."}), 400
 
-            # Update final_order pour les sélectionnés
-            for i, result in enumerate(top):
+            # Select top performers (reverse order for final round)
+            finalists = results[:selected_count]
+            finalists.reverse()  # Reverse order: worst to best for final round
+
+            # Update final_order for finalists (1 = first to jump in final)
+            for i, result in enumerate(finalists):
                 execute_query(
                     "UPDATE results SET final_order = %s WHERE id = %s",
                     (i + 1, result['id'])
                 )
 
-            # Clear final_order pour les autres
-            for result in results[n:]:
+            # Clear final_order for non-finalists
+            for result in results[selected_count:]:
                 execute_query(
                     "UPDATE results SET final_order = NULL WHERE id = %s",
                     (result['id'],)
                 )
 
+            message = f'{selected_count} athletes selected for final round.'
+            if selected_count == 8:
+                message += f' Order: {finalists[0]["athlete_bib"]} (1st to jump) to {finalists[-1]["athlete_bib"]} (8th to jump)'
+
             return jsonify({
                 'success': True,
-                'message': f'{n} athletes selected for final. Order: {top[0]["athlete_bib"]} (worst) to {top[-1]["athlete_bib"]} (best)'
+                'message': message
             })
 
         except Exception as e:

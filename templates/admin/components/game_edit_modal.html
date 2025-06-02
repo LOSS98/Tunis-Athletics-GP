@@ -1,114 +1,3 @@
-<div id="gameEditModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
-    <div class="flex items-center justify-center min-h-screen p-4">
-        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full">
-            <div class="p-6">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-bold">Edit Game</h2>
-                    <button onclick="closeGameEditModal()" class="text-gray-400 hover:text-gray-600">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-
-                <form id="gameEditForm">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <input type="hidden" id="editGameId" name="game_id">
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-gray-700 text-sm font-bold mb-2">Event</label>
-                            <select id="editEvent" name="event" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500" required>
-                                {% for event in config.get_field_events() + config.get_track_events() %}
-                                <option value="{{ event }}">{{ event }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
-                        <div>
-                            <label class="block text-gray-700 text-sm font-bold mb-2">Gender</label>
-                            <select id="editGender" name="gender" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500" required>
-                                <option value="Male">Male</option>
-                                <option value="Female">Female</option>
-                            </select>
-                        </div>
-
-                        <div class="md:col-span-2">
-                            <label class="block text-gray-700 text-sm font-bold mb-2">Classes</label>
-                            <input type="text" id="editClasses" name="classes" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500" required>
-                        </div>
-
-                        <div>
-                            <label class="block text-gray-700 text-sm font-bold mb-2">Phase</label>
-                            <input type="text" id="editPhase" name="phase" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500">
-                        </div>
-
-                        <div>
-                            <label class="block text-gray-700 text-sm font-bold mb-2">Area</label>
-                            <input type="text" id="editArea" name="area" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500">
-                        </div>
-
-                        <div>
-                            <label class="block text-gray-700 text-sm font-bold mb-2">Day</label>
-                            <input type="number" id="editDay" name="day" min="1" max="8" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500" required>
-                        </div>
-
-                        <div>
-                            <label class="block text-gray-700 text-sm font-bold mb-2">Time</label>
-                            <input type="time" id="editTime" name="time" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500" required>
-                        </div>
-
-                        <div>
-                            <label class="block text-gray-700 text-sm font-bold mb-2">Number of Athletes</label>
-                            <input type="number" id="editNbAthletes" name="nb_athletes" min="1" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500" required>
-                        </div>
-
-                        <div>
-                            <label class="block text-gray-700 text-sm font-bold mb-2">Status</label>
-                            <select id="editStatus" name="status" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500" required>
-                                <option value="scheduled">Scheduled</option>
-                                <option value="started">Started</option>
-                                <option value="in_progress">In Progress</option>
-                                <option value="finished">Finished</option>
-                                <option value="cancelled">Cancelled</option>
-                            </select>
-                        </div>
-
-                        <div class="md:col-span-2">
-                            <div class="flex items-center space-x-6">
-                                <label class="flex items-center">
-                                    <input type="checkbox" id="editPublished" name="published" class="mr-2">
-                                    <span class="text-sm font-medium text-gray-700">Published</span>
-                                </label>
-                                <label class="flex items-center">
-                                    <input type="checkbox" id="editWpaPoints" name="wpa_points" class="mr-2">
-                                    <span class="text-sm font-medium text-gray-700">Use RAZA Scoring</span>
-                                </label>
-                            </div>
-                        </div>
-                        {% if game_json.event in config.TRACK_EVENTS %}
-                        <div class="md:col-span-2">
-                            <label class="block text-gray-700 text-sm font-bold mb-2">Photo Finish</label>
-                            <input type="file" id="editPhotoFinish" name="photo_finish"
-                                   class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500"
-                                   accept="image/*,.pdf">
-                            <p class="text-sm text-gray-600 mt-1">Photo finish for track events</p>
-                        </div>
-                        {% endif %}
-                    </div>
-
-                    <div class="mt-6 flex justify-end space-x-4">
-                        <button type="button" onclick="closeGameEditModal()" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
-                            Cancel
-                        </button>
-                        <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-                            Update Game
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-
 <script>
 function openGameEditModal(gameId, gameData) {
     document.getElementById('editGameId').value = gameId;
@@ -134,28 +23,47 @@ function closeGameEditModal() {
 document.getElementById('gameEditForm').addEventListener('submit', function(e) {
     e.preventDefault();
 
-    const formData = new FormData(this);
+    const formData = new FormData();
     const gameId = document.getElementById('editGameId').value;
+
+    // Add CSRF token
+    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+    formData.append('csrf_token', csrfToken);
+
+    // Add form fields
+    formData.append('event', document.getElementById('editEvent').value);
+    formData.append('gender', document.getElementById('editGender').value);
+    formData.append('classes', document.getElementById('editClasses').value);
+    formData.append('phase', document.getElementById('editPhase').value);
+    formData.append('area', document.getElementById('editArea').value);
+    formData.append('day', document.getElementById('editDay').value);
+    formData.append('time', document.getElementById('editTime').value);
+    formData.append('nb_athletes', document.getElementById('editNbAthletes').value);
+    formData.append('status', document.getElementById('editStatus').value);
+    formData.append('published', document.getElementById('editPublished').checked);
+    formData.append('wpa_points', document.getElementById('editWpaPoints').checked);
 
     fetch(`/admin/games/${gameId}/edit`, {
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
+    .then(response => {
+        if (response.ok) {
             closeGameEditModal();
             location.reload();
         } else {
-            alert('Error: ' + (data.error || 'Unknown error'));
+            return response.text().then(text => {
+                throw new Error('Server error: ' + text);
+            });
         }
     })
     .catch(error => {
         console.error('Error:', error);
-        alert('Error updating game');
+        alert('Error updating game: ' + error.message);
     });
 });
 
+// Close modal when clicking outside
 document.getElementById('gameEditModal').addEventListener('click', function(e) {
     if (e.target === this) {
         closeGameEditModal();
