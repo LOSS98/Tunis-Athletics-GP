@@ -165,9 +165,78 @@ def register_routes(bp):
                 except (ValueError, TypeError):
                     errors.append('Invalid athlete BIB')
 
-            if game['event'] in Config.get_field_events():
+            # High Jump special handling
+            if game['event'] == 'High Jump':
+                height = request.form.get('height')
+                attempt_result = request.form.get('attempt_result', 'O')
+
+                if not height:
+                    errors.append('Height is required for High Jump')
+
+                if errors:
+                    for error in errors:
+                        flash(error, 'danger')
+                    return redirect(url_for('admin.game_results', id=game_id))
+
+                existing_result = Result.get_by_game_athlete(game_id, athlete_bib)
+                if not existing_result:
+                    # Create initial result for High Jump
+                    result_data = {
+                        'game_id': game_id,
+                        'athlete_bib': athlete_bib,
+                        'value': 'NH',  # No Height initially
+                        'raza_score': 0,
+                        'raza_score_precise': 0.0
+                    }
+                    result_id = Result.create(**result_data)
+                else:
+                    result_id = existing_result['id']
+
+                # Add the attempt
+                height_float = float(height)
+                raza_score = 0
+                raza_score_precise = 0.0
+
+                if attempt_result == 'O' and game.get('wpa_points', False):
+                    raza_score, raza_score_precise = calculate_and_store_raza(athlete, game, height_float)
+
+                # Get next attempt number
+                existing_attempts = execute_query(
+                    "SELECT MAX(attempt_number) as max_num FROM attempts WHERE result_id = %s",
+                    (result_id,), fetch=True
+                )
+                next_attempt = 1
+                if existing_attempts and existing_attempts[0]['max_num']:
+                    next_attempt = existing_attempts[0]['max_num'] + 1
+
+                Attempt.create(result_id, next_attempt, attempt_result, None, raza_score, raza_score_precise,
+                               height_float)
+
+                # Update best height if cleared
+                if attempt_result == 'O':
+                    current_best = execute_one(
+                        "SELECT MAX(height) as best_height FROM attempts WHERE result_id = %s AND value = 'O'",
+                        (result_id,)
+                    )
+                    if current_best and current_best['best_height']:
+                        best_height = current_best['best_height']
+                        best_raza_score, best_raza_score_precise = calculate_and_store_raza(athlete, game, best_height)
+
+                        Result.update(result_id,
+                                      value=best_height,
+                                      best_attempt=f"{best_height:.2f}",
+                                      raza_score=best_raza_score,
+                                      raza_score_precise=best_raza_score_precise)
+
+                flash('High Jump attempt added successfully', 'success')
+                return redirect(url_for('admin.game_results', id=game_id))
+
+            # Field events (excluding High Jump)
+            elif game['event'] in Config.get_field_events():
                 if not any(attempt for attempt in attempts if attempt):
                     errors.append('At least one valid attempt is required for field events')
+
+            # Track events
             elif game['event'] in Config.get_track_events():
                 if not value:
                     errors.append('Performance value is required for track events')
@@ -186,8 +255,9 @@ def register_routes(bp):
                 return redirect(url_for('admin.game_results', id=game_id))
 
             if not StartList.athlete_in_startlist(game_id, athlete_bib):
-                flash(f'Warning: Athlete BIB {athlete_bib} is not in the start list. Add to start list?', 'warning')
+                flash(f'Warning: Athlete BIB {athlete_bib} is not in the start list.', 'warning')
 
+            # Field events processing
             if game['event'] in Config.get_field_events():
                 valid_attempts = []
                 raza_scores = []
@@ -204,9 +274,10 @@ def register_routes(bp):
                             valid_attempts.append(attempt_float)
                             all_attempt_values.append(attempt_float)
 
-                            raza_score, raza_score_precise = calculate_and_store_raza(athlete, game, attempt_float)
-                            if raza_score > 0:
-                                raza_scores.append(raza_score)
+                            if game.get('wpa_points', False):
+                                raza_score, raza_score_precise = calculate_and_store_raza(athlete, game, attempt_float)
+                                if raza_score > 0:
+                                    raza_scores.append(raza_score)
                         except (ValueError, TypeError) as e:
                             print(f"Error processing attempt {i + 1}: {e}")
 
@@ -241,7 +312,7 @@ def register_routes(bp):
                     performance_value = max(valid_attempts)
                     max_raza_score = max(raza_scores) if raza_scores else 0
                     max_raza_score_precise = 0.0
-                    if raza_scores:
+                    if raza_scores and game.get('wpa_points', False):
                         for i, attempt_value in enumerate(all_attempt_values):
                             if attempt_value == performance_value:
                                 raza_score, raza_score_precise = calculate_and_store_raza(athlete, game, attempt_value)
@@ -275,9 +346,12 @@ def register_routes(bp):
                 if attempts_data:
                     Attempt.create_multiple(result_id=result_id, attempts=attempts_data)
 
-                if game['event'] not in ['High Jump'] and len(attempts_data) >= 3:
+                # Check for final round qualification
+                if game['event'] in ['Long Jump', 'Triple Jump', 'Shot Put', 'Discus Throw', 'Javelin Throw',
+                                     'Club Throw'] and len(attempts_data) >= 3:
                     update_final_order_after_three_attempts(game_id)
 
+            # Track events processing
             elif game['event'] in Config.get_track_events():
                 if value.upper() in Config.get_result_special_values():
                     performance_value = value.upper()
@@ -288,8 +362,12 @@ def register_routes(bp):
                         performance_seconds = parse_time_to_seconds(value)
                         performance_value = format_time_output(performance_seconds)
 
-                        max_raza_score, max_raza_score_precise = calculate_and_store_raza(athlete, game,
-                                                                                          performance_seconds)
+                        if game.get('wpa_points', False):
+                            max_raza_score, max_raza_score_precise = calculate_and_store_raza(athlete, game,
+                                                                                              performance_seconds)
+                        else:
+                            max_raza_score = 0
+                            max_raza_score_precise = 0.0
 
                     except (ValueError, IndexError) as e:
                         flash('Invalid time format', 'danger')

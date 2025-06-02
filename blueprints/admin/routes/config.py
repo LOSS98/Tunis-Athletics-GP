@@ -334,3 +334,14 @@ def register_routes(bp):
         clear_config_cache()
         flash('Configuration cache cleared successfully', 'success')
         return redirect(url_for('admin.config_index'))
+@staticmethod
+def get_genders():
+    return ['Male', 'Female']
+
+@staticmethod
+def get_weight_field_events():
+    try:
+        from database.config_manager import ConfigManager
+        return ConfigManager.get_config_tags('weight_field_events')
+    except (ImportError, Exception):
+        return ['Shot Put', 'Discus Throw', 'Javelin Throw', 'Hammer Throw', 'Club Throw', 'Weight Throw']

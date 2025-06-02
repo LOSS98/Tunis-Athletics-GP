@@ -76,6 +76,10 @@ def create_app():
                 return Config.get_wind_affected_field_events()
 
             @property
+            def WEIGHT_FIELD_EVENTS(self):
+                return Config.get_weight_field_events()
+
+            @property
             def CURRENT_DAY(self):
                 return Config.get_current_day()
 
@@ -121,7 +125,10 @@ def create_app():
             def get_wind_affected_field_events(self):
                 return Config.get_wind_affected_field_events()
 
-            # Formatting methods - these were missing!
+            def get_weight_field_events(self):
+                return Config.get_weight_field_events()
+
+            # Formatting methods
             def format_time(self, time_value):
                 return Config.format_time(time_value)
 
