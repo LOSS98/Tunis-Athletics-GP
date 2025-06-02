@@ -3,8 +3,6 @@
 {% block page_title %}Manage Results - {{ game.event }}{% endblock %}
 
 {% block content %}
-{% include 'admin/components/game_edit_modal.html' %}
-
 <div class="mb-6">
     <div class="bg-white rounded-lg shadow p-4">
         <div class="flex justify-between items-start">
@@ -24,8 +22,7 @@
                 {% if game.wpa_points %}
                 <div class="mt-2 p-2 bg-purple-50 border border-purple-200 rounded">
                     <i class="fas fa-calculator text-purple-600 mr-2"></i>
-                    <span class="text-purple-800 font-medium">RAZA Scoring Enabled:</span>
-                    <span class="text-purple-700 text-sm">Points available for comparison</span>
+                    <span class="text-purple-800 font-medium">RAZA Scoring Enabled</span>
                 </div>
                 {% endif %}
             </div>
@@ -52,28 +49,27 @@
                 {% endif %}
 
                 <button onclick="autoRankResults({{ game.id }}, event)"
-                        class="bg-purple-500 text-white px-3 py-1 rounded text-sm hover:bg-purple-600"
-                        title="Auto-rank by performance">
+                        class="bg-purple-500 text-white px-3 py-1 rounded text-sm hover:bg-purple-600">
                     <i class="fas fa-sort-numeric-down"></i> Auto Rank
                 </button>
 
                 {% if game.event in ['Long Jump', 'Triple Jump', 'Shot Put', 'Discus Throw', 'Javelin Throw', 'Club Throw'] %}
                 <button onclick="selectFinalistsForRound1({{ game.id }})"
-                        class="bg-orange-500 text-white px-3 py-1 rounded text-sm hover:bg-orange-600"
-                        title="Select top 8 for final round">
+                        class="bg-orange-500 text-white px-3 py-1 rounded text-sm hover:bg-orange-600">
                     <i class="fas fa-trophy"></i> Round 1 → Final
                 </button>
                 {% endif %}
 
+                {% if game.wpa_points %}
                 <button onclick="recalculateRaza({{ game.id }})"
-                        class="bg-indigo-500 text-white px-3 py-1 rounded text-sm hover:bg-indigo-600"
-                        title="Recalculate all RAZA scores">
+                        class="bg-indigo-500 text-white px-3 py-1 rounded text-sm hover:bg-indigo-600">
                     <i class="fas fa-calculator"></i> Recalc RAZA
                 </button>
+                {% endif %}
 
                 <a href="{{ url_for('admin.generate_game_pdf', game_id=game.id) }}"
                    class="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600"
-                   title="Generate PDF Results" target="_blank">
+                   target="_blank">
                     <i class="fas fa-file-pdf"></i> PDF
                 </a>
             </div>
@@ -133,18 +129,6 @@
 <div class="mb-6">
     <div class="bg-white rounded-lg shadow p-6">
         <h3 class="text-lg font-bold mb-4">Add Result</h3>
-
-        <div id="errorMessages" class="hidden mb-4">
-            <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                <div class="flex">
-                    <i class="fas fa-exclamation-circle mt-0.5 mr-2"></i>
-                    <div>
-                        <strong>Please fix the following errors:</strong>
-                        <ul id="errorList" class="mt-2 ml-4 list-disc"></ul>
-                    </div>
-                </div>
-            </div>
-        </div>
 
         <form method="POST" action="{{ url_for('admin.result_add', game_id=game.id) }}" id="resultForm">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
@@ -274,16 +258,11 @@
     <div class="p-6 border-b">
         <div class="flex justify-between items-center">
             <h3 class="text-lg font-bold">Current Results ({{ results|length }}/{{ game.nb_athletes }})</h3>
-            <div class="text-sm text-gray-600">
-                {% if is_track_event or (is_field_event and game.event in config.WIND_AFFECTED_FIELD_EVENTS) %}
-                    <span class="bg-lime-100 text-lime-800 px-2 py-1 rounded">
-                        Wind: {% if game.wind_velocity is not none %}{{ config.format_wind(game.wind_velocity) }} m/s{% else %}-{% endif %}
-                    </span>
-                {% endif %}
-                {% if game.wpa_points %}
-                    <span class="bg-purple-100 text-purple-800 px-2 py-1 rounded ml-2">RAZA Scoring</span>
-                {% endif %}
+            {% if total_selected_r1 > 0 and game.event in ['Long Jump', 'Triple Jump', 'Shot Put', 'Discus Throw', 'Javelin Throw', 'Club Throw'] %}
+            <div class="text-sm text-orange-600 bg-orange-50 px-2 py-1 rounded">
+                R1 Finalists: {{ total_selected_r1 }}/8
             </div>
+            {% endif %}
         </div>
     </div>
 
@@ -293,10 +272,7 @@
             <thead class="bg-gray-50">
                 <tr>
                     <th class="px-4 py-3 text-left">
-                        <div class="flex items-center">
-                            <i class="fas fa-arrows-alt-v text-gray-400 mr-2" title="Drag to reorder"></i>
-                            Rank 🏆
-                        </div>
+                        Rank 🏆
                     </th>
                     <th class="px-4 py-3 text-left">BIB</th>
                     <th class="px-4 py-3 text-left">Name</th>
@@ -310,7 +286,7 @@
                     </th>
                     {% if game.event in ['Long Jump', 'Triple Jump', 'Shot Put', 'Discus Throw', 'Javelin Throw', 'Club Throw'] %}
                     <th class="px-4 py-3 text-left">
-                        Round 1 Order
+                        R1 Order
                     </th>
                     {% endif %}
                     {% if game.wpa_points %}
@@ -328,7 +304,6 @@
                 <tr class="hover:bg-gray-50 draggable-row" data-result-id="{{ result.id }}" data-current-rank="{{ loop.index }}">
                     <td class="px-4 py-4">
                         <div class="flex items-center">
-                            <i class="fas fa-grip-vertical text-gray-400 mr-2 cursor-move drag-handle"></i>
                             {% set rank = result.rank %}
                             {% if rank == '1' %}
                                 <span class="text-2xl mr-2">🥇</span><span class="font-bold text-yellow-600">{{ rank }}</span>
@@ -404,9 +379,6 @@
                         {% if result.raza_score %}
                             <div class="text-lg font-bold text-purple-600 bg-purple-50 px-2 py-1 rounded text-center">
                                 {{ result.raza_score }}
-                                {% if result.raza_score_precise %}
-                                    <div class="text-xs">{{ result.raza_score_precise }}</div>
-                                {% endif %}
                             </div>
                         {% else %}
                             <span class="text-gray-400">-</span>
@@ -481,98 +453,88 @@
     {% endif %}
 </div>
 
-<div id="addAttemptModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+<div id="gameEditModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
-        <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full">
             <div class="p-6">
                 <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-bold">Add High Jump Attempt</h2>
-                    <button onclick="closeAddAttemptModal()" class="text-gray-400 hover:text-gray-600">
+                    <h2 class="text-xl font-bold">Edit Game</h2>
+                    <button onclick="closeGameEditModal()" class="text-gray-400 hover:text-gray-600">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
+                <form id="gameEditForm">
+                    <input type="hidden" id="editGameId">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
 
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium mb-2">Height (m)</label>
-                        <input type="number" id="attemptHeight" step="0.01" class="w-full px-3 py-2 border rounded-lg" placeholder="1.50">
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium mb-2">Result</label>
-                        <select id="attemptResult" class="w-full px-3 py-2 border rounded-lg">
-                            <option value="O">O (Success)</option>
-                            <option value="X">X (Failure)</option>
-                            <option value="-">- (Pass)</option>
-                            <option value="XO">XO</option>
-                            <option value="XXO">XXO</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="mt-6 flex justify-end space-x-4">
-                    <button onclick="closeAddAttemptModal()" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
-                        Cancel
-                    </button>
-                    <button onclick="addHighJumpAttempt()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
-                        Add Attempt
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div id="editAttemptsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
-    <div class="flex items-center justify-center min-h-screen p-4">
-        <div class="bg-white rounded-lg shadow-xl max-w-4xl w-full">
-            <div class="p-6">
-                <div class="flex justify-between items-center mb-4">
-                    <h2 class="text-xl font-bold">Edit Attempts</h2>
-                    <button onclick="closeEditAttemptsModal()" class="text-gray-400 hover:text-gray-600">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-                <form id="editAttemptsForm">
-                    <input type="hidden" id="editResultId">
-                    <div class="grid grid-cols-2 md:grid-cols-6 gap-4">
-                        {% for i in range(1, 7) %}
+                    <div class="grid grid-cols-2 gap-4">
                         <div>
-                            <label class="text-sm font-medium mb-1">Attempt {{ i }}</label>
-                            <input type="text" id="editAttempt{{ i }}" class="w-full px-3 py-2 border rounded-lg" placeholder="X, O, XX.XX">
-                            {% if game.event in config.WIND_AFFECTED_FIELD_EVENTS %}
-                            <input type="number" step="0.01" id="editWind{{ i }}" class="mt-1 w-full px-3 py-2 border rounded-lg" placeholder="±X.XX m/s">
-                            {% endif %}
-                            {% if game.event == 'High Jump' %}
-                            <input type="number" step="0.01" id="editHeight{{ i }}" class="mt-1 w-full px-3 py-2 border rounded-lg" placeholder="X.XX m">
-                            {% endif %}
-                        </div>
-                        {% endfor %}
-                    </div>
-
-                    <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="text-sm font-medium mb-1">Record</label>
-                            <select id="editRecord" class="w-full px-3 py-2 border rounded-lg">
-                                <option value="">None</option>
-                                {% for record in config.RECORD_TYPES %}
-                                    <option value="{{ record }}">{{ record }}</option>
+                            <label class="block text-sm font-medium mb-2">Event</label>
+                            <select id="editEvent" name="event" class="w-full px-3 py-2 border rounded-lg">
+                                {% for event in config.FIELD_EVENTS + config.TRACK_EVENTS %}
+                                <option value="{{ event }}">{{ event }}</option>
                                 {% endfor %}
                             </select>
                         </div>
-                        {% if game.event in config.get_weight_field_events() %}
                         <div>
-                            <label class="text-sm font-medium mb-1">Weight (kg)</label>
-                            <input type="number" step="0.001" id="editWeight" class="w-full px-3 py-2 border rounded-lg" placeholder="X.XXX">
+                            <label class="block text-sm font-medium mb-2">Gender</label>
+                            <select id="editGender" name="gender" class="w-full px-3 py-2 border rounded-lg">
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                            </select>
                         </div>
-                        {% endif %}
+                        <div class="col-span-2">
+                            <label class="block text-sm font-medium mb-2">Classes</label>
+                            <input type="text" id="editClasses" name="classes" class="w-full px-3 py-2 border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Phase</label>
+                            <input type="text" id="editPhase" name="phase" class="w-full px-3 py-2 border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Area</label>
+                            <input type="text" id="editArea" name="area" class="w-full px-3 py-2 border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Day</label>
+                            <input type="number" id="editDay" name="day" min="1" max="8" class="w-full px-3 py-2 border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Time</label>
+                            <input type="time" id="editTime" name="time" class="w-full px-3 py-2 border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Number of Athletes</label>
+                            <input type="number" id="editNbAthletes" name="nb_athletes" min="1" class="w-full px-3 py-2 border rounded-lg">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium mb-2">Status</label>
+                            <select id="editStatus" name="status" class="w-full px-3 py-2 border rounded-lg">
+                                <option value="scheduled">Scheduled</option>
+                                <option value="started">Started</option>
+                                <option value="in_progress">In Progress</option>
+                                <option value="finished">Finished</option>
+                                <option value="cancelled">Cancelled</option>
+                            </select>
+                        </div>
+                        <div class="col-span-2 flex space-x-4">
+                            <label class="flex items-center">
+                                <input type="checkbox" id="editPublished" name="published" class="mr-2">
+                                Published
+                            </label>
+                            <label class="flex items-center">
+                                <input type="checkbox" id="editWpaPoints" name="wpa_points" class="mr-2">
+                                RAZA Scoring
+                            </label>
+                        </div>
                     </div>
 
                     <div class="mt-6 flex justify-end space-x-4">
-                        <button type="button" onclick="closeEditAttemptsModal()" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+                        <button type="button" onclick="closeGameEditModal()" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
                             Cancel
                         </button>
                         <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-                            Update Attempts
+                            Update Game
                         </button>
                     </div>
                 </form>
@@ -580,585 +542,3 @@
         </div>
     </div>
 </div>
-
-<div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-    <h4 class="font-bold text-blue-900 mb-3">
-        <i class="fas fa-info-circle mr-2"></i>Competition Rules
-    </h4>
-
-    {% if game.event == 'High Jump' %}
-    <div class="text-sm text-blue-800 space-y-2">
-        <p><strong>High Jump Rules:</strong> Progressive heights with 3 attempts per height. Athletes eliminated after 3 consecutive failures.</p>
-        <p><strong>Tie-breaking:</strong> 1) Fewer misses at tied height, 2) Fewer total misses, 3) Jump-off or shared medal</p>
-        <p><strong>Symbols:</strong> O = Success, X = Failure, - = Pass, XO = Success after 1 miss, XXO = Success after 2 misses</p>
-    </div>
-    {% elif game.event in ['Long Jump', 'Triple Jump', 'Shot Put', 'Discus Throw', 'Javelin Throw', 'Club Throw'] %}
-    <div class="text-sm text-blue-800 space-y-2">
-        <p><strong>Qualification Round:</strong> All athletes get 3 attempts. Best performance determines ranking.</p>
-        <p><strong>Final Round:</strong> Top 8 athletes advance to 3 additional attempts (4th, 5th, 6th).</p>
-        <p><strong>Reverse Order:</strong> Final round attempts in reverse ranking order (worst to best).</p>
-        <p><strong>Tie-breaking:</strong> Second best attempt, then third best, etc.</p>
-        <p><strong>Wind:</strong> Legal if ≤ +2.0 m/s for Long Jump and Triple Jump</p>
-    </div>
-    {% endif %}
-
-    {% if game.wpa_points %}
-    <div class="mt-3 p-2 bg-purple-50 rounded">
-        <span class="font-semibold text-purple-800">RAZA Scoring Active:</span>
-        <span class="text-purple-700 text-sm">Multi-class ranking uses RAZA points. Tie-breaking uses precise scores to 3 decimals.</span>
-    </div>
-    {% endif %}
-</div>
-
-<!-- Action Buttons -->
-<div class="mt-6 flex justify-between">
-    <a href="{{ url_for('admin.games_list') }}" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">
-        <i class="fas fa-arrow-left mr-2"></i>Back to Games
-    </a>
-
-    <div class="flex gap-2">
-        <a href="{{ url_for('admin.game_startlist', id=game.id) }}" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">
-            <i class="fas fa-list mr-2"></i>Start List
-        </a>
-
-        {% if results %}
-        <button onclick="exportResults()" class="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600">
-            <i class="fas fa-download mr-2"></i>Export
-        </button>
-        {% endif %}
-    </div>
-</div>
-
-<script>
-let searchTimeout;
-let currentEditResultId = null;
-let currentAddAttemptResultId = null;
-
-// Athlete search functionality
-const athleteSearch = document.getElementById('athleteSearch');
-const athleteResults = document.getElementById('athleteResults');
-const selectedBib = document.getElementById('selectedBib');
-const selectedAthlete = document.getElementById('selectedAthlete');
-
-if (athleteSearch) {
-    athleteSearch.addEventListener('input', function() {
-        clearTimeout(searchTimeout);
-        const query = this.value.trim();
-
-        if (query.length < 2) {
-            athleteResults.classList.add('hidden');
-            return;
-        }
-
-        searchTimeout = setTimeout(() => {
-            fetch(`/admin/athletes/search?q=${encodeURIComponent(query)}`)
-                .then(response => response.json())
-                .then(athletes => {
-                    athleteResults.innerHTML = '';
-                    if (athletes.length === 0) {
-                        athleteResults.innerHTML = '<div class="p-2 text-gray-500">No athletes found</div>';
-                    } else {
-                        athletes.forEach(athlete => {
-                            const div = document.createElement('div');
-                            div.className = 'p-2 hover:bg-gray-100 cursor-pointer border-b';
-
-                            const gameClasses = '{{ game.classes }}'.split(',').map(c => c.trim());
-                            const gameGender = '{{ game.gender }}';
-
-                            let alertClass = '';
-                            if (athlete.gender !== gameGender || !gameClasses.includes(athlete.class)) {
-                                alertClass = 'bg-yellow-50 border-yellow-300';
-                            }
-
-                            div.className += ` ${alertClass}`;
-                            div.innerHTML = `
-                                <div class="flex justify-between items-center">
-                                    <div>
-                                        <strong>${athlete.bib}</strong> - ${athlete.name} (${athlete.country})
-                                        ${athlete.gender !== gameGender ? '<span class="text-red-600 text-xs block">⚠️ Gender mismatch</span>' : ''}
-                                        ${!gameClasses.includes(athlete.class) ? '<span class="text-red-600 text-xs block">⚠️ Class mismatch</span>' : ''}
-                                    </div>
-                                    <div class="text-right">
-                                        <span class="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">${athlete.class}</span>
-                                        <div class="text-xs text-gray-500 mt-1">${athlete.gender}</div>
-                                    </div>
-                                </div>
-                            `;
-                            div.onclick = () => selectAthlete(athlete);
-                            athleteResults.appendChild(div);
-                        });
-                    }
-                    athleteResults.classList.remove('hidden');
-                })
-                .catch(error => {
-                    console.error('Search error:', error);
-                    athleteResults.innerHTML = '<div class="p-2 text-red-500">Search failed</div>';
-                    athleteResults.classList.remove('hidden');
-                });
-        }, 300);
-    });
-}
-
-function selectAthlete(athlete) {
-    checkAthleteCompatibility(athlete);
-    selectedBib.value = athlete.bib;
-    athleteSearch.value = '';
-    athleteResults.classList.add('hidden');
-}
-
-function selectFromStartList(bib, name, gender, athleteClass) {
-    const athlete = { bib, name, gender, class: athleteClass };
-    selectAthlete(athlete);
-
-    selectedAthlete.innerHTML = `Selected: <strong>${bib}</strong> - ${name}`;
-
-    const gameClasses = selectedAthlete.dataset.gameClasses.split(',').map(c => c.trim());
-    const gameGender = selectedAthlete.dataset.gameGender;
-
-    let warnings = [];
-    if (gender !== gameGender) {
-        warnings.push(`Gender mismatch: ${gender} (Expected: ${gameGender})`);
-    }
-    if (!gameClasses.includes(athleteClass)) {
-        warnings.push(`Class mismatch: ${athleteClass} (Expected: ${gameClasses.join(', ')})`);
-    }
-
-    if (warnings.length > 0) {
-        selectedAthlete.innerHTML += `
-            <div class="mt-2 p-2 bg-red-100 border border-red-400 text-red-700 rounded">
-                <i class="fas fa-exclamation-triangle mr-1"></i> Warnings:
-                <ul class="mt-1 ml-4 list-disc">
-                    ${warnings.map(w => `<li>${w}</li>`).join('')}
-                </ul>
-            </div>
-        `;
-    }
-}
-
-function checkAthleteCompatibility(athlete) {
-    const gameClasses = selectedAthlete.dataset.gameClasses.split(',').map(c => c.trim());
-    const gameGender = selectedAthlete.dataset.gameGender;
-
-    let warnings = [];
-    selectedAthlete.innerHTML = `Selected: <strong>${athlete.bib}</strong> - ${athlete.name} (${athlete.country})`;
-
-    if (athlete.gender !== gameGender) {
-        warnings.push(`Gender mismatch: ${athlete.gender} (Expected: ${gameGender})`);
-    }
-    if (!gameClasses.includes(athlete.class)) {
-        warnings.push(`Class mismatch: ${athlete.class} (Expected: ${gameClasses.join(', ')})`);
-    }
-
-    if (warnings.length > 0) {
-        selectedAthlete.innerHTML += `
-            <div class="mt-2 p-2 bg-red-100 border border-red-400 text-red-700 rounded">
-                <i class="fas fa-exclamation-triangle mr-1"></i> Warnings:
-                <ul class="mt-1 ml-4 list-disc">
-                    ${warnings.map(w => `<li>${w}</li>`).join('')}
-                </ul>
-            </div>
-        `;
-    }
-}
-
-function selectSpecialValue(value) {
-    if (value) {
-        document.getElementById('performanceValue').value = value;
-    }
-}
-
-// Status and publish functions
-function updateStatus(gameId, status) {
-    fetch(`/admin/games/${gameId}/status`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: `status=${status}`
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.error) {
-            showNotification('Error updating status: ' + data.error, 'error');
-        } else {
-            showNotification('Status updated successfully', 'success');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showNotification('Error updating status', 'error');
-    });
-}
-
-{% if current_user.is_loc() %}
-function togglePublish(gameId, event) {
-    const button = event.target;
-    const originalText = button.textContent;
-    button.disabled = true;
-    button.textContent = 'Processing...';
-
-    fetch(`/admin/games/${gameId}/publish`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.error) {
-            showNotification('Error: ' + data.error, 'error');
-            button.textContent = originalText;
-        } else {
-            location.reload();
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showNotification('Error updating publish status', 'error');
-        button.textContent = originalText;
-    })
-    .finally(() => {
-        button.disabled = false;
-    });
-}
-{% endif %}
-
-function autoRankResults(gameId, event) {
-    if (confirm('Auto-rank all results based on performance? This will overwrite existing ranks.')) {
-        const button = event.target;
-        const originalText = button.innerHTML;
-        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Ranking...';
-        button.disabled = true;
-
-        fetch(`/admin/games/${gameId}/auto-rank`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showNotification('Results auto-ranked successfully!', 'success');
-                setTimeout(() => location.reload(), 1000);
-            } else {
-                showNotification('Error: ' + (data.error || 'Unknown error'), 'error');
-                button.innerHTML = originalText;
-                button.disabled = false;
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showNotification('Error auto-ranking results', 'error');
-            button.innerHTML = originalText;
-            button.disabled = false;
-        });
-    }
-}
-
-function selectFinalistsForRound1(gameId) {
-    if (confirm('Select top 8 athletes with 3+ attempts for final round? This will set their final order for attempts 4-6.')) {
-        fetch(`/admin/games/${gameId}/auto-rank-round1`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showNotification(data.message, 'success');
-                setTimeout(() => location.reload(), 1000);
-            } else {
-                showNotification('Error: ' + (data.error || 'Unknown error'), 'error');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showNotification('Error selecting finalists', 'error');
-        });
-    }
-}
-
-function recalculateRaza(gameId) {
-    if (confirm('Recalculate all RAZA scores for this event? This may take a moment.')) {
-        fetch(`/admin/games/${gameId}/recalculate-raza`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                showNotification(`RAZA scores updated for ${data.updated} results`, 'success');
-                setTimeout(() => location.reload(), 1000);
-            } else {
-                showNotification('Error: ' + (data.error || 'Unknown error'), 'error');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showNotification('Error recalculating RAZA scores', 'error');
-        });
-    }
-}
-
-function deleteResult(resultId) {
-    if (confirm('Are you sure you want to delete this result? This action cannot be undone.')) {
-        fetch(`/admin/results/${resultId}/delete`, {
-            method: 'POST'
-        })
-        .then(response => {
-            if (response.ok) {
-                const row = document.querySelector(`[data-result-id="${resultId}"]`);
-                if (row) {
-                    row.style.transition = 'all 0.3s ease';
-                    row.style.opacity = '0';
-                    row.style.transform = 'translateX(-100%)';
-                    setTimeout(() => row.remove(), 300);
-                }
-                showNotification('Result deleted successfully', 'success');
-            } else {
-                showNotification('Error deleting result', 'error');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            showNotification('Error deleting result', 'error');
-        });
-    }
-}
-
-function toggleAttempts(resultId) {
-    const attemptsDiv = document.getElementById(`attempts-${resultId}`);
-    const icon = document.getElementById(`attempts-icon-${resultId}`);
-
-    if (attemptsDiv.classList.contains('hidden')) {
-        attemptsDiv.classList.remove('hidden');
-        icon.classList.remove('fa-eye');
-        icon.classList.add('fa-eye-slash');
-    } else {
-        attemptsDiv.classList.add('hidden');
-        icon.classList.remove('fa-eye-slash');
-        icon.classList.add('fa-eye');
-    }
-}
-
-// High Jump specific functions
-function showAddAttemptModal(resultId) {
-    currentAddAttemptResultId = resultId;
-    document.getElementById('attemptHeight').value = '';
-    document.getElementById('attemptResult').value = 'O';
-    document.getElementById('addAttemptModal').classList.remove('hidden');
-}
-
-function closeAddAttemptModal() {
-    document.getElementById('addAttemptModal').classList.add('hidden');
-    currentAddAttemptResultId = null;
-}
-
-function addHighJumpAttempt() {
-    const height = document.getElementById('attemptHeight').value;
-    const result = document.getElementById('attemptResult').value;
-
-    if (!height || !result) {
-        showNotification('Please fill all fields', 'error');
-        return;
-    }
-
-    fetch(`/admin/results/${currentAddAttemptResultId}/add-attempt`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            height: parseFloat(height),
-            result: result
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            closeAddAttemptModal();
-            showNotification('Attempt added successfully', 'success');
-            setTimeout(() => location.reload(), 1000);
-        } else {
-            showNotification('Error: ' + (data.error || 'Unknown error'), 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showNotification('Error adding attempt', 'error');
-    });
-}
-
-// Field Events edit attempts
-function editAttempts(resultId, result) {
-    currentEditResultId = resultId;
-
-    // Populate form with current data
-    for (let i = 1; i <= 6; i++) {
-        const attempt = result.attempts?.find(a => a.attempt_number === i);
-        document.getElementById(`editAttempt${i}`).value = attempt?.value || '';
-
-        {% if game.event in config.WIND_AFFECTED_FIELD_EVENTS %}
-        const windInput = document.getElementById(`editWind${i}`);
-        if (windInput) windInput.value = attempt?.wind_velocity || '';
-        {% endif %}
-
-        {% if game.event == 'High Jump' %}
-        const heightInput = document.getElementById(`editHeight${i}`);
-        if (heightInput) heightInput.value = attempt?.height || '';
-        {% endif %}
-    }
-
-    document.getElementById('editRecord').value = result.record || '';
-    {% if game.event in config.get_weight_field_events() %}
-    const weightInput = document.getElementById('editWeight');
-    if (weightInput) weightInput.value = result.weight || '';
-    {% endif %}
-
-    document.getElementById('editAttemptsModal').classList.remove('hidden');
-}
-
-function closeEditAttemptsModal() {
-    document.getElementById('editAttemptsModal').classList.add('hidden');
-    currentEditResultId = null;
-}
-
-document.getElementById('editAttemptsForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-
-    const attempts = {};
-    let record = document.getElementById('editRecord').value;
-    let weight = null;
-
-    {% if game.event in config.get_weight_field_events() %}
-    const weightInput = document.getElementById('editWeight');
-    if (weightInput && weightInput.value) {
-        weight = parseFloat(weightInput.value);
-    }
-    {% endif %}
-
-    for (let i = 1; i <= 6; i++) {
-        const value = document.getElementById(`editAttempt${i}`).value;
-        if (value.trim()) {
-            attempts[i] = { value: value.trim() };
-
-            {% if game.event in config.WIND_AFFECTED_FIELD_EVENTS %}
-            const windInput = document.getElementById(`editWind${i}`);
-            if (windInput && windInput.value) {
-                attempts[i].wind_velocity = parseFloat(windInput.value);
-            }
-            {% endif %}
-
-            {% if game.event == 'High Jump' %}
-            const heightInput = document.getElementById(`editHeight${i}`);
-            if (heightInput && heightInput.value) {
-                attempts[i].height = parseFloat(heightInput.value);
-            }
-            {% endif %}
-        }
-    }
-
-    fetch(`/admin/results/${currentEditResultId}/update-attempts`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-            attempts: attempts,
-            record: record || null,
-            weight: weight
-        })
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            closeEditAttemptsModal();
-            showNotification('Attempts updated successfully', 'success');
-            setTimeout(() => location.reload(), 1000);
-        } else {
-            showNotification('Error: ' + (data.error || 'Unknown error'), 'error');
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        showNotification('Error updating attempts', 'error');
-    });
-});
-
-// Utility functions
-function showNotification(message, type = 'info') {
-    const notification = document.createElement('div');
-    notification.className = `fixed top-4 right-4 z-50 px-4 py-2 rounded-lg text-white transition-all duration-300 ${
-        type === 'success' ? 'bg-green-500' :
-        type === 'error' ? 'bg-red-500' :
-        type === 'warning' ? 'bg-yellow-500' :
-        'bg-blue-500'
-    }`;
-    notification.innerHTML = `
-        <div class="flex items-center">
-            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : type === 'warning' ? 'exclamation-triangle' : 'info-circle'} mr-2"></i>
-            ${message}
-        </div>
-    `;
-
-    document.body.appendChild(notification);
-
-    setTimeout(() => {
-        notification.style.opacity = '0';
-        notification.style.transform = 'translateX(100%)';
-        setTimeout(() => notification.remove(), 300);
-    }, 3000);
-}
-
-function exportResults() {
-    window.print();
-}
-
-// Close search when clicking outside
-document.addEventListener('click', function(e) {
-    if (athleteSearch && athleteResults &&
-        !athleteSearch.contains(e.target) &&
-        !athleteResults.contains(e.target)) {
-        athleteResults.classList.add('hidden');
-    }
-});
-
-// Modal close on outside click
-document.getElementById('addAttemptModal')?.addEventListener('click', function(e) {
-    if (e.target === this) {
-        closeAddAttemptModal();
-    }
-});
-
-document.getElementById('editAttemptsModal')?.addEventListener('click', function(e) {
-    if (e.target === this) {
-        closeEditAttemptsModal();
-    }
-});
-
-// Form validation
-document.getElementById('resultForm')?.addEventListener('submit', function(e) {
-    const athleteBib = document.getElementById('selectedBib').value;
-    const performanceValue = document.getElementById('performanceValue')?.value;
-
-    if (!athleteBib) {
-        e.preventDefault();
-        showNotification('Please select an athlete', 'error');
-        return;
-    }
-
-    {% if is_track_event %}
-    if (!performanceValue) {
-        e.preventDefault();
-        showNotification('Please enter a performance value', 'error');
-        return;
-    }
-    {% endif %}
-});
-</script>
-
-{% endblock %}
