@@ -370,9 +370,11 @@ class Result:
     @staticmethod
     def get_all(**filters):
         query = """
-            SELECT r.*, a.firstname, a.lastname, a.country, a.gender as athlete_gender, a.class as athlete_class
+            SELECT r.*, a.firstname, a.lastname, a.country, a.gender as athlete_gender, a.class as athlete_class,
+                   g.firstname AS guide_firstname, g.lastname AS guide_lastname
             FROM results r
             JOIN athletes a ON r.athlete_sdms = a.sdms
+            LEFT JOIN athletes g ON r.guide_sdms = g.sdms
             WHERE 1=1
         """
         params = []
@@ -633,19 +635,21 @@ class StartList:
     @staticmethod
     def get_by_game(game_id):
         query = """
-            SELECT s.*, a.firstname, a.lastname, a.country, a.class, a.gender
+            SELECT s.*, a.firstname, a.lastname, a.country, a.class, a.gender,
+                   g.firstname AS guide_firstname, g.lastname AS guide_lastname
             FROM startlist s
             JOIN athletes a ON s.athlete_sdms = a.sdms
+            LEFT JOIN athletes g ON s.guide_sdms = g.sdms
             WHERE s.game_id = %s
             ORDER BY s.final_order IS NULL, s.final_order, s.lane_order, a.sdms
         """
         return execute_query(query, (game_id,), fetch=True)
 
     @staticmethod
-    def create(game_id, athlete_sdms, lane_order=None):
+    def create(game_id, athlete_sdms, lane_order=None, guide_sdms=None):
         return execute_query(
-            "INSERT INTO startlist (game_id, athlete_sdms, lane_order) VALUES (%s, %s, %s)",
-            (game_id, athlete_sdms, lane_order)
+            "INSERT INTO startlist (game_id, athlete_sdms, lane_order, guide_sdms) VALUES (%s, %s, %s, %s)",
+            (game_id, athlete_sdms, lane_order, guide_sdms)
         )
 
     @staticmethod

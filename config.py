@@ -133,6 +133,14 @@ class Config:
             return ['Shot Put', 'Discus Throw', 'Javelin Throw', 'Hammer Throw', 'Club Throw', 'Weight Throw']
 
     @staticmethod
+    def get_guide_classes():
+        try:
+            from database.config_manager import ConfigManager
+            return ConfigManager.get_config_tags('guide_classes')
+        except (ImportError, Exception):
+            return ['T11', 'T12']
+
+    @staticmethod
     def get_current_day():
         try:
             from database.config_manager import ConfigManager

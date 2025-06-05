@@ -134,6 +134,7 @@ def init_db():
             gender VARCHAR(10) NOT NULL,
             class VARCHAR(10) NOT NULL,
             photo VARCHAR(255),
+            is_guide BOOLEAN DEFAULT FALSE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )""",
 
@@ -163,6 +164,7 @@ def init_db():
             id SERIAL PRIMARY KEY,
             game_id INTEGER NOT NULL,
             athlete_sdms INTEGER NOT NULL,
+            guide_sdms INTEGER,
             rank VARCHAR(10),
             value VARCHAR(20) NOT NULL,
             raza_score INTEGER,
@@ -181,6 +183,7 @@ def init_db():
             id SERIAL PRIMARY KEY,
             game_id INTEGER NOT NULL,
             athlete_sdms INTEGER NOT NULL,
+            guide_sdms INTEGER,
             lane_order INTEGER,
             final_order INTEGER,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -341,6 +344,7 @@ def insert_default_config():
             'Marathon', '4x100m Relay', '4x400m Relay', 'Universal Relay',
             'Long Jump', 'High Jump', 'Triple Jump', 'Pole Vault'
         ]),
+        ('guide_classes', ['T11', 'T12']),
         ('wind_affected_field_events', ['Long Jump', 'Triple Jump', '100m', '200m']),
         ('weight_field_events', [
             'Shot Put', 'Discus Throw', 'Javelin Throw', 'Hammer Throw',

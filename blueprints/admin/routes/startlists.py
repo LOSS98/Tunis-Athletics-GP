@@ -36,8 +36,10 @@ def register_routes(bp):
                     flash(f"Warning: Athlete class {athlete['class']} not in game classes {', '.join(game_classes)}",
                         'warning')
 
+                guide_sdms = form.guide_sdms.data if form.guide_sdms.data else None
+
                 try:
-                    StartList.create(game_id, form.athlete_sdms.data, form.lane_order.data)
+                    StartList.create(game_id, form.athlete_sdms.data, form.lane_order.data, guide_sdms)
                     flash('Athlete added to start list', 'success')
                 except Exception as e:
                     flash(f'Error adding to start list: {str(e)}', 'danger')
