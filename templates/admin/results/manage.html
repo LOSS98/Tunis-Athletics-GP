@@ -318,9 +318,11 @@
                         <div id="athleteResults" class="absolute z-10 w-full bg-white border rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto"></div>
                     </div>
                     <input type="hidden" name="athlete_sdms" id="selectedSdms" required>
+                    <input type="hidden" name="guide_sdms" id="selectedGuideSdms">
                     <div id="selectedAthlete" class="mt-2 text-sm text-gray-600"
                          data-game-classes="{{ game.classes }}"
                          data-game-gender="{{ game.gender }}"></div>
+                    <div id="selectedGuide" class="text-xs text-gray-500"></div>
                 </div>
 
                 <!-- Performance Value (Track Events Only) -->
@@ -439,10 +441,13 @@
         <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
             {% for entry in startlist %}
             <div class="border rounded p-2 text-sm cursor-pointer hover:bg-gray-50 transition-colors"
-                 onclick="selectFromStartList('{{ entry.athlete_sdms }}', '{{ entry.firstname|e }} {{ entry.lastname|e }}', '{{ entry.gender }}', '{{ entry.class }}')">
+                 onclick="selectFromStartList('{{ entry.athlete_sdms }}', '{{ entry.firstname|e }} {{ entry.lastname|e }}', '{{ entry.gender }}', '{{ entry.class }}', '{{ entry.guide_sdms or '' }}')">
                 <span class="font-semibold">{{ entry.athlete_sdms }}</span> -
                 {{ entry.firstname }} {{ entry.lastname }} ({{ entry.country }})
                 <span class="text-xs bg-blue-100 text-blue-800 px-1 rounded">{{ entry.class }}</span>
+                {% if entry.guide_sdms %}
+                    <div class="text-xs text-gray-500">Guide: {{ entry.guide_sdms }}</div>
+                {% endif %}
                 {% if entry.gender != game.gender %}
                     <div class="text-xs text-yellow-700 mt-1">
                         <i class="fas fa-exclamation-triangle"></i> Gender mismatch

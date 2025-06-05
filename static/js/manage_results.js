@@ -101,16 +101,26 @@ function selectAthlete(athlete) {
     const athleteSearch = document.getElementById('athleteSearch');
     const athleteResults = document.getElementById('athleteResults');
     const selectedAthlete = document.getElementById('selectedAthlete');
+    const selectedGuideSdms = document.getElementById('selectedGuideSdms');
+    const selectedGuide = document.getElementById('selectedGuide');
 
     if (selectedSdms) selectedSdms.value = athlete.sdms;
     if (athleteSearch) athleteSearch.value = '';
     if (athleteResults) athleteResults.classList.add('hidden');
     if (selectedAthlete) selectedAthlete.innerHTML = `Selected: <strong>${athlete.sdms}</strong> - ${athlete.name}`;
+    if (selectedGuideSdms) selectedGuideSdms.value = '';
+    if (selectedGuide) selectedGuide.innerHTML = '';
 }
 
-function selectFromStartList(sdms, name, gender, athleteClass) {
+function selectFromStartList(sdms, name, gender, athleteClass, guideSdms) {
     const athlete = { sdms: sdms, name: name, gender: gender, class: athleteClass };
     selectAthlete(athlete);
+    if (guideSdms) {
+        const selectedGuideSdms = document.getElementById('selectedGuideSdms');
+        const selectedGuide = document.getElementById('selectedGuide');
+        if (selectedGuideSdms) selectedGuideSdms.value = guideSdms;
+        if (selectedGuide) selectedGuide.innerHTML = `Guide SDMS: <strong>${guideSdms}</strong>`;
+    }
 }
 
 function selectSpecialValue(value) {
