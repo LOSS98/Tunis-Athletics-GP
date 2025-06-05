@@ -14,9 +14,9 @@ class ConfigForm(FlaskForm):
 
 
 class StatsConfigForm(FlaskForm):
-    countries_count = IntegerField('Number of Countries',
+    countries_count = IntegerField('Number of NPCs',
                                    validators=[DataRequired(), NumberRange(min=1)],
-                                   description='Total number of participating countries')
+                                   description='Total number of participating NPCs')
 
     athletes_count = IntegerField('Number of Athletes',
                                   validators=[DataRequired(), NumberRange(min=1)],
@@ -64,13 +64,13 @@ class CurrentDayForm(FlaskForm):
 
 
 class CountryForm(FlaskForm):
-    code = StringField('Country Code',
+    code = StringField('NPC Code',
                        validators=[DataRequired(), Length(min=3, max=3)],
-                       description='3-letter country code (ISO 3166-1 alpha-3)')
+                       description='3-letter NPC code (ISO 3166-1 alpha-3)')
 
-    name = StringField('Country Name',
+    name = StringField('NPC Name',
                        validators=[DataRequired(), Length(max=100)],
-                       description='Full country name')
+                       description='Full NPC name')
 
     continent = SelectField('Continent',
                             choices=[

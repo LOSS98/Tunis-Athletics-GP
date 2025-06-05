@@ -1,17 +1,17 @@
 {% extends "admin/base_admin.html" %}
 
-{% block page_title %}Countries Management{% endblock %}
+{% block page_title %}NPC Management{% endblock %}
 
 {% block content %}
 <div class="mb-6">
     <div class="flex items-center justify-between">
         <div>
-            <h2 class="text-2xl font-bold">Countries Management</h2>
-            <p class="text-gray-600 mt-1">Manage participating countries and their flags</p>
+            <h2 class="text-2xl font-bold">NPC Management</h2>
+            <p class="text-gray-600 mt-1">Manage participating NPCs and their flags</p>
         </div>
         <div class="flex space-x-2">
             <a href="{{ url_for('admin.config_country_add') }}" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
-                <i class="fas fa-plus mr-2"></i>Add Country
+                <i class="fas fa-plus mr-2"></i>Add NPC
             </a>
             <a href="{{ url_for('admin.config_index') }}" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
                 <i class="fas fa-arrow-left mr-2"></i>Back
@@ -23,7 +23,7 @@
 <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
     <div class="bg-white rounded-lg shadow p-4 text-center">
         <div class="text-2xl font-bold text-blue-600">{{ countries|length }}</div>
-        <div class="text-sm text-gray-600">Total Countries</div>
+        <div class="text-sm text-gray-600">Total NPCs</div>
     </div>
     <div class="bg-white rounded-lg shadow p-4 text-center">
         <div class="text-2xl font-bold text-green-600">{{ countries|selectattr('flag_available')|list|length }}</div>
@@ -41,7 +41,7 @@
 
 <div class="bg-white rounded-lg shadow overflow-hidden">
     <div class="p-6 border-b">
-        <h3 class="text-lg font-bold">Countries List</h3>
+        <h3 class="text-lg font-bold">NPC List</h3>
     </div>
 
     {% if countries %}
@@ -136,10 +136,10 @@
         <div class="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
             <i class="fas fa-globe text-4xl text-gray-300"></i>
         </div>
-        <h3 class="text-lg font-medium text-gray-900 mb-2">No Countries</h3>
-        <p class="text-gray-500 mb-6">Add countries to manage participating nations.</p>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">No NPCs</h3>
+        <p class="text-gray-500 mb-6">Add NPCs to manage participating nations.</p>
         <a href="{{ url_for('admin.config_country_add') }}" class="bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600">
-            <i class="fas fa-plus mr-2"></i>Add First Country
+            <i class="fas fa-plus mr-2"></i>Add First NPC
         </a>
     </div>
     {% endif %}
@@ -151,9 +151,9 @@
     </h4>
     <div class="text-sm text-blue-800 space-y-2">
         <p><strong>Flag Files:</strong> Place SVG flag files in <code>/static/images/flags/</code> with the country code as filename (e.g., <code>TUN.svg</code>)</p>
-        <p><strong>Country Codes:</strong> Use 3-letter ISO codes or common Olympic codes (e.g., TUN, FRA, USA, GBR)</p>
+        <p><strong>NPC Codes:</strong> Use 3-letter ISO codes or common Olympic codes (e.g., TUN, FRA, USA, GBR)</p>
         <p><strong>Flag Status:</strong> Enable "Flag Available" only when the actual flag file exists</p>
-        <p><strong>Continents:</strong> Used for grouping and filtering countries in reports</p>
+        <p><strong>Continents:</strong> Used for grouping and filtering NPCs in reports</p>
     </div>
 </div>
 

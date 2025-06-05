@@ -262,7 +262,7 @@ function selectFinalistsRound1(gameIdParam) {
 }
 
 function recalculateRaza(gameIdParam) {
-    if (confirm('Recalculate all RAZA scores?')) {
+    if (confirm('Recalculate all WPA Points?')) {
         const button = event.target;
         setLoadingState(button, true);
 
@@ -276,7 +276,7 @@ function recalculateRaza(gameIdParam) {
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                showNotification(`RAZA scores recalculated! Updated ${data.updated} results.`, 'success');
+                showNotification(`WPA Points recalculated! Updated ${data.updated} results.`, 'success');
                 setTimeout(() => location.reload(), 1000);
             } else {
                 showNotification('Error: ' + (data.error || 'Unknown error'), 'error');
@@ -285,7 +285,7 @@ function recalculateRaza(gameIdParam) {
         })
         .catch(error => {
             console.error('Error:', error);
-            showNotification('Error recalculating RAZA scores', 'error');
+            showNotification('Error recalculating WPA Points', 'error');
             setLoadingState(button, false);
         });
     }

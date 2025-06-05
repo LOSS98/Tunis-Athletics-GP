@@ -10,7 +10,7 @@
         <div class="grid grid-cols-2 md:grid-cols-5 gap-8">
             <div class="text-center">
                 <div class="text-4xl font-bold">{{ config.COUNTRIES_COUNT }}</div>
-                <div class="text-sm opacity-90">Countries</div>
+                <div class="text-sm opacity-90">NPCs</div>
             </div>
             <div class="text-center">
                 <div class="text-4xl font-bold">{{ config.ATHLETES_COUNT }}</div>
@@ -46,7 +46,7 @@
                         <p class="text-sm text-gray-500">Day {{ game.day }} at {{ game.time }}</p>
                         {% if game.wpa_points %}
                         <span class="inline-block mt-2 px-2 py-1 text-xs bg-purple-100 text-purple-800 rounded">
-                            RAZA Scoring
+                            WPA Points
                         </span>
                         {% endif %}
                     </div>
@@ -171,7 +171,7 @@
 
     <div class="bg-white rounded-lg shadow p-6 text-center">
         <div class="text-4xl mb-4">🧮</div>
-        <h3 class="text-xl font-bold mb-2">RAZA Scoring</h3>
+        <h3 class="text-xl font-bold mb-2">WPA Points</h3>
         <p class="text-gray-600 mb-4">Advanced mathematical system enabling fair competition across all disability classes.</p>
         <a href="{{ url_for('public.raza') }}" class="text-blue-600 hover:text-blue-800 font-medium">
             Learn More <i class="fas fa-arrow-right ml-1"></i>
@@ -185,7 +185,7 @@
         <p class="text-lg text-gray-700 max-w-3xl mx-auto">
             The World Para Athletics Grand Prix Tunisia 2025 brings together the world's finest para-athletes
             for a celebration of speed, strength, and determination. Featuring both traditional classification-based
-            competition and innovative RAZA scoring for multi-class events, this championship represents the
+            competition and innovative WPA Points system for multi-class events, this championship represents the
             pinnacle of inclusive athletic competition.
         </p>
     </div>

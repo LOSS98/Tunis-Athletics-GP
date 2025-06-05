@@ -220,10 +220,10 @@ def register_routes(bp):
                 form.continent.data,
                 form.flag_available.data
             )
-            flash('Country added successfully', 'success')
+            flash('NPC added successfully', 'success')
             return redirect(url_for('admin.config_countries'))
 
-        return render_template('admin/config/country_form.html', form=form, title='Add Country')
+        return render_template('admin/config/country_form.html', form=form, title='Add NPC')
 
     @bp.route('/config/countries/<int:country_id>/edit', methods=['GET', 'POST'])
     @loc_required
@@ -232,7 +232,7 @@ def register_routes(bp):
         country = next((c for c in countries if c['id'] == country_id), None)
 
         if not country:
-            flash('Country not found', 'danger')
+            flash('NPC not found', 'danger')
             return redirect(url_for('admin.config_countries'))
 
         form = CountryForm()
@@ -245,7 +245,7 @@ def register_routes(bp):
                 form.continent.data,
                 form.flag_available.data
             )
-            flash('Country updated successfully', 'success')
+            flash('NPC updated successfully', 'success')
             return redirect(url_for('admin.config_countries'))
 
         elif request.method == 'GET':
@@ -254,13 +254,13 @@ def register_routes(bp):
             form.continent.data = country['continent']
             form.flag_available.data = country['flag_available']
 
-        return render_template('admin/config/country_form.html', form=form, title='Edit Country', country=country)
+        return render_template('admin/config/country_form.html', form=form, title='Edit NPC', country=country)
 
     @bp.route('/config/countries/<int:country_id>/delete', methods=['POST'])
     @loc_required
     def config_country_delete(country_id):
         ConfigManager.delete_country(country_id)
-        flash('Country deleted successfully', 'success')
+        flash('NPC deleted successfully', 'success')
         return redirect(url_for('admin.config_countries'))
 
     @bp.route('/config/record-types')
