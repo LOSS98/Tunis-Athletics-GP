@@ -289,7 +289,7 @@ athleteSearch.addEventListener('input', function() {
     }
 
     searchTimeout = setTimeout(() => {
-        fetch(`/admin/athletes/search?q=${encodeURIComponent(query)}`)
+        fetch(`/admin/athletes/search?q=${encodeURIComponent(query)}&guides=1`)
             .then(response => response.json())
             .then(athletes => {
                 athleteResults.innerHTML = '';

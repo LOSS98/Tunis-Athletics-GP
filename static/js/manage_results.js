@@ -96,6 +96,43 @@ function initializeAthleteSearch() {
     });
 }
 
+function initializeGuideSearch() {
+    const guideSearch = document.getElementById('guideSearch');
+    const guideResults = document.getElementById('guideResults');
+
+    if (!guideSearch || !guideResults) return;
+
+    guideSearch.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        const query = this.value.trim();
+
+        if (query.length < 2) {
+            guideResults.classList.add('hidden');
+            return;
+        }
+
+        searchTimeout = setTimeout(() => {
+            fetch(`/admin/athletes/search?q=${encodeURIComponent(query)}&guides=1`)
+                .then(response => response.json())
+                .then(athletes => {
+                    guideResults.innerHTML = '';
+                    if (athletes.length === 0) {
+                        guideResults.innerHTML = '<div class="p-2 text-gray-500">No athletes found</div>';
+                    } else {
+                        athletes.forEach(athlete => {
+                            const div = document.createElement('div');
+                            div.className = 'p-2 hover:bg-gray-100 cursor-pointer border-b';
+                            div.innerHTML = `<strong>${athlete.sdms}</strong> - ${athlete.name} (${athlete.country})`;
+                            div.onclick = () => selectGuide(athlete);
+                            guideResults.appendChild(div);
+                        });
+                    }
+                    guideResults.classList.remove('hidden');
+                });
+        }, 300);
+    });
+}
+
 function selectAthlete(athlete) {
     const selectedSdms = document.getElementById('selectedSdms');
     const athleteSearch = document.getElementById('athleteSearch');
@@ -121,6 +158,17 @@ function selectFromStartList(sdms, name, gender, athleteClass, guideSdms) {
         if (selectedGuideSdms) selectedGuideSdms.value = guideSdms;
         if (selectedGuide) selectedGuide.innerHTML = `Guide SDMS: <strong>${guideSdms}</strong>`;
     }
+
+function selectGuide(athlete) {
+    const sdmsInput = document.getElementById('selectedGuideSdms') || document.getElementById('editGuideSdms');
+    const searchInput = document.getElementById('guideSearch') || document.getElementById('editGuideSearch');
+    const resultsDiv = document.getElementById('guideResults') || document.getElementById('editGuideResults');
+    const displayDiv = document.getElementById('selectedGuide') || document.getElementById('editSelectedGuide');
+
+    if (sdmsInput) sdmsInput.value = athlete.sdms;
+    if (searchInput) searchInput.value = '';
+    if (resultsDiv) resultsDiv.classList.add('hidden');
+    if (displayDiv) displayDiv.innerHTML = `Guide: <strong>${athlete.sdms}</strong> - ${athlete.name}`;
 }
 
 function selectSpecialValue(value) {
@@ -338,6 +386,17 @@ function editAttempts(resultId, resultData) {
     const weightInput = document.getElementById('editWeight');
     if (weightInput && resultData.weight) {
         weightInput.value = resultData.weight;
+    }
+
+    const guideInput = document.getElementById('editGuideSdms');
+    const guideDisplay = document.getElementById('editSelectedGuide');
+    if (guideInput) guideInput.value = resultData.guide_sdms || '';
+    if (guideDisplay) {
+        if (resultData.guide_sdms) {
+            guideDisplay.innerHTML = `Guide SDMS: <strong>${resultData.guide_sdms}</strong>`;
+        } else {
+            guideDisplay.innerHTML = '';
+        }
     }
 
     const recordSelect = document.getElementById('editRecord');
@@ -703,7 +762,8 @@ function initializeFormHandlers() {
 
                 data = {
                     high_jump_attempts: attempts,
-                    record: document.getElementById('editRecord').value
+                    record: document.getElementById('editRecord').value,
+                    guide_sdms: document.getElementById('editGuideSdms').value
                 };
             } else {
                 // Other field events
@@ -723,7 +783,8 @@ function initializeFormHandlers() {
                 data = {
                     attempts: attempts,
                     record: document.getElementById('editRecord').value,
-                    weight: document.getElementById('editWeight').value
+                    weight: document.getElementById('editWeight').value,
+                    guide_sdms: document.getElementById('editGuideSdms').value
                 };
             }
 
@@ -756,6 +817,7 @@ function initializeFormHandlers() {
 // Initialisation
 document.addEventListener('DOMContentLoaded', function() {
     initializeAthleteSearch();
+    initializeGuideSearch();
     initializeFormHandlers();
     initializeDragAndDrop();
 });
@@ -763,6 +825,7 @@ document.addEventListener('DOMContentLoaded', function() {
 // Export global
 window.selectAthlete = selectAthlete;
 window.selectFromStartList = selectFromStartList;
+window.selectGuide = selectGuide;
 window.selectSpecialValue = selectSpecialValue;
 window.togglePublish = togglePublish;
 window.autoRankResults = autoRankResults;

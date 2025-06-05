@@ -323,6 +323,14 @@
                          data-game-classes="{{ game.classes }}"
                          data-game-gender="{{ game.gender }}"></div>
                     <div id="selectedGuide" class="text-xs text-gray-500"></div>
+                    <div class="mt-2">
+                        <label class="block text-gray-700 text-sm font-bold mb-2">Guide (optional)</label>
+                        <div class="relative">
+                            <input type="text" id="guideSearch" placeholder="Search guide" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500" autocomplete="off">
+                            <div id="guideResults" class="absolute z-10 w-full bg-white border rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto"></div>
+                        </div>
+                    </div>
+
                 </div>
 
                 <!-- Performance Value (Track Events Only) -->
@@ -496,6 +504,7 @@
                     <th class="px-4 py-3 text-left">Name</th>
                     <th class="px-4 py-3 text-left">Country</th>
                     <th class="px-4 py-3 text-left">Class</th>
+                    <th class="px-4 py-3 text-left">Guide</th>
 
                     {% if game.event in config.WEIGHT_FIELD_EVENTS %}
                         <th class="px-4 py-3 text-left">Weight</th>
@@ -572,6 +581,15 @@
                         <span class="px-2 py-1 text-xs {% if result.athlete_class not in game.classes_list %}bg-red-100 text-red-800{% else %}bg-blue-100 text-blue-800{% endif %} rounded">
                             {{ result.athlete_class }}
                         </span>
+                    </td>
+
+                    <td class="px-4 py-4">
+                        {% if result.guide_sdms %}
+                            <span class="bg-indigo-100 text-indigo-800 px-2 py-1 rounded text-sm font-semibold">{{ result.guide_sdms }}</span>
+                            <div class="text-xs text-gray-600">{{ result.guide_lastname }} {{ result.guide_firstname }}</div>
+                        {% else %}
+                            <span class="text-gray-400">-</span>
+                        {% endif %}
                     </td>
 
                     {% if game.event in config.WEIGHT_FIELD_EVENTS %}
@@ -776,6 +794,17 @@
                                placeholder="X.XXX">
                     </div>
                     {% endif %}
+
+                    <div class="mb-4">
+                        <label class="block text-sm font-medium mb-2">Guide (optional)</label>
+                        <div class="relative">
+                            <input type="text" id="editGuideSearch" placeholder="Search guide"
+                                   class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500">
+                            <div id="editGuideResults" class="absolute z-10 w-full bg-white border rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto"></div>
+                        </div>
+                        <input type="hidden" id="editGuideSdms">
+                        <div id="editSelectedGuide" class="text-xs text-gray-500"></div>
+                    </div>
 
                     <div class="mb-4">
                         <label class="block text-sm font-medium mb-2">Record</label>
