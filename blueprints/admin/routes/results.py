@@ -137,6 +137,7 @@ def register_routes(bp):
                 return redirect(url_for('admin.games_list'))
 
             athlete_sdms = request.form.get('athlete_sdms')
+            guide_sdms = request.form.get('guide_sdms')
             value = request.form.get('value', '').strip() if request.form.get('value') else ''
             weight_raw = request.form.get('weight')
             weight = weight_raw.strip() if weight_raw else None
@@ -169,6 +170,12 @@ def register_routes(bp):
                 except (ValueError, TypeError):
                     errors.append('Invalid athlete SDMS')
 
+            if guide_sdms:
+                try:
+                    guide_sdms = int(guide_sdms)
+                except (ValueError, TypeError):
+                    guide_sdms = None
+
             # High Jump special handling
             if game['event'] == 'High Jump':
                 height = request.form.get('height')
@@ -194,6 +201,7 @@ def register_routes(bp):
                     result_data = {
                         'game_id': game_id,
                         'athlete_sdms': athlete_sdms,
+                        'guide_sdms': guide_sdms,
                         'value': 'NH',  # No Height initially
                         'raza_score': 0,
                         'raza_score_precise': 0.0
@@ -549,6 +557,7 @@ def register_routes(bp):
                 result_data = {
                     'game_id': game_id,
                     'athlete_sdms': athlete_sdms,
+                    'guide_sdms': guide_sdms,
                     'value': performance_value,
                     'best_attempt': f"{performance_value:.2f}" if performance_value != "NM" else None,
                     'raza_score': max_raza_score,
@@ -603,6 +612,7 @@ def register_routes(bp):
                 result_data = {
                     'game_id': game_id,
                     'athlete_sdms': athlete_sdms,
+                    'guide_sdms': guide_sdms,
                     'value': performance_value,
                     'raza_score': max_raza_score,
                     'raza_score_precise': max_raza_score_precise
@@ -897,6 +907,7 @@ def register_routes(bp):
             data = request.json
             record = data.get('record')
             weight = data.get('weight')
+            guide_sdms = data.get('guide_sdms')
 
             athlete = Athlete.get_by_sdms(result['athlete_sdms'])
             if not athlete:
@@ -935,10 +946,11 @@ def register_routes(bp):
                                   best_attempt=f"{max_height:.2f}",
                                   raza_score=best_raza_score,
                                   raza_score_precise=best_raza_score_precise,
-                                  record=record)
+                                  record=record,
+                                  guide_sdms=guide_sdms)
                 else:
                     Result.update(result_id, value='NH', best_attempt=None, raza_score=0, raza_score_precise=0.0,
-                                  record=record)
+                                  record=record, guide_sdms=guide_sdms)
 
             else:
                 # Other field events (code existant)
@@ -1003,7 +1015,8 @@ def register_routes(bp):
                                   raza_score=max_raza_score,
                                   raza_score_precise=max_raza_score_precise,
                                   record=record,
-                                  weight=weight)
+                                  weight=weight,
+                                  guide_sdms=guide_sdms)
 
             return jsonify({'success': True, 'message': 'Attempts updated successfully'})
 

@@ -112,17 +112,23 @@ class Athlete:
         return execute_query("DELETE FROM athletes WHERE id = %s", (id,))
 
     @staticmethod
-    def search(query):
+    def search(query, guides_only=False, allowed_classes=None):
         search_query = """
-            SELECT * FROM athletes 
-            WHERE LOWER(firstname) LIKE LOWER(%s)
-            OR LOWER(lastname) LIKE LOWER(%s)
-            OR LOWER(country) LIKE LOWER(%s)
-            OR sdms::text LIKE %s
-            ORDER BY sdms
+            SELECT * FROM athletes
+            WHERE (LOWER(firstname) LIKE LOWER(%s)
+                   OR LOWER(lastname) LIKE LOWER(%s)
+                   OR LOWER(country) LIKE LOWER(%s)
+                   OR sdms::text LIKE %s)
         """
-        search_term = f"%{query}%"
-        return execute_query(search_query, (search_term, search_term, search_term, search_term), fetch=True)
+        params = [f"%{query}%"] * 4
+        if guides_only:
+            search_query += " AND is_guide = TRUE"
+        if allowed_classes:
+            placeholders = ','.join(['%s'] * len(allowed_classes))
+            search_query += f" AND class IN ({placeholders})"
+            params.extend(allowed_classes)
+        search_query += " ORDER BY sdms"
+        return execute_query(search_query, params, fetch=True)
 
 
 class Game:
@@ -370,9 +376,11 @@ class Result:
     @staticmethod
     def get_all(**filters):
         query = """
-            SELECT r.*, a.firstname, a.lastname, a.country, a.gender as athlete_gender, a.class as athlete_class
+            SELECT r.*, a.firstname, a.lastname, a.country, a.gender as athlete_gender, a.class as athlete_class,
+                   g.firstname AS guide_firstname, g.lastname AS guide_lastname
             FROM results r
             JOIN athletes a ON r.athlete_sdms = a.sdms
+            LEFT JOIN athletes g ON r.guide_sdms = g.sdms
             WHERE 1=1
         """
         params = []
@@ -633,19 +641,21 @@ class StartList:
     @staticmethod
     def get_by_game(game_id):
         query = """
-            SELECT s.*, a.firstname, a.lastname, a.country, a.class, a.gender
+            SELECT s.*, a.firstname, a.lastname, a.country, a.class, a.gender,
+                   g.firstname AS guide_firstname, g.lastname AS guide_lastname
             FROM startlist s
             JOIN athletes a ON s.athlete_sdms = a.sdms
+            LEFT JOIN athletes g ON s.guide_sdms = g.sdms
             WHERE s.game_id = %s
             ORDER BY s.final_order IS NULL, s.final_order, s.lane_order, a.sdms
         """
         return execute_query(query, (game_id,), fetch=True)
 
     @staticmethod
-    def create(game_id, athlete_sdms, lane_order=None):
+    def create(game_id, athlete_sdms, lane_order=None, guide_sdms=None):
         return execute_query(
-            "INSERT INTO startlist (game_id, athlete_sdms, lane_order) VALUES (%s, %s, %s)",
-            (game_id, athlete_sdms, lane_order)
+            "INSERT INTO startlist (game_id, athlete_sdms, lane_order, guide_sdms) VALUES (%s, %s, %s, %s)",
+            (game_id, athlete_sdms, lane_order, guide_sdms)
         )
 
     @staticmethod

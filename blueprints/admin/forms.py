@@ -39,6 +39,7 @@ class AthleteForm(FlaskForm):
     gender = SelectField('Gender', choices=[('Male', 'Male'), ('Female', 'Female')], validators=[DataRequired()])
     athlete_class = SelectField('Class', validators=[DataRequired()])
     photo = FileField('Photo', validators=[FileAllowed(['jpg', 'jpeg', 'png', 'gif'])])
+    is_guide = BooleanField('Is Guide')
 
     def __init__(self, *args, **kwargs):
         super(AthleteForm, self).__init__(*args, **kwargs)
@@ -143,7 +144,8 @@ class ResultForm(FlaskForm):
 
 class StartListForm(FlaskForm):
     athlete_sdms = IntegerField('Athlete SDMS', validators=[DataRequired()])
-    lane_order = IntegerField('Lane/Order', validators=[Optional(), NumberRange(min=1)])\
+    lane_order = IntegerField('Lane/Order', validators=[Optional(), NumberRange(min=1)])
+    guide_sdms = IntegerField('Guide SDMS', validators=[Optional()])
 
 class HighJumpHeightsForm(FlaskForm):
     heights = StringField('Heights (comma-separated)',

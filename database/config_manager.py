@@ -113,7 +113,7 @@ class ConfigManager:
                 result[key] = value
 
         tag_configs = ['classes', 'record_types', 'result_special_values', 'field_events', 'track_events',
-                       'wind_affected_field_events', 'weight_field_events']
+                       'wind_affected_field_events', 'weight_field_events', 'guide_classes']
         for key in tag_configs:
             result[key] = ConfigManager.get_config_tags(key)
 
