@@ -112,17 +112,23 @@ class Athlete:
         return execute_query("DELETE FROM athletes WHERE id = %s", (id,))
 
     @staticmethod
-    def search(query):
+    def search(query, guides_only=False, allowed_classes=None):
         search_query = """
-            SELECT * FROM athletes 
-            WHERE LOWER(firstname) LIKE LOWER(%s)
-            OR LOWER(lastname) LIKE LOWER(%s)
-            OR LOWER(country) LIKE LOWER(%s)
-            OR sdms::text LIKE %s
-            ORDER BY sdms
+            SELECT * FROM athletes
+            WHERE (LOWER(firstname) LIKE LOWER(%s)
+                   OR LOWER(lastname) LIKE LOWER(%s)
+                   OR LOWER(country) LIKE LOWER(%s)
+                   OR sdms::text LIKE %s)
         """
-        search_term = f"%{query}%"
-        return execute_query(search_query, (search_term, search_term, search_term, search_term), fetch=True)
+        params = [f"%{query}%"] * 4
+        if guides_only:
+            search_query += " AND is_guide = TRUE"
+        if allowed_classes:
+            placeholders = ','.join(['%s'] * len(allowed_classes))
+            search_query += f" AND class IN ({placeholders})"
+            params.extend(allowed_classes)
+        search_query += " ORDER BY sdms"
+        return execute_query(search_query, params, fetch=True)
 
 
 class Game:

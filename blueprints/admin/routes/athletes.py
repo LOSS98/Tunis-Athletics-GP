@@ -1,6 +1,7 @@
 from flask import render_template, redirect, url_for, flash, request, jsonify
 from ..auth import admin_required
 from ..forms import AthleteForm
+from config import Config
 from database.models import Athlete
 from utils.helpers import save_uploaded_file
 import os
@@ -20,8 +21,11 @@ def register_routes(bp):
     @admin_required
     def athletes_search():
         query = request.args.get('q', '')
+        guides_only = request.args.get('guides')
+        guides_only = guides_only in ['1', 'true', 'True']
         if query:
-            athletes = Athlete.search(query)
+            allowed_classes = Config.get_guide_classes() if guides_only else None
+            athletes = Athlete.search(query, guides_only=guides_only, allowed_classes=allowed_classes)
         else:
             athletes = []
 
@@ -45,7 +49,8 @@ def register_routes(bp):
                 'lastname': form.lastname.data,
                 'country': form.country.data.upper(),
                 'gender': form.gender.data,
-                'class': form.athlete_class.data
+                'class': form.athlete_class.data,
+                'is_guide': form.is_guide.data
             }
 
             if form.photo.data:
@@ -79,7 +84,8 @@ def register_routes(bp):
                 'lastname': form.lastname.data,
                 'country': form.country.data.upper(),
                 'gender': form.gender.data,
-                'class': form.athlete_class.data
+                'class': form.athlete_class.data,
+                'is_guide': form.is_guide.data
             }
 
             if form.photo.data:
@@ -103,6 +109,7 @@ def register_routes(bp):
             form.country.data = athlete['country']
             form.gender.data = athlete['gender']
             form.athlete_class.data = athlete['class']
+            form.is_guide.data = athlete['is_guide']
 
         return render_template('admin/athletes/edit.html', form=form, athlete=athlete)
 

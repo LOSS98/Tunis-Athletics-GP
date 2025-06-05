@@ -29,6 +29,7 @@
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Country</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gender</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guide</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
             </thead>
@@ -52,6 +53,7 @@
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">{{ athlete.gender }}</td>
                     <td class="px-6 py-4 whitespace-nowrap">{{ athlete.class }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">{{ 'Yes' if athlete.is_guide else 'No' }}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm">
                         <a href="{{ url_for('admin.athlete_edit', id=athlete.id) }}" class="text-indigo-600 hover:text-indigo-900 mr-2">
                             <i class="fas fa-edit"></i>

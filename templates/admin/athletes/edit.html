@@ -38,6 +38,11 @@
                     <label class="block text-gray-700 text-sm font-bold mb-2">Class</label>
                     {{ form.athlete_class(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
                 </div>
+
+                <div class="mb-4 flex items-center">
+                    {{ form.is_guide(class="mr-2") }}
+                    <label class="text-gray-700 text-sm font-bold" for="is_guide">Is Guide</label>
+                </div>
             </div>
 
             <div class="mb-4">
