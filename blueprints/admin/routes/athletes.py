@@ -27,7 +27,7 @@ def register_routes(bp):
 
         return jsonify([{
             'id': a['id'],
-            'bib': a['bib'],
+            'sdms': a['sdms'],
             'name': f"{a['firstname']} {a['lastname']}",
             'country': a['country'],
             'class': a['class'],
@@ -40,7 +40,7 @@ def register_routes(bp):
         form = AthleteForm()
         if form.validate_on_submit():
             data = {
-                'bib': form.bib.data,
+                'sdms': form.sdms.data,
                 'firstname': form.firstname.data,
                 'lastname': form.lastname.data,
                 'country': form.country.data.upper(),
@@ -74,7 +74,7 @@ def register_routes(bp):
 
         if form.validate_on_submit():
             data = {
-                'bib': form.bib.data,
+                'sdms': form.sdms.data,
                 'firstname': form.firstname.data,
                 'lastname': form.lastname.data,
                 'country': form.country.data.upper(),
@@ -97,7 +97,7 @@ def register_routes(bp):
                 flash(f'Error updating athlete: {str(e)}', 'danger')
 
         elif request.method == 'GET':
-            form.bib.data = athlete['bib']
+            form.sdms.data = athlete['sdms']
             form.firstname.data = athlete['firstname']
             form.lastname.data = athlete['lastname']
             form.country.data = athlete['country']

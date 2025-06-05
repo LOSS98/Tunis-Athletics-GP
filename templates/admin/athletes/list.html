@@ -24,7 +24,7 @@
             <thead class="bg-gray-50">
                 <tr>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Photo</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">BIB</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SDMS</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Country</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gender</th>
@@ -44,7 +44,7 @@
                             </div>
                         {% endif %}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap font-semibold">{{ athlete.bib }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap font-semibold">{{ athlete.sdms }}</td>
                     <td class="px-6 py-4 whitespace-nowrap">{{ athlete.lastname }} {{ athlete.firstname }}</td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <img src="/static/images/flags/{{ athlete.country }}.svg" alt="{{ athlete.country }}" class="inline w-6 h-4 mr-1">

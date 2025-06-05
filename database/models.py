@@ -18,6 +18,12 @@ class User(UserMixin):
     def is_loc(self):
         return self.admin_type == 'loc'
 
+    def is_technical_delegate(self):
+        return self.admin_type == 'technical_delegate'
+
+    def has_loc_privileges(self):
+        return self.admin_type in ['loc', 'technical_delegate']
+
     @staticmethod
     def get(user_id):
         user = execute_one("SELECT * FROM users WHERE id = %s", (user_id,))
@@ -76,12 +82,12 @@ class Athlete:
                     query += f" AND {key} = %s"
                     params.append(value)
 
-        query += " ORDER BY bib"
+        query += " ORDER BY sdms"
         return execute_query(query, params, fetch=True)
 
     @staticmethod
-    def get_by_bib(bib):
-        return execute_one("SELECT * FROM athletes WHERE bib = %s", (bib,))
+    def get_by_sdms(sdms):
+        return execute_one("SELECT * FROM athletes WHERE sdms = %s", (sdms,))
 
     @staticmethod
     def get_by_id(id):
@@ -112,8 +118,8 @@ class Athlete:
             WHERE LOWER(firstname) LIKE LOWER(%s)
             OR LOWER(lastname) LIKE LOWER(%s)
             OR LOWER(country) LIKE LOWER(%s)
-            OR bib::text LIKE %s
-            ORDER BY bib
+            OR sdms::text LIKE %s
+            ORDER BY sdms
         """
         search_term = f"%{query}%"
         return execute_query(search_query, (search_term, search_term, search_term, search_term), fetch=True)
@@ -189,13 +195,13 @@ class Game:
 
         result = execute_one("""
             SELECT COUNT(*) as count FROM results r
-            JOIN athletes a ON r.athlete_bib = a.bib
+            JOIN athletes a ON r.athlete_sdms = a.sdms
             WHERE r.game_id = %s AND (a.gender != %s OR a.class NOT IN %s)
         """, (id, game_gender, tuple(game_classes)))
 
         startlist_result = execute_one("""
             SELECT COUNT(*) as count FROM startlist s
-            JOIN athletes a ON s.athlete_bib = a.bib
+            JOIN athletes a ON s.athlete_sdms = a.sdms
             WHERE s.game_id = %s AND (a.gender != %s OR a.class NOT IN %s)
         """, (id, game_gender, tuple(game_classes)))
 
@@ -262,119 +268,18 @@ class Game:
         return count['count'] > 0 if count else False
 
     @staticmethod
-    def auto_rank_results(game_id):
-        try:
-            game = Game.get_by_id(game_id)
-            if not game:
-                return False
-
-            results = execute_query("""
-                SELECT r.*, a.gender as athlete_gender, a.class as athlete_class
-                FROM results r
-                JOIN athletes a ON r.athlete_bib = a.bib
-                WHERE r.game_id = %s
-            """, (game_id,), fetch=True)
-
-            if not results:
-                return False
-
-            is_track = game['event'] in Config.get_track_events()
-            is_field = game['event'] in Config.get_field_events()
-            use_wpa_points = game.get('wpa_points', False)
-            special_values = Config.get_result_special_values()
-
-            valid_results = []
-            for result in results:
-                if result['value'] not in special_values:
-                    if is_field:
-                        # Get all attempts for tie-breaking
-                        attempts = Attempt.get_by_result(result['id'])
-                        result['all_attempts'] = []
-                        for attempt in attempts:
-                            if attempt['value'] and attempt['value'] not in special_values:
-                                try:
-                                    result['all_attempts'].append(float(attempt['value']))
-                                except ValueError:
-                                    pass
-                        # Sort attempts in descending order for tie-breaking
-                        result['all_attempts'].sort(reverse=True)
-
-                        # Pad with zeros for consistent comparison
-                        while len(result['all_attempts']) < 6:
-                            result['all_attempts'].append(0.0)
-
-                    valid_results.append(result)
-
-            if not valid_results:
-                return True
-
-            def get_sort_key(result):
-                if use_wpa_points:
-                    # For RAZA scoring, use precise score for tie-breaking
-                    primary = -(result.get('raza_score_precise') or result.get('raza_score') or 0)
-                    # Secondary tie-break still uses attempts for field events
-                    if is_field and 'all_attempts' in result:
-                        return (primary, *[-x for x in result['all_attempts']])
-                    return (primary,)
-                else:
-                    # Standard scoring
-                    try:
-                        if is_track:
-                            primary = float(result['value'])
-                        else:
-                            primary = -float(result['value'])
-                    except ValueError:
-                        primary = float('inf') if is_track else -float('inf')
-
-                        # Tie-breaking for field events
-                        if is_field and 'all_attempts' in result:
-                            return (primary, *[-x for x in result['all_attempts']])
-                        return (primary,)
-
-                        # Sort results
-                    valid_results.sort(key=get_sort_key)
-
-                    # Assign ranks with proper tie handling
-                    current_rank = 1
-                    previous_key = None
-
-                    for i, result in enumerate(valid_results):
-                        current_key = get_sort_key(result)
-
-                        # Check for ties
-                        if i > 0 and current_key != previous_key:
-                            current_rank = i + 1
-
-                        execute_query("UPDATE results SET rank = %s WHERE id = %s",
-                                      (str(current_rank), result['id']))
-                        previous_key = current_key
-
-                    # Handle special values (DNS, DNF, etc.)
-                    for result in results:
-                        if result['value'] in special_values:
-                            execute_query("UPDATE results SET rank = %s WHERE id = %s",
-                                          ('-', result['id']))
-
-                    return True
-
-        except Exception as e:
-            print(f"Error in auto_rank_results: {e}")
-            traceback.print_exc()
-            return False
-
-    @staticmethod
     def update_field_event_progression(game_id):
         game = Game.get_by_id(game_id)
         if not game or game['event'] in ['High Jump'] or game['event'] not in Config.get_field_events():
             return False
 
         results = execute_query("""
-            SELECT r.id, r.athlete_bib, r.value, 
+            SELECT r.id, r.athlete_sdms, r.value, 
                    COUNT(DISTINCT a.attempt_number) as attempt_count
             FROM results r
             LEFT JOIN attempts a ON r.id = a.result_id AND a.attempt_number <= 3
             WHERE r.game_id = %s AND r.value NOT IN %s
-            GROUP BY r.id, r.athlete_bib, r.value
+            GROUP BY r.id, r.athlete_sdms, r.value
             HAVING COUNT(DISTINCT a.attempt_number) >= 3
         """, (game_id, tuple(Config.get_result_special_values())), fetch=True)
 
@@ -423,6 +328,43 @@ class Game:
         if results_with_3_attempts and results_with_3_attempts[0]['count'] >= 8:
             Game.update_field_event_progression(game_id)
 
+    @staticmethod
+    def toggle_official_status(game_id, user_id):
+        """Toggle official status of all results for a game"""
+        game = execute_one("SELECT official FROM games WHERE id = %s", (game_id,))
+        if not game:
+            return False
+
+        new_status = not game.get('official', False)
+
+        if new_status:
+            # Mark as official
+            execute_query(
+                "UPDATE games SET official = %s, official_date = CURRENT_TIMESTAMP, official_by = %s WHERE id = %s",
+                (True, user_id, game_id)
+            )
+        else:
+            # Mark as unofficial
+            execute_query(
+                "UPDATE games SET official = %s, official_date = NULL, official_by = NULL WHERE id = %s",
+                (False, game_id)
+            )
+
+        return new_status
+
+    @staticmethod
+    def get_by_id_with_official(id):
+        game = execute_one("""
+                SELECT g.*, u.username as official_by_username
+                FROM games g
+                LEFT JOIN users u ON g.official_by = u.id
+                WHERE g.id = %s
+            """, (id,))
+
+        if game:
+            game['classes_list'] = [c.strip() for c in game['classes'].split(',')]
+        return game
+
 
 class Result:
     @staticmethod
@@ -430,7 +372,7 @@ class Result:
         query = """
             SELECT r.*, a.firstname, a.lastname, a.country, a.gender as athlete_gender, a.class as athlete_class
             FROM results r
-            JOIN athletes a ON r.athlete_bib = a.bib
+            JOIN athletes a ON r.athlete_sdms = a.sdms
             WHERE 1=1
         """
         params = []
@@ -460,8 +402,8 @@ class Result:
         return execute_one("SELECT * FROM results WHERE id = %s", (id,))
 
     @staticmethod
-    def get_by_game_athlete(game_id, athlete_bib):
-        return execute_one("SELECT * FROM results WHERE game_id = %s AND athlete_bib = %s", (game_id, athlete_bib))
+    def get_by_game_athlete(game_id, athlete_sdms):
+        return execute_one("SELECT * FROM results WHERE game_id = %s AND athlete_sdms = %s", (game_id, athlete_sdms))
 
     @staticmethod
     def create(**data):
@@ -508,7 +450,7 @@ class Result:
             SELECT r.*, a.firstname, a.lastname, a.country, a.photo,
                    g.event, g.gender, g.classes, g.day, g.time, g.id as game_id
             FROM results r
-            JOIN athletes a ON r.athlete_bib = a.bib
+            JOIN athletes a ON r.athlete_sdms = a.sdms
             JOIN games g ON r.game_id = g.id
             WHERE r.record IS NOT NULL AND r.record != ''
             ORDER BY g.day DESC, g.time DESC
@@ -525,7 +467,7 @@ class Result:
             results = execute_query("""
                 SELECT r.*, a.gender as athlete_gender, a.class as athlete_class
                 FROM results r
-                JOIN athletes a ON r.athlete_bib = a.bib
+                JOIN athletes a ON r.athlete_sdms = a.sdms
                 WHERE r.game_id = %s
             """, (game_id,), fetch=True)
 
@@ -534,6 +476,7 @@ class Result:
 
             is_track = game['event'] in Config.get_track_events()
             is_field = game['event'] in Config.get_field_events()
+            is_high_jump = game['event'] == 'High Jump'
             use_wpa_points = game.get('wpa_points', False)
             special_values = Config.get_result_special_values()
 
@@ -541,70 +484,97 @@ class Result:
             valid_results = []
             for result in results:
                 if result['value'] not in special_values:
-                    # Get all attempts for field events
+                    # Get all attempts for field events (especially High Jump)
                     if is_field:
-                        attempts = Attempt.get_by_result(result['id'])
-                        result['attempts_list'] = []
+                        attempts = execute_query("""
+                            SELECT value, height FROM attempts 
+                            WHERE result_id = %s 
+                            ORDER BY attempt_number
+                        """, (result['id'],), fetch=True)
 
-                        # Sort attempts by value (descending for field events)
-                        for attempt in sorted(attempts, key=lambda x: x['attempt_number']):
-                            if attempt['value'] and attempt['value'] not in special_values:
-                                try:
-                                    result['attempts_list'].append(float(attempt['value']))
-                                except ValueError:
-                                    pass
+                        if is_high_jump:
+                            # Calculate High Jump specific stats
+                            result['high_jump_stats'] = Result.calculate_high_jump_stats(attempts, float(result['value']))
+                        else:
+                            # For other field events
+                            all_attempts = []
+                            for attempt in attempts:
+                                val = attempt['value']
+                                if val and str(val).strip() not in special_values:
+                                    try:
+                                        attempt_float = float(val)
+                                        all_attempts.append(attempt_float)
+                                    except (ValueError, TypeError):
+                                        pass
+                            all_attempts.sort(reverse=True)
+                            result['sorted_attempts'] = all_attempts
 
                     valid_results.append(result)
 
             if not valid_results:
                 return True
 
-            def compare_results(result):
-                # Primary comparison: RAZA score or performance
-                if use_wpa_points:
-                    primary_key = -(result.get('raza_score_precise') or result.get('raza_score') or 0)
+            def get_sort_key(result):
+                """Generate sort key for ranking"""
+
+                if is_high_jump:
+                    # High Jump specific ranking
+                    try:
+                        max_height = float(result['value'])
+                        hj_stats = result.get('high_jump_stats', {})
+
+                        # Primary: max height (higher is better, so negative)
+                        primary = -max_height
+
+                        # Secondary: failures at max height (fewer is better)
+                        failures_at_max = hj_stats.get('failures_at_max_height', 999)
+
+                        # Tertiary: total failures (fewer is better)
+                        total_failures = hj_stats.get('total_failures', 999)
+
+                        return (primary, failures_at_max, total_failures)
+                    except (ValueError, TypeError):
+                        return (float('inf'), 999, 999)
+
+                # Primary: best performance (or RAZA if enabled)
+                if use_wpa_points and result.get('raza_score_precise'):
+                    primary = -float(result['raza_score_precise'])
+                elif use_wpa_points and result.get('raza_score'):
+                    primary = -float(result['raza_score'])
                 else:
                     try:
                         if is_track:
-                            primary_key = float(result['value'])
+                            primary = float(result['value'])  # Lower is better
                         else:
-                            primary_key = -float(result['value'])
-                    except ValueError:
-                        primary_key = float('inf') if is_track else 0
+                            primary = -float(result['value'])  # Higher is better, so negative
+                    except (ValueError, TypeError):
+                        primary = float('inf') if is_track else float('-inf')
 
-                # Secondary comparison: subsequent attempts for field events
+                # Tie-breakers for field events (except High Jump)
                 tie_breakers = []
-                if is_field and 'attempts_list' in result:
-                    # Sort attempts in descending order
-                    sorted_attempts = sorted(result['attempts_list'], reverse=True)
-                    # Use all attempts as tie breakers
-                    tie_breakers = sorted_attempts + [0] * (6 - len(sorted_attempts))
+                if is_field and not is_high_jump and 'sorted_attempts' in result:
+                    attempts = result['sorted_attempts']
+                    # Add up to 6 attempts as tie-breakers
+                    for i in range(6):
+                        if i < len(attempts):
+                            tie_breakers.append(-attempts[i])  # Negative for descending
+                        else:
+                            tie_breakers.append(float('inf'))  # Worst possible value
 
-                return (primary_key, *tie_breakers)
+                return (primary, *tie_breakers)
 
             # Sort results
-            valid_results.sort(key=compare_results)
+            valid_results.sort(key=get_sort_key)
 
             # Assign ranks
-            current_rank = 1
-            previous_comparison = None
-
             for i, result in enumerate(valid_results):
-                current_comparison = compare_results(result)
+                rank = i + 1
+                execute_query("UPDATE results SET rank = %s WHERE id = %s", (str(rank), result['id']))
 
-                # Check if this result is truly different from the previous
-                if i > 0 and current_comparison != previous_comparison:
-                    current_rank = i + 1
-
-                execute_query("UPDATE results SET rank = %s WHERE id = %s",
-                              (str(current_rank), result['id']))
-                previous_comparison = current_comparison
-
-            # Handle special values
+            # Handle special values (DNS, DNF, etc.)
             for result in results:
                 if result['value'] in special_values:
-                    execute_query("UPDATE results SET rank = %s WHERE id = %s",
-                                  ('-', result['id']))
+                    execute_query("UPDATE results SET rank = %s WHERE id = %s", ('-', result['id']))
 
             return True
 
@@ -613,6 +583,51 @@ class Result:
             traceback.print_exc()
             return False
 
+    @staticmethod
+    def calculate_high_jump_stats(attempts, max_height):
+        """Calculate High Jump specific statistics for ranking"""
+        stats = {
+            'failures_at_max_height': 0,
+            'total_failures': 0
+        }
+
+        failures_at_max = 0
+        total_failures = 0
+
+        for attempt in attempts:
+            if attempt.get('height') and attempt.get('value'):
+                try:
+                    height = float(attempt['height'])
+                    value = str(attempt['value']).upper().strip()
+
+                    # Compter les échecs dans chaque valeur
+                    failure_count = 0
+
+                    if value == 'X':
+                        failure_count = 1
+                    elif value == 'XO':
+                        failure_count = 1  # 1 échec + 1 réussite
+                    elif value == 'XXO':
+                        failure_count = 2  # 2 échecs + 1 réussite
+                    elif value == 'XXX':
+                        failure_count = 3  # 3 échecs (élimination)
+                    # O et - n'ont pas d'échecs
+
+                    # Ajouter au total des échecs
+                    total_failures += failure_count
+
+                    # Compter les échecs à la hauteur maximale
+                    if abs(height - max_height) < 0.001:  # Éviter les problèmes de précision float
+                        failures_at_max += failure_count
+
+                except (ValueError, TypeError) as e:
+                    print(f"Error processing attempt: {attempt}, error: {e}")
+                    continue
+
+        stats['failures_at_max_height'] = failures_at_max
+        stats['total_failures'] = total_failures
+
+        return stats
 
 class StartList:
     @staticmethod
@@ -620,24 +635,24 @@ class StartList:
         query = """
             SELECT s.*, a.firstname, a.lastname, a.country, a.class, a.gender
             FROM startlist s
-            JOIN athletes a ON s.athlete_bib = a.bib
+            JOIN athletes a ON s.athlete_sdms = a.sdms
             WHERE s.game_id = %s
-            ORDER BY s.final_order IS NULL, s.final_order, s.lane_order, a.bib
+            ORDER BY s.final_order IS NULL, s.final_order, s.lane_order, a.sdms
         """
         return execute_query(query, (game_id,), fetch=True)
 
     @staticmethod
-    def create(game_id, athlete_bib, lane_order=None):
+    def create(game_id, athlete_sdms, lane_order=None):
         return execute_query(
-            "INSERT INTO startlist (game_id, athlete_bib, lane_order) VALUES (%s, %s, %s)",
-            (game_id, athlete_bib, lane_order)
+            "INSERT INTO startlist (game_id, athlete_sdms, lane_order) VALUES (%s, %s, %s)",
+            (game_id, athlete_sdms, lane_order)
         )
 
     @staticmethod
-    def delete(game_id, athlete_bib):
+    def delete(game_id, athlete_sdms):
         return execute_query(
-            "DELETE FROM startlist WHERE game_id = %s AND athlete_bib = %s",
-            (game_id, athlete_bib)
+            "DELETE FROM startlist WHERE game_id = %s AND athlete_sdms = %s",
+            (game_id, athlete_sdms)
         )
 
     @staticmethod
@@ -651,8 +666,8 @@ class StartList:
         return count['count'] if count else 0
 
     @staticmethod
-    def athlete_in_startlist(game_id, athlete_bib):
-        result = execute_one("SELECT id FROM startlist WHERE game_id = %s AND athlete_bib = %s", (game_id, athlete_bib))
+    def athlete_in_startlist(game_id, athlete_sdms):
+        result = execute_one("SELECT id FROM startlist WHERE game_id = %s AND athlete_sdms = %s", (game_id, athlete_sdms))
         return result is not None
 
     @staticmethod
@@ -662,7 +677,7 @@ class StartList:
             return False
 
         results = execute_query("""
-            SELECT r.athlete_bib, r.value as best_performance
+            SELECT r.athlete_sdms, r.value as best_performance
             FROM results r
             WHERE r.game_id = %s AND r.value NOT IN ('DNS', 'DNF', 'DSQ', 'NM')
         """, (game_id,), fetch=True)
@@ -674,8 +689,8 @@ class StartList:
 
         for i, result in enumerate(results):
             execute_query(
-                "UPDATE startlist SET final_order = %s WHERE game_id = %s AND athlete_bib = %s",
-                (i + 1, game_id, result['athlete_bib'])
+                "UPDATE startlist SET final_order = %s WHERE game_id = %s AND athlete_sdms = %s",
+                (i + 1, game_id, result['athlete_sdms'])
             )
 
         return True
@@ -687,10 +702,10 @@ class StartList:
             return False
 
         results = execute_query("""
-            SELECT r.athlete_bib, r.value as best_performance, r.best_attempt,
+            SELECT r.athlete_sdms, r.value as best_performance, r.best_attempt,
                    a.firstname, a.lastname
             FROM results r
-            JOIN athletes a ON r.athlete_bib = a.bib
+            JOIN athletes a ON r.athlete_sdms = a.sdms
             WHERE r.game_id = %s AND r.value NOT IN ('DNS', 'DNF', 'DSQ', 'NM')
         """, (game_id,), fetch=True)
 
@@ -700,8 +715,8 @@ class StartList:
         final_order_results = []
         for result in results:
             attempts_count = execute_one(
-                "SELECT COUNT(*) as count FROM attempts WHERE result_id = (SELECT id FROM results WHERE game_id = %s AND athlete_bib = %s)",
-                (game_id, result['athlete_bib'])
+                "SELECT COUNT(*) as count FROM attempts WHERE result_id = (SELECT id FROM results WHERE game_id = %s AND athlete_sdms = %s)",
+                (game_id, result['athlete_sdms'])
             )
 
             if attempts_count and attempts_count['count'] >= 3:
@@ -714,8 +729,8 @@ class StartList:
 
         for i, result in enumerate(final_order_results[:8]):
             execute_query(
-                "UPDATE startlist SET final_order = %s WHERE game_id = %s AND athlete_bib = %s",
-                (i + 1, game_id, result['athlete_bib'])
+                "UPDATE startlist SET final_order = %s WHERE game_id = %s AND athlete_sdms = %s",
+                (i + 1, game_id, result['athlete_sdms'])
             )
 
         return True
@@ -827,7 +842,7 @@ class Attempt:
         if result:
             game = Game.get_by_id(result['game_id'])
             if game and game.get('wpa_points', False):
-                athlete = execute_one("SELECT * FROM athletes WHERE bib = %s", (result['athlete_bib'],))
+                athlete = execute_one("SELECT * FROM athletes WHERE sdms = %s", (result['athlete_sdms'],))
                 if athlete and verify_combination(athlete['gender'], game['event'], athlete['class']):
                     try:
                         raza_result = calculate_raza(

@@ -17,7 +17,8 @@
                 <tr>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Privileges</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created At</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
@@ -26,25 +27,81 @@
                 {% for user in users %}
                 <tr>
                     <td class="px-6 py-4 whitespace-nowrap">{{ user.id }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap font-medium">{{ user.username }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap font-medium">
+                        {{ user.username }}
+                        {% if user.id == current_user.id %}
+                            <span class="ml-2 text-xs text-blue-600">(You)</span>
+                        {% endif %}
+                    </td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-                            {% if user.admin_type == 'loc' %}bg-purple-100 text-purple-800{% else %}bg-gray-100 text-gray-800{% endif %}">
-                            {{ user.admin_type|upper }}
+                        <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full
+                            {% if user.admin_type == 'loc' %}bg-purple-100 text-purple-800
+                            {% elif user.admin_type == 'technical_delegate' %}bg-green-100 text-green-800
+                            {% else %}bg-gray-100 text-gray-800{% endif %}">
+                            {% if user.admin_type == 'technical_delegate' %}
+                                <i class="fas fa-stamp mr-1"></i>Technical Delegate
+                            {% elif user.admin_type == 'loc' %}
+                                <i class="fas fa-crown mr-1"></i>LOC
+                            {% else %}
+                                <i class="fas fa-user mr-1"></i>Volunteer
+                            {% endif %}
                         </span>
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm">{{ user.created_at }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                        {% if user.admin_type == 'technical_delegate' %}
+                            <div class="space-y-1">
+                                <div class="flex items-center">
+                                    <i class="fas fa-stamp text-green-600 mr-1"></i>
+                                    <span class="text-xs">Results Officialization</span>
+                                </div>
+                                <div class="flex items-center">
+                                    <i class="fas fa-cogs text-purple-600 mr-1"></i>
+                                    <span class="text-xs">Full Configuration</span>
+                                </div>
+                            </div>
+                        {% elif user.admin_type == 'loc' %}
+                            <div class="space-y-1">
+                                <div class="flex items-center">
+                                    <i class="fas fa-cogs text-purple-600 mr-1"></i>
+                                    <span class="text-xs">Full Configuration</span>
+                                </div>
+                                <div class="flex items-center">
+                                    <i class="fas fa-users text-blue-600 mr-1"></i>
+                                    <span class="text-xs">User Management</span>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="flex items-center">
+                                <i class="fas fa-edit text-gray-500 mr-1"></i>
+                                <span class="text-xs">Basic Operations</span>
+                            </div>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {% if user.created_at %}
+                            {{ user.created_at.strftime('%Y-%m-%d %H:%M') if user.created_at.strftime else user.created_at }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm">
-                        <a href="{{ url_for('admin.user_edit', id=user.id) }}" class="text-indigo-600 hover:text-indigo-900 mr-2">
+                        <a href="{{ url_for('admin.user_edit', id=user.id) }}"
+                           class="text-indigo-600 hover:text-indigo-900 mr-3"
+                           title="Edit User">
                             <i class="fas fa-edit"></i>
                         </a>
                         {% if user.id != current_user.id %}
                         <form method="POST" action="{{ url_for('admin.user_delete', id=user.id) }}" class="inline"
-                              onsubmit="return confirm('Are you sure you want to delete this user?');">
-                            <button type="submit" class="text-red-600 hover:text-red-900">
+                              onsubmit="return confirm('Are you sure you want to delete user {{ user.username }}? This action cannot be undone.');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="text-red-600 hover:text-red-900" title="Delete User">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </form>
+                        {% else %}
+                        <span class="text-gray-400" title="Cannot delete your own account">
+                            <i class="fas fa-lock"></i>
+                        </span>
                         {% endif %}
                     </td>
                 </tr>
@@ -53,4 +110,71 @@
         </table>
     </div>
 </div>
+
+<!-- Legend -->
+<div class="mt-6 bg-white rounded-lg shadow p-4">
+    <h3 class="text-lg font-medium text-gray-900 mb-4">Role Explanations</h3>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Volunteer -->
+        <div class="border rounded-lg p-4">
+            <div class="flex items-center mb-2">
+                <span class="px-3 py-1 bg-gray-100 text-gray-800 rounded-full text-xs font-semibold">
+                    <i class="fas fa-user mr-1"></i>Volunteer
+                </span>
+            </div>
+            <ul class="text-sm text-gray-600 space-y-1">
+                <li><i class="fas fa-check text-green-500 mr-1"></i> Manage games</li>
+                <li><i class="fas fa-check text-green-500 mr-1"></i> Manage athletes</li>
+                <li><i class="fas fa-check text-green-500 mr-1"></i> Add results</li>
+                <li><i class="fas fa-times text-red-500 mr-1"></i> Cannot configure system</li>
+                <li><i class="fas fa-times text-red-500 mr-1"></i> Cannot publish games</li>
+            </ul>
+        </div>
+
+        <!-- LOC -->
+        <div class="border rounded-lg p-4">
+            <div class="flex items-center mb-2">
+                <span class="px-3 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-semibold">
+                    <i class="fas fa-crown mr-1"></i>LOC
+                </span>
+            </div>
+            <ul class="text-sm text-gray-600 space-y-1">
+                <li><i class="fas fa-check text-green-500 mr-1"></i> All volunteer privileges</li>
+                <li><i class="fas fa-check text-green-500 mr-1"></i> Full system configuration</li>
+                <li><i class="fas fa-check text-green-500 mr-1"></i> User management</li>
+                <li><i class="fas fa-check text-green-500 mr-1"></i> Publish/unpublish games</li>
+                <li><i class="fas fa-times text-red-500 mr-1"></i> Cannot officialize results</li>
+            </ul>
+        </div>
+
+        <!-- Technical Delegate -->
+        <div class="border rounded-lg p-4">
+            <div class="flex items-center mb-2">
+                <span class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
+                    <i class="fas fa-stamp mr-1"></i>Technical Delegate
+                </span>
+            </div>
+            <ul class="text-sm text-gray-600 space-y-1">
+                <li><i class="fas fa-check text-green-500 mr-1"></i> All LOC privileges</li>
+                <li><i class="fas fa-check text-green-500 mr-1"></i> Full system configuration</li>
+                <li><i class="fas fa-check text-green-500 mr-1"></i> User management</li>
+                <li><i class="fas fa-check text-green-500 mr-1"></i> Publish/unpublish games</li>
+                <li><i class="fas fa-stamp text-green-600 mr-1"></i> <strong>Officialize results</strong></li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+{% if users|length == 0 %}
+<div class="text-center py-12">
+    <div class="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+        <i class="fas fa-users text-4xl text-gray-300"></i>
+    </div>
+    <h3 class="text-lg font-medium text-gray-900 mb-2">No users found</h3>
+    <p class="text-gray-500 mb-6">Get started by creating your first admin user.</p>
+    <a href="{{ url_for('admin.user_create') }}" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">
+        <i class="fas fa-plus mr-2"></i>Create First User
+    </a>
+</div>
+{% endif %}
 {% endblock %}

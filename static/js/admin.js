@@ -48,7 +48,7 @@ async function searchAthletes(query, resultsDiv) {
                 div.innerHTML = `
                     <div class="flex justify-between items-center">
                         <div>
-                            <strong>${athlete.bib}</strong> - ${athlete.name}
+                            <strong>${athlete.sdms}</strong> - ${athlete.name}
                             <span class="text-sm text-gray-600">(${athlete.country})</span>
                         </div>
                         <span class="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">${athlete.class}</span>
@@ -67,17 +67,17 @@ async function searchAthletes(query, resultsDiv) {
 
 function selectAthlete(athlete, resultsDiv) {
     const input = resultsDiv.previousElementSibling;
-    const hiddenInput = document.getElementById('selectedBib') ||
-                       document.querySelector('input[name="athlete_bib"]');
+    const hiddenInput = document.getElementById('selectedSdms') ||
+                       document.querySelector('input[name="athlete_sdms"]');
     const selectedDiv = document.getElementById('selectedAthlete');
 
     if (hiddenInput) {
-        hiddenInput.value = athlete.bib;
+        hiddenInput.value = athlete.sdms;
     }
 
     if (selectedDiv) {
         selectedDiv.innerHTML = `
-            Selected: <strong>${athlete.bib}</strong> - ${athlete.name} (${athlete.country})
+            Selected: <strong>${athlete.sdms}</strong> - ${athlete.name} (${athlete.country})
             <span class="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">${athlete.class}</span>
         `;
     }
@@ -223,16 +223,16 @@ function toggleAttempts(resultId) {
 }
 
 // Quick select from start list
-function selectFromStartList(bib, name) {
-    const hiddenInput = document.querySelector('input[name="athlete_bib"]');
+function selectFromStartList(sdms, name) {
+    const hiddenInput = document.querySelector('input[name="athlete_sdms"]');
     const selectedDiv = document.getElementById('selectedAthlete');
 
     if (hiddenInput) {
-        hiddenInput.value = bib;
+        hiddenInput.value = sdms;
     }
 
     if (selectedDiv) {
-        selectedDiv.innerHTML = `Selected: <strong>${bib}</strong> - ${name}`;
+        selectedDiv.innerHTML = `Selected: <strong>${sdms}</strong> - ${name}`;
     }
 
     // Clear search input

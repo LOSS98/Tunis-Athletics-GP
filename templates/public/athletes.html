@@ -7,7 +7,7 @@
     <h1 class="text-3xl font-bold mb-4">Athletes</h1>
     <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div class="md:col-span-2">
-            <input type="text" name="search" value="{{ search }}" placeholder="Search name, BIB, country..."
+            <input type="text" name="search" value="{{ search }}" placeholder="Search name, SDMS, country..."
                    class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:border-red-500">
         </div>
         <div>
@@ -53,7 +53,7 @@
                     {% endif %}
                     <div>
                         <h3 class="text-xl font-bold">{{ athlete.firstname }} {{ athlete.lastname }}</h3>
-                        <p class="text-gray-600">BIB: {{ athlete.bib }}</p>
+                        <p class="text-gray-600">SDMS: {{ athlete.sdms }}</p>
                     </div>
                 </div>
             </div>

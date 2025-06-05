@@ -225,7 +225,7 @@ def register_routes(bp):
             if not game:
                 return jsonify({'error': 'Game not found'}), 404
 
-            success = Game.auto_rank_results(id)
+            success = Result.auto_rank_results(id)
             if success:
                 return jsonify({'success': True})
             else:

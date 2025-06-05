@@ -127,7 +127,7 @@ def init_db():
 
         """CREATE TABLE IF NOT EXISTS athletes (
             id SERIAL PRIMARY KEY,
-            bib INTEGER UNIQUE NOT NULL,
+            sdms INTEGER UNIQUE NOT NULL,
             firstname VARCHAR(100) NOT NULL,
             lastname VARCHAR(100) NOT NULL,
             country VARCHAR(3) NOT NULL,
@@ -149,6 +149,9 @@ def init_db():
             nb_athletes INTEGER DEFAULT 8,
             status VARCHAR(20) DEFAULT 'scheduled',
             published BOOLEAN DEFAULT FALSE,
+            official BOOLEAN DEFAULT FALSE,
+            official_date TIMESTAMP,
+            official_by INTEGER,
             start_file VARCHAR(255),
             result_file VARCHAR(255),
             wind_velocity double precision DEFAULT 0.0,
@@ -159,7 +162,7 @@ def init_db():
         """CREATE TABLE IF NOT EXISTS results (
             id SERIAL PRIMARY KEY,
             game_id INTEGER NOT NULL,
-            athlete_bib INTEGER NOT NULL,
+            athlete_sdms INTEGER NOT NULL,
             rank VARCHAR(10),
             value VARCHAR(20) NOT NULL,
             raza_score INTEGER,
@@ -171,18 +174,18 @@ def init_db():
             best_attempt VARCHAR(20),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE,
-            UNIQUE (game_id, athlete_bib)
+            UNIQUE (game_id, athlete_sdms)
         )""",
 
         """CREATE TABLE IF NOT EXISTS startlist (
             id SERIAL PRIMARY KEY,
             game_id INTEGER NOT NULL,
-            athlete_bib INTEGER NOT NULL,
+            athlete_sdms INTEGER NOT NULL,
             lane_order INTEGER,
             final_order INTEGER,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE,
-            UNIQUE (game_id, athlete_bib)
+            UNIQUE (game_id, athlete_sdms)
         )""",
 
         """CREATE TABLE IF NOT EXISTS attempts (

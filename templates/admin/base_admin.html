@@ -24,8 +24,15 @@
                 <p class="text-sm text-gray-400">World Para Athletics</p>
                 <div class="mt-2 text-xs text-gray-500">
                     <i class="fas fa-user mr-1"></i>{{ current_user.username }}
-                    <span class="ml-1 px-1 py-0.5 text-white bg-{{ 'purple' if current_user.is_loc() else 'gray' }}-600 rounded text-xs">
-                        {{ current_user.admin_type.upper() }}
+                    <span class="ml-1 px-1 py-0.5 text-white rounded text-xs
+                        {% if current_user.is_loc() %}bg-purple-600
+                        {% elif current_user.is_technical_delegate() %}bg-green-600
+                        {% else %}bg-gray-600{% endif %}">
+                        {% if current_user.is_technical_delegate() %}
+                            TD
+                        {% else %}
+                            {{ current_user.admin_type.upper() }}
+                        {% endif %}
                     </span>
                 </div>
             </div>
@@ -39,7 +46,9 @@
                 <a href="/admin/athletes" class="block px-4 py-2 hover:bg-gray-800 {% if 'athletes' in request.endpoint %}bg-gray-800{% endif %}">
                     <i class="fas fa-users mr-2"></i> Athletes
                 </a>
-                {% if current_user.is_loc() %}
+
+                <!-- Section accessible aux LOC et Technical Delegates -->
+                {% if current_user.has_loc_privileges() %}
                 <a href="/admin/users" class="block px-4 py-2 hover:bg-gray-800 {% if 'users' in request.endpoint %}bg-gray-800{% endif %}">
                     <i class="fas fa-user-cog mr-2"></i> Users
                 </a>
@@ -58,6 +67,7 @@
                     </a>
                 </div>
                 {% endif %}
+
                 <div class="border-t border-gray-700 mt-4 pt-4">
                     <a href="/" class="block px-4 py-2 hover:bg-gray-800">
                         <i class="fas fa-globe mr-2"></i> Public Site
@@ -80,9 +90,16 @@
                         <div class="text-sm text-gray-600">
                             Day {{ config.CURRENT_DAY }} | {{ current_date }}
                         </div>
-                        {% if current_user.is_loc() %}
-                        <span class="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs font-medium">
-                            LOC Access
+                        {% if current_user.has_loc_privileges() %}
+                        <span class="px-2 py-1 rounded-full text-xs font-medium
+                            {% if current_user.is_loc() %}bg-purple-100 text-purple-800
+                            {% elif current_user.is_technical_delegate() %}bg-green-100 text-green-800
+                            {% endif %}">
+                            {% if current_user.is_technical_delegate() %}
+                                <i class="fas fa-stamp mr-1"></i>Technical Delegate
+                            {% else %}
+                                <i class="fas fa-crown mr-1"></i>LOC Access
+                            {% endif %}
                         </span>
                         {% endif %}
                     </div>

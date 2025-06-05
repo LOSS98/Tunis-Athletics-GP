@@ -25,12 +25,14 @@ class LoginForm(FlaskForm):
 class UserForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired(), Length(min=3, max=50)])
     password = PasswordField('Password', validators=[Optional(), Length(min=6)])
-    admin_type = SelectField('Admin Type', choices=[('volunteer', 'Volunteer'), ('loc', 'LOC')],
-                             validators=[DataRequired()])
-
+    admin_type = SelectField('Admin Type', choices=[
+        ('volunteer', 'Volunteer'),
+        ('loc', 'LOC'),
+        ('technical_delegate', 'Technical Delegate')
+    ], validators=[DataRequired()])
 
 class AthleteForm(FlaskForm):
-    bib = IntegerField('BIB Number', validators=[DataRequired(), NumberRange(min=1)])
+    sdms = IntegerField('SDMS Number', validators=[DataRequired(), NumberRange(min=1)])
     firstname = StringField('First Name', validators=[DataRequired(), Length(max=100)])
     lastname = StringField('Last Name', validators=[DataRequired(), Length(max=100)])
     country = StringField('Country Code', validators=[DataRequired(), Length(min=3, max=3)])
@@ -95,7 +97,7 @@ class AttemptForm(FlaskForm):
 
 
 class ResultForm(FlaskForm):
-    athlete_bib = IntegerField('Athlete BIB', validators=[DataRequired(message="Please select an athlete")])
+    athlete_sdms = IntegerField('Athlete SDMS', validators=[DataRequired(message="Please select an athlete")])
     rank = StringField('Rank', validators=[Optional(), Length(max=10)])
     value = StringField('Performance Value',
                         validators=[DataRequired(message="Performance value is required"), Length(max=20)])
@@ -140,7 +142,7 @@ class ResultForm(FlaskForm):
 
 
 class StartListForm(FlaskForm):
-    athlete_bib = IntegerField('Athlete BIB', validators=[DataRequired()])
+    athlete_sdms = IntegerField('Athlete SDMS', validators=[DataRequired()])
     lane_order = IntegerField('Lane/Order', validators=[Optional(), NumberRange(min=1)])\
 
 class HighJumpHeightsForm(FlaskForm):
