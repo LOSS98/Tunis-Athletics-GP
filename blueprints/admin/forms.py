@@ -35,7 +35,7 @@ class AthleteForm(FlaskForm):
     sdms = IntegerField('SDMS Number', validators=[DataRequired(), NumberRange(min=1)])
     firstname = StringField('First Name', validators=[DataRequired(), Length(max=100)])
     lastname = StringField('Last Name', validators=[DataRequired(), Length(max=100)])
-    country = StringField('Country Code', validators=[DataRequired(), Length(min=3, max=3)])
+    country = StringField('NPC Code', validators=[DataRequired(), Length(min=3, max=3)])
     gender = SelectField('Gender', choices=[('Male', 'Male'), ('Female', 'Female')], validators=[DataRequired()])
     athlete_class = SelectField('Class', validators=[DataRequired()])
     photo = FileField('Photo', validators=[FileAllowed(['jpg', 'jpeg', 'png', 'gif'])])

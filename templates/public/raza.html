@@ -1,17 +1,17 @@
 {% extends "base.html" %}
 
-{% block title %}RAZA Score System - World Para Athletics Grand Prix{% endblock %}
+{% block title %}WPA Points System - World Para Athletics Grand Prix{% endblock %}
 
 {% block content %}
 <div class="mb-8">
-    <h1 class="text-3xl font-bold mb-4">RAZA Point Score System</h1>
+    <h1 class="text-3xl font-bold mb-4">WPA Points System</h1>
     <p class="text-gray-600">Understanding Paralympic Performance Comparison</p>
 </div>
 
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
     <div class="bg-white rounded-lg shadow p-6">
-        <h2 class="text-2xl font-bold mb-4">What is RAZA?</h2>
-        <p class="mb-4">The RAZA point score system is the official method used by World Para Athletics to compare performances across different disability classes in athletics competitions.</p>
+        <h2 class="text-2xl font-bold mb-4">What are WPA Points?</h2>
+        <p class="mb-4">The WPA Points system is the official method used by World Para Athletics to compare performances across different disability classes in athletics competitions.</p>
         <p class="mb-4">Named after mathematician Purshottam Raza, the system uses a mathematical formula to convert performances into points, allowing fair competition between athletes with different disabilities.</p>
         <div class="bg-blue-50 p-4 rounded-lg">
             <h3 class="font-bold mb-2">Official Formula (Gompertz):</h3>
@@ -44,7 +44,7 @@
             <li class="flex items-start">
                 <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
                 <div>
-                    <strong>Higher is Better:</strong> The athlete with the highest RAZA score wins, regardless of their class
+                    <strong>Higher is Better:</strong> The athlete with the highest WPA Points wins, regardless of their class
                 </div>
             </li>
             <li class="flex items-start">
@@ -58,10 +58,10 @@
 </div>
 
 <div class="bg-white rounded-lg shadow p-6 mb-8">
-    <h2 class="text-2xl font-bold mb-4">RAZA Score Calculator</h2>
+    <h2 class="text-2xl font-bold mb-4">WPA Points Calculator</h2>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-            <h3 class="text-lg font-semibold mb-3">Performance to RAZA Score</h3>
+            <h3 class="text-lg font-semibold mb-3">Performance to WPA Points</h3>
             <div class="space-y-3">
                 <select id="gender" class="w-full px-3 py-2 border rounded-lg">
                     <option value="">Select Gender</option>
@@ -76,13 +76,13 @@
                 </select>
                 <input type="text" id="performance" placeholder="Enter performance" class="w-full px-3 py-2 border rounded-lg">
                 <button onclick="calculateRAZA()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 w-full">
-                    Calculate RAZA Score
+                    Calculate WPA Points
                 </button>
             </div>
         </div>
 
         <div>
-            <h3 class="text-lg font-semibold mb-3">RAZA Score to Performance</h3>
+            <h3 class="text-lg font-semibold mb-3">WPA Points to Performance</h3>
             <div class="space-y-3">
                 <select id="gender2" class="w-full px-3 py-2 border rounded-lg">
                     <option value="">Select Gender</option>
@@ -95,7 +95,7 @@
                 <select id="class2" class="w-full px-3 py-2 border rounded-lg">
                     <option value="">Select Class</option>
                 </select>
-                <input type="number" id="razaScore" placeholder="Enter RAZA score" class="w-full px-3 py-2 border rounded-lg">
+                <input type="number" id="razaScore" placeholder="Enter WPA points" class="w-full px-3 py-2 border rounded-lg">
                 <button onclick="calculatePerformance()" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 w-full">
                     Calculate Performance
                 </button>
@@ -116,7 +116,7 @@
            target="_blank" class="border rounded-lg p-4 hover:bg-gray-50 flex items-center">
             <i class="fas fa-file-pdf text-red-500 text-3xl mr-4"></i>
             <div>
-                <h3 class="font-semibold">Field Events RAZA Scores</h3>
+                <h3 class="font-semibold">Field Events WPA Points</h3>
                 <p class="text-sm text-gray-600">2025-2026 Official IPC Document</p>
             </div>
         </a>
@@ -124,7 +124,7 @@
            target="_blank" class="border rounded-lg p-4 hover:bg-gray-50 flex items-center">
             <i class="fas fa-file-pdf text-red-500 text-3xl mr-4"></i>
             <div>
-                <h3 class="font-semibold">Track Events RAZA Scores</h3>
+                <h3 class="font-semibold">Track Events WPA Points</h3>
                 <p class="text-sm text-gray-600">2025-2026 Official IPC Document</p>
             </div>
         </a>
@@ -141,18 +141,18 @@ async function loadRazaData() {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         razaData = await response.json();
-        console.log('RAZA data loaded:', razaData.length, 'entries');
+        console.log('WPA Points data loaded:', razaData.length, 'entries');
 
         if (razaData.length > 0) {
             console.log('Sample data:', razaData[0]);
             populateInitialOptions();
         } else {
-            console.error('No RAZA data loaded');
-            showError('No RAZA data available. Please check the data file.');
+            console.error('No WPA Points data loaded');
+            showError('No WPA Points data available. Please check the data file.');
         }
     } catch (error) {
-        console.error('Error loading RAZA data:', error);
-        showError('Failed to load RAZA data. Please refresh the page.');
+        console.error('Error loading WPA Points data:', error);
+        showError('Failed to load WPA Points data. Please refresh the page.');
     }
 }
 
@@ -312,7 +312,7 @@ async function calculateRAZA() {
     try {
         const data = razaData.find(d => d.Gender === gender && d.Event === event && d.Class === cls);
         if (!data) {
-            showError('No RAZA data found for this combination');
+            showError('No WPA Points data found for this combination');
             return;
         }
 
@@ -343,11 +343,11 @@ async function calculateRAZA() {
             return;
         }
 
-        showSuccess(`RAZA Score: ${result.raza_score} points`);
+        showSuccess(`WPA Points: ${result.raza_score}`);
 
     } catch (error) {
         console.error('Calculation error:', error);
-        showError('Error calculating RAZA score: ' + error.message);
+        showError('Error calculating WPA Points: ' + error.message);
     }
 }
 
@@ -363,7 +363,7 @@ async function calculatePerformance() {
     }
 
     if (isNaN(razaScore) || razaScore <= 0) {
-        showError('Please enter a valid RAZA score (positive number)');
+        showError('Please enter a valid WPA Points value');
         return;
     }
 
@@ -404,7 +404,7 @@ async function calculatePerformance() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Page loaded, loading RAZA data...');
+    console.log('Page loaded, loading WPA Points data...');
     loadRazaData();
 });
 </script>
