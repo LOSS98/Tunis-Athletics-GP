@@ -75,7 +75,7 @@
                             </label>
                             <label class="flex items-center">
                                 <input type="checkbox" id="editWpaPoints" name="wpa_points" class="mr-2">
-                                RAZA Scoring
+                                WPA Points
                             </label>
                         </div>
                     </div>
@@ -136,7 +136,7 @@
                 {% if game.wpa_points %}
                 <div class="mt-2 p-2 bg-purple-50 border border-purple-200 rounded">
                     <i class="fas fa-calculator text-purple-600 mr-2"></i>
-                    <span class="text-purple-800 font-medium">RAZA Scoring Enabled</span>
+                    <span class="text-purple-800 font-medium">WPA Points Enabled</span>
                 </div>
                 {% endif %}
 
@@ -202,7 +202,7 @@
 
                 <button onclick="autoRankResults({{ game.id }}, event)"
                         class="bg-purple-500 text-white px-3 py-1 rounded text-sm hover:bg-purple-600"
-                        title="Auto-rank by performance{% if game.wpa_points %} and RAZA scores{% endif %}">
+                        title="Auto-rank by performance{% if game.wpa_points %} and WPA Points{% endif %}">
                     <i class="fas fa-sort-numeric-down"></i> Auto Rank
                 </button>
 
@@ -217,8 +217,8 @@
                 {% if game.wpa_points %}
                 <button onclick="recalculateRaza({{ game.id }})"
                         class="bg-indigo-500 text-white px-3 py-1 rounded text-sm hover:bg-indigo-600"
-                        title="Recalculate all RAZA scores">
-                    <i class="fas fa-calculator"></i> Recalc RAZA
+                        title="Recalculate all WPA Points">
+                    <i class="fas fa-calculator"></i> Recalc WPA
                 </button>
                 {% endif %}
                 {% if game.event == 'High Jump' %}
@@ -485,7 +485,7 @@
                     </span>
                 {% endif %}
                 {% if game.wpa_points %}
-                    <span class="bg-purple-100 text-purple-800 px-2 py-1 rounded">RAZA Scoring</span>
+                    <span class="bg-purple-100 text-purple-800 px-2 py-1 rounded">WPA Points</span>
                 {% endif %}
             </div>
         </div>
@@ -502,7 +502,7 @@
                     <th class="px-4 py-3 text-left">Rank</th>
                     <th class="px-4 py-3 text-left">SDMS</th>
                     <th class="px-4 py-3 text-left">Name</th>
-                    <th class="px-4 py-3 text-left">Country</th>
+                    <th class="px-4 py-3 text-left">NPC</th>
                     <th class="px-4 py-3 text-left">Class</th>
                     <th class="px-4 py-3 text-left">Guide</th>
 
@@ -520,7 +520,7 @@
                     {% endif %}
 
                     {% if game.wpa_points %}
-                    <th class="px-4 py-3 text-left">RAZA Score</th>
+                    <th class="px-4 py-3 text-left">WPA Points</th>
                     {% endif %}
 
                     {% if game.event in config.FIELD_EVENTS %}
@@ -734,6 +734,40 @@
     </div>
     {% endif %}
 </div>
+
+{% if combined_results %}
+<div class="bg-white rounded-lg shadow mt-8">
+    <div class="p-4 border-b">
+        <h3 class="text-lg font-bold">Combined Results</h3>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left">Rank</th>
+                    <th class="px-4 py-3 text-left">SDMS</th>
+                    <th class="px-4 py-3 text-left">Name</th>
+                    <th class="px-4 py-3 text-left">NPC</th>
+                    <th class="px-4 py-3 text-left">Class</th>
+                    <th class="px-4 py-3 text-left">Performance</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for result in combined_results %}
+                <tr>
+                    <td class="px-4 py-2 font-semibold">{{ result.combined_rank }}</td>
+                    <td class="px-4 py-2">{{ result.athlete_sdms }}</td>
+                    <td class="px-4 py-2">{{ result.lastname }} {{ result.firstname }}</td>
+                    <td class="px-4 py-2">{{ result.country }}</td>
+                    <td class="px-4 py-2">{{ result.athlete_class }}</td>
+                    <td class="px-4 py-2">{{ result.value }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
 
 <!-- Edit Attempts Modal -->
 <div id="editAttemptsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">

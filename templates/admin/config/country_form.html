@@ -8,7 +8,7 @@
         <div class="flex items-center justify-between">
             <h2 class="text-2xl font-bold">{{ title }}</h2>
             <a href="{{ url_for('admin.config_countries') }}" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
-                <i class="fas fa-arrow-left mr-2"></i>Back to Countries
+                <i class="fas fa-arrow-left mr-2"></i>Back to NPCs
             </a>
         </div>
     </div>
@@ -19,7 +19,7 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
                 <label class="block text-gray-700 text-sm font-bold mb-2">
-                    Country Code <span class="text-red-500">*</span>
+                    NPC Code <span class="text-red-500">*</span>
                 </label>
                 {{ form.code(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500", maxlength="3", style="text-transform: uppercase") }}
                 <p class="text-sm text-gray-600 mt-1">{{ form.code.description }}</p>
@@ -34,7 +34,7 @@
 
             <div>
                 <label class="block text-gray-700 text-sm font-bold mb-2">
-                    Country Name <span class="text-red-500">*</span>
+                    NPC Name <span class="text-red-500">*</span>
                 </label>
                 {{ form.name(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
                 <p class="text-sm text-gray-600 mt-1">{{ form.name.description }}</p>
@@ -90,7 +90,7 @@
                 Cancel
             </a>
             <button type="submit" class="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600">
-                <i class="fas fa-save mr-2"></i>{{ 'Update' if country else 'Create' }} Country
+                <i class="fas fa-save mr-2"></i>{{ 'Update' if country else 'Create' }} NPC
             </button>
         </div>
     </form>

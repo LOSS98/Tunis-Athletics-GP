@@ -9,6 +9,34 @@ import re
 from utils.raza_calculation import calculate_raza, verify_combination
 
 
+def parse_time_to_seconds(time_str):
+    time_str = time_str.strip()
+    if not time_str:
+        return 0.0
+    if ':' in time_str:
+        parts = time_str.split(':')
+        minutes = int(parts[0])
+        seconds_part = parts[1]
+        if '.' in seconds_part:
+            sec_parts = seconds_part.split('.')
+            seconds = int(sec_parts[0])
+            decimal_part = sec_parts[1].ljust(4, '0')[:4]
+        else:
+            seconds = int(seconds_part)
+            decimal_part = '0000'
+        total_seconds = minutes * 60 + seconds + (int(decimal_part) / 10000)
+    else:
+        if '.' in time_str:
+            sec_parts = time_str.split('.')
+            seconds = int(sec_parts[0])
+            decimal_part = sec_parts[1].ljust(4, '0')[:4]
+        else:
+            seconds = int(time_str)
+            decimal_part = '0000'
+        total_seconds = seconds + (int(decimal_part) / 10000)
+    return total_seconds
+
+
 class User(UserMixin):
     def __init__(self, id, username, admin_type='volunteer'):
         self.id = id
@@ -371,6 +399,22 @@ class Game:
             game['classes_list'] = [c.strip() for c in game['classes'].split(',')]
         return game
 
+    @staticmethod
+    def get_related_heats(game_id):
+        game = Game.get_by_id(game_id)
+        if not game:
+            return []
+        heats = execute_query(
+            """
+                SELECT id FROM games
+                WHERE event = %s AND gender = %s AND classes = %s AND day = %s
+                AND (phase IS NULL OR phase ILIKE 'Heat%%')
+            """,
+            (game['event'], game['gender'], game['classes'], game['day']),
+            fetch=True,
+        )
+        return [h['id'] for h in heats]
+
 
 class Result:
     @staticmethod
@@ -451,6 +495,47 @@ class Result:
     def count_by_game(game_id):
         count = execute_one("SELECT COUNT(*) as count FROM results WHERE game_id = %s", (game_id,))
         return count['count'] if count else 0
+
+    @staticmethod
+    def get_by_games(game_ids):
+        if not game_ids:
+            return []
+        placeholders = ','.join(['%s'] * len(game_ids))
+        query = f"""
+            SELECT r.*, a.firstname, a.lastname, a.country, a.gender as athlete_gender,
+                   a.class as athlete_class
+            FROM results r
+            JOIN athletes a ON r.athlete_sdms = a.sdms
+            WHERE r.game_id IN ({placeholders})
+            ORDER BY CASE WHEN r.rank ~ '^[0-9]+' THEN CAST(r.rank AS INTEGER) ELSE 999 END, r.rank
+        """
+        return execute_query(query, game_ids, fetch=True)
+
+    @staticmethod
+    def combine_and_rank_track(game_ids, event_name):
+        results = Result.get_by_games(game_ids)
+        if not results:
+            return []
+        special_values = Config.get_result_special_values()
+        valid = []
+        for r in results:
+            if r['value'] not in special_values:
+                try:
+                    if event_name in Config.get_track_events():
+                        val = parse_time_to_seconds(str(r['value']))
+                    else:
+                        val = float(r['value']) * -1
+                    valid.append((val, r))
+                except (ValueError, TypeError):
+                    continue
+        valid.sort(key=lambda x: x[0])
+        for idx, (_, res) in enumerate(valid, start=1):
+            res['combined_rank'] = idx
+        for r in results:
+            if 'combined_rank' not in r:
+                r['combined_rank'] = '-'
+        results.sort(key=lambda x: (999 if x['combined_rank'] == '-' else x['combined_rank']))
+        return results
 
     @staticmethod
     def get_records():

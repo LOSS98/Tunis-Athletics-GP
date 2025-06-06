@@ -26,7 +26,7 @@
 
     <div class="bg-white rounded-lg shadow p-4 text-center">
         <div class="text-2xl font-bold text-green-600">{{ configs.get('countries_count', 0) }}</div>
-        <div class="text-sm text-gray-600">Countries</div>
+        <div class="text-sm text-gray-600">NPCs</div>
     </div>
 
     <div class="bg-white rounded-lg shadow p-4 text-center">
@@ -41,7 +41,7 @@
 
     <div class="bg-white rounded-lg shadow p-4 text-center">
         <div class="text-2xl font-bold text-red-600">{{ countries|length }}</div>
-        <div class="text-sm text-gray-600">Countries in DB</div>
+        <div class="text-sm text-gray-600">NPCs in DB</div>
     </div>
 </div>
 
@@ -92,7 +92,7 @@
         <div class="p-6">
             <div class="space-y-3">
                 <div class="flex justify-between">
-                    <span class="text-sm text-gray-600">Countries:</span>
+                    <span class="text-sm text-gray-600">NPCs:</span>
                     <span class="text-sm font-medium">{{ configs.get('countries_count', 0) }}</span>
                 </div>
                 <div class="flex justify-between">
@@ -117,7 +117,7 @@
             <div class="flex items-center">
                 <i class="fas fa-globe text-red-600 text-2xl mr-3"></i>
                 <div>
-                    <h3 class="text-lg font-bold">Countries</h3>
+                    <h3 class="text-lg font-bold">NPCs</h3>
                     <p class="text-sm text-gray-600">Participating nations and flags</p>
                 </div>
             </div>
@@ -125,7 +125,7 @@
         <div class="p-6">
             <div class="space-y-3">
                 <div class="flex justify-between">
-                    <span class="text-sm text-gray-600">Total Countries:</span>
+                    <span class="text-sm text-gray-600">Total NPCs:</span>
                     <span class="text-sm font-medium">{{ countries|length }}</span>
                 </div>
                 <div class="flex justify-between">
@@ -200,7 +200,7 @@
         </a>
 
         <a href="{{ url_for('admin.config_country_add') }}" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 text-sm">
-            <i class="fas fa-globe mr-1"></i> Add Country
+            <i class="fas fa-globe mr-1"></i> Add NPC
         </a>
     </div>
 </div>
