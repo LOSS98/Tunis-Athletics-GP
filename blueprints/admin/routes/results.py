@@ -101,6 +101,11 @@ def register_routes(bp):
         startlist = StartList.get_by_game(id)
         form = ResultForm()
 
+        combined_results = []
+        heat_ids = Game.get_related_heats(id)
+        if heat_ids and len(heat_ids) > 1:
+            combined_results = Result.combine_and_rank_track(heat_ids, game['event'])
+
         game_json = {
             'id': game['id'],
             'event': game['event'],
@@ -122,10 +127,11 @@ def register_routes(bp):
                                game_json=game_json,
                                results=results,
                                startlist=startlist,
+                               combined_results=combined_results,
                                form=form,
                                is_field_event=game['event'] in Config.get_field_events(),
                                is_track_event=game['event'] in Config.get_track_events(),
-                               total_selected_r1 = total_selected_r1,)
+                               total_selected_r1=total_selected_r1)
 
     @bp.route('/games/<int:game_id>/results/add', methods=['POST'])
     @admin_required
