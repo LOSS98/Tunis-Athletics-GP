@@ -158,7 +158,7 @@ function selectFromStartList(sdms, name, gender, athleteClass, guideSdms) {
         if (selectedGuideSdms) selectedGuideSdms.value = guideSdms;
         if (selectedGuide) selectedGuide.innerHTML = `Guide SDMS: <strong>${guideSdms}</strong>`;
     }
-
+}
 function selectGuide(athlete) {
     const sdmsInput = document.getElementById('selectedGuideSdms') || document.getElementById('editGuideSdms');
     const searchInput = document.getElementById('guideSearch') || document.getElementById('editGuideSearch');

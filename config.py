@@ -254,6 +254,10 @@ class Config:
         except:
             return str(weight_value)
 
+    @staticmethod
+    def get_genders():
+        return ['Male', 'Female']
+
     @property
     def CLASSES(self):
         return self.get_classes()
