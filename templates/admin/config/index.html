@@ -9,7 +9,7 @@
         <span class="font-medium text-blue-800">Configuration Management</span>
     </div>
     <p class="text-blue-700 text-sm mt-1">
-        Manage competition settings, classes, events, countries, and competition schedule. Changes take effect immediately.
+        Manage competition settings, classes, events, npcs, and competition schedule. Changes take effect immediately.
     </p>
 </div>
 
@@ -25,7 +25,7 @@
     </div>
 
     <div class="bg-white rounded-lg shadow p-4 text-center">
-        <div class="text-2xl font-bold text-green-600">{{ configs.get('countries_count', 0) }}</div>
+        <div class="text-2xl font-bold text-green-600">{{ configs.get('npcs_count', 0) }}</div>
         <div class="text-sm text-gray-600">NPCs</div>
     </div>
 
@@ -40,7 +40,7 @@
     </div>
 
     <div class="bg-white rounded-lg shadow p-4 text-center">
-        <div class="text-2xl font-bold text-red-600">{{ countries|length }}</div>
+        <div class="text-2xl font-bold text-red-600">{{ npcs|length }}</div>
         <div class="text-sm text-gray-600">NPCs in DB</div>
     </div>
 </div>
@@ -93,7 +93,7 @@
             <div class="space-y-3">
                 <div class="flex justify-between">
                     <span class="text-sm text-gray-600">NPCs:</span>
-                    <span class="text-sm font-medium">{{ configs.get('countries_count', 0) }}</span>
+                    <span class="text-sm font-medium">{{ configs.get('npcs_count', 0) }}</span>
                 </div>
                 <div class="flex justify-between">
                     <span class="text-sm text-gray-600">Athletes:</span>
@@ -126,19 +126,19 @@
             <div class="space-y-3">
                 <div class="flex justify-between">
                     <span class="text-sm text-gray-600">Total NPCs:</span>
-                    <span class="text-sm font-medium">{{ countries|length }}</span>
+                    <span class="text-sm font-medium">{{ npcs|length }}</span>
                 </div>
                 <div class="flex justify-between">
                     <span class="text-sm text-gray-600">With Flags:</span>
-                    <span class="text-sm font-medium">{{ countries|selectattr('flag_available')|list|length }}</span>
+                    <span class="text-sm font-medium">{{ npcs|selectattr('flag_available')|list|length }}</span>
                 </div>
                 <div class="flex justify-between">
                     <span class="text-sm text-gray-600">Continents:</span>
-                    <span class="text-sm font-medium">{{ countries|map(attribute='continent')|unique|list|length }}</span>
+                    <span class="text-sm font-medium">{{ npcs|map(attribute='continent')|unique|list|length }}</span>
                 </div>
             </div>
             <div class="mt-4">
-                <a href="{{ url_for('admin.config_countries') }}" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 text-sm">
+                <a href="{{ url_for('admin.config_npcs') }}" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 text-sm">
                     <i class="fas fa-globe mr-1"></i> Manage
                 </a>
             </div>
@@ -199,7 +199,7 @@
             <i class="fas fa-plus mr-1"></i> Add Competition Day
         </a>
 
-        <a href="{{ url_for('admin.config_country_add') }}" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 text-sm">
+        <a href="{{ url_for('admin.config_npc_add') }}" class="bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600 text-sm">
             <i class="fas fa-globe mr-1"></i> Add NPC
         </a>
     </div>

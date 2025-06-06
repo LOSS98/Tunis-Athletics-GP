@@ -1,6 +1,7 @@
 from flask import render_template, redirect, url_for, flash
 from ..auth import admin_required
 from ..forms import StartListForm
+
 from database.models import Game, StartList, Athlete
 
 def register_routes(bp):

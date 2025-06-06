@@ -11,7 +11,7 @@ def register_routes(bp):
             records = [r for r in records if
                       search.lower() in r['firstname'].lower() or
                       search.lower() in r['lastname'].lower() or
-                      search.lower() in r['country'].lower() or
+                      search.lower() in r['npc'].lower() or
                       search.lower() in r['event'].lower() or
                       search.lower() in r['record'].lower()]
 

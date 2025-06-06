@@ -166,38 +166,38 @@ class ConfigManager:
         )
 
     @staticmethod
-    def get_countries():
+    def get_npcs():
         return execute_query(
-            "SELECT * FROM countries ORDER BY name",
+            "SELECT * FROM npcs ORDER BY name",
             fetch=True
         )
 
     @staticmethod
-    def get_country_by_code(code):
+    def get_npc_by_code(code):
         return execute_one(
-            "SELECT * FROM countries WHERE code = %s",
+            "SELECT * FROM npcs WHERE code = %s",
             (code,)
         )
 
     @staticmethod
-    def create_country(code, name, continent, flag_available=False):
+    def create_npc(code, name, continent, flag_available=False):
         execute_query(
-            "INSERT INTO countries (code, name, continent, flag_available) VALUES (%s, %s, %s, %s)",
+            "INSERT INTO npcs (code, name, continent, flag_available) VALUES (%s, %s, %s, %s)",
             (code.upper(), name, continent, flag_available)
         )
 
     @staticmethod
-    def update_country(country_id, code, name, continent, flag_available=False):
+    def update_npc(npc_id, code, name, continent, flag_available=False):
         execute_query(
-            "UPDATE countries SET code = %s, name = %s, continent = %s, flag_available = %s WHERE id = %s",
-            (code.upper(), name, continent, flag_available, country_id)
+            "UPDATE npcs SET code = %s, name = %s, continent = %s, flag_available = %s WHERE id = %s",
+            (code.upper(), name, continent, flag_available, npc_id)
         )
 
     @staticmethod
-    def delete_country(country_id):
+    def delete_npc(npc_id):
         execute_query(
-            "DELETE FROM countries WHERE id = %s",
-            (country_id,)
+            "DELETE FROM npcs WHERE id = %s",
+            (npc_id,)
         )
 
     @staticmethod

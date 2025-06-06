@@ -7,7 +7,8 @@ from flask_login import current_user
 from utils.raza_calculation import calculate_raza, verify_combination
 from ..auth import admin_required, technical_delegate_required
 from ..forms import ResultForm
-from database.models import Game, Result, Athlete, Attempt, StartList
+from database.models import Athlete, Game, StartList, Result, Attempt
+
 from database.db_manager import execute_one, execute_query
 from config import Config
 import re
@@ -1210,11 +1211,14 @@ def register_routes(bp):
             new_status = Game.toggle_official_status(game_id, current_user.id)
 
             if new_status:
-                message = 'All game results marked as OFFICIAL'
-                status = 'success'
+                # Check all results for records and PBs
+                results = Result.get_all(game_id=game_id)
+                for result in results:
+                    process_result_for_records(result['id'])
+
+                message = 'All game results marked as OFFICIAL and checked for records'
             else:
                 message = 'Game results marked as UNOFFICIAL'
-                status = 'warning'
 
             return jsonify({
                 'success': True,
@@ -1302,3 +1306,18 @@ def check_and_update_long_jump_progression(attempts):
 
     return best_valid, cleaned_attempts, True
 
+
+def process_result_for_records(result_id):
+    """Check for records and personal bests when a result is officialized"""
+    result = Result.get_by_id(result_id)
+    if not result:
+        return
+
+    game = Game.get_by_id(result['game_id'])
+    athlete = Athlete.get_by_sdms(result['athlete_sdms'])
+
+    if not game or not athlete or not game.get('official'):
+        return
+
+    from .records import check_for_records_and_pbs
+    check_for_records_and_pbs(result, athlete, game)

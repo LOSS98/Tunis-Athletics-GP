@@ -1,6 +1,6 @@
 from flask import render_template, redirect, url_for, flash, request, jsonify
 from ..auth import admin_required, loc_required
-from ..config_forms import StatsConfigForm, CompetitionDayForm, CurrentDayForm, CountryForm, RecordTypeForm
+from ..config_forms import StatsConfigForm, CompetitionDayForm, CurrentDayForm, NPCForm, RecordTypeForm
 from database.config_manager import ConfigManager, clear_config_cache
 from config import Config
 from datetime import date
@@ -12,13 +12,13 @@ def register_routes(bp):
     def config_index():
         configs = ConfigManager.get_all_config()
         days = ConfigManager.get_competition_days()
-        countries = ConfigManager.get_countries()
+        npcs = ConfigManager.get_npcs()
         current_day = ConfigManager.get_current_competition_day()
 
         return render_template('admin/config/index.html',
                                configs=configs,
                                days=days,
-                               countries=countries,
+                               npcs=npcs,
                                current_day=current_day)
 
     @bp.route('/config/general')
@@ -105,7 +105,7 @@ def register_routes(bp):
         form = StatsConfigForm()
 
         if form.validate_on_submit():
-            ConfigManager.set_config('countries_count', form.countries_count.data, 'integer')
+            ConfigManager.set_config('npcs_count', form.npcs_count.data, 'integer')
             ConfigManager.set_config('athletes_count', form.athletes_count.data, 'integer')
             ConfigManager.set_config('volunteers_count', form.volunteers_count.data, 'integer')
             ConfigManager.set_config('loc_count', form.loc_count.data, 'integer')
@@ -116,7 +116,7 @@ def register_routes(bp):
             return redirect(url_for('admin.config_index'))
 
         elif request.method == 'GET':
-            form.countries_count.data = ConfigManager.get_config('countries_count', 61)
+            form.npcs_count.data = ConfigManager.get_config('npcs_count', 61)
             form.athletes_count.data = ConfigManager.get_config('athletes_count', 529)
             form.volunteers_count.data = ConfigManager.get_config('volunteers_count', 50)
             form.loc_count.data = ConfigManager.get_config('loc_count', 15)
@@ -202,66 +202,66 @@ def register_routes(bp):
 
         return render_template('admin/config/current_day.html', form=form)
 
-    @bp.route('/config/countries')
+    @bp.route('/config/npcs')
     @loc_required
-    def config_countries():
-        countries = ConfigManager.get_countries()
-        return render_template('admin/config/countries.html', countries=countries)
+    def config_npcs():
+        npcs = ConfigManager.get_npcs()
+        return render_template('admin/config/npcs.html', npcs=npcs)
 
-    @bp.route('/config/countries/add', methods=['GET', 'POST'])
+    @bp.route('/config/npcs/add', methods=['GET', 'POST'])
     @loc_required
-    def config_country_add():
-        form = CountryForm()
+    def config_npc_add():
+        form = NPCForm()
 
         if form.validate_on_submit():
-            ConfigManager.create_country(
+            ConfigManager.create_npc(
                 form.code.data,
                 form.name.data,
                 form.continent.data,
                 form.flag_available.data
             )
             flash('NPC added successfully', 'success')
-            return redirect(url_for('admin.config_countries'))
+            return redirect(url_for('admin.config_npcs'))
 
-        return render_template('admin/config/country_form.html', form=form, title='Add NPC')
+        return render_template('admin/config/npc_form.html', form=form, title='Add NPC')
 
-    @bp.route('/config/countries/<int:country_id>/edit', methods=['GET', 'POST'])
+    @bp.route('/config/npcs/<int:npc_id>/edit', methods=['GET', 'POST'])
     @loc_required
-    def config_country_edit(country_id):
-        countries = ConfigManager.get_countries()
-        country = next((c for c in countries if c['id'] == country_id), None)
+    def config_npc_edit(npc_id):
+        npcs = ConfigManager.get_npcs()
+        npc = next((c for c in npcs if c['id'] == npc_id), None)
 
-        if not country:
+        if not npc:
             flash('NPC not found', 'danger')
-            return redirect(url_for('admin.config_countries'))
+            return redirect(url_for('admin.config_npcs'))
 
-        form = CountryForm()
+        form = NPCForm()
 
         if form.validate_on_submit():
-            ConfigManager.update_country(
-                country_id,
+            ConfigManager.update_npc(
+                npc_id,
                 form.code.data,
                 form.name.data,
                 form.continent.data,
                 form.flag_available.data
             )
             flash('NPC updated successfully', 'success')
-            return redirect(url_for('admin.config_countries'))
+            return redirect(url_for('admin.config_npcs'))
 
         elif request.method == 'GET':
-            form.code.data = country['code']
-            form.name.data = country['name']
-            form.continent.data = country['continent']
-            form.flag_available.data = country['flag_available']
+            form.code.data = npc['code']
+            form.name.data = npc['name']
+            form.continent.data = npc['continent']
+            form.flag_available.data = npc['flag_available']
 
-        return render_template('admin/config/country_form.html', form=form, title='Edit NPC', country=country)
+        return render_template('admin/config/npc_form.html', form=form, title='Edit NPC', npc=npc)
 
-    @bp.route('/config/countries/<int:country_id>/delete', methods=['POST'])
+    @bp.route('/config/npcs/<int:npc_id>/delete', methods=['POST'])
     @loc_required
-    def config_country_delete(country_id):
-        ConfigManager.delete_country(country_id)
+    def config_npc_delete(npc_id):
+        ConfigManager.delete_npc(npc_id)
         flash('NPC deleted successfully', 'success')
-        return redirect(url_for('admin.config_countries'))
+        return redirect(url_for('admin.config_npcs'))
 
     @bp.route('/config/record-types')
     @loc_required

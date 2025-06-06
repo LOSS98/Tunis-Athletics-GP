@@ -14,7 +14,7 @@ class ConfigForm(FlaskForm):
 
 
 class StatsConfigForm(FlaskForm):
-    countries_count = IntegerField('Number of NPCs',
+    npcs_count = IntegerField('Number of NPCs',
                                    validators=[DataRequired(), NumberRange(min=1)],
                                    description='Total number of participating NPCs')
 
@@ -63,7 +63,7 @@ class CurrentDayForm(FlaskForm):
                                description='Manually set the current competition day')
 
 
-class CountryForm(FlaskForm):
+class NPCForm(FlaskForm):
     code = StringField('NPC Code',
                        validators=[DataRequired(), Length(min=3, max=3)],
                        description='3-letter NPC code (ISO 3166-1 alpha-3)')
@@ -83,11 +83,11 @@ class CountryForm(FlaskForm):
                                 ('Antarctica', 'Antarctica')
                             ],
                             validators=[DataRequired()],
-                            description='Continent where the country is located')
+                            description='Continent where the npc is located')
 
     flag_available = BooleanField('Flag Available',
                                   default=False,
-                                  description='Whether a flag image is available for this country')
+                                  description='Whether a flag image is available for this npc')
 
 
 class RecordTypeForm(FlaskForm):
@@ -114,7 +114,7 @@ class RecordTypeForm(FlaskForm):
 
     scope_values = StringField('Scope Values',
                                validators=[Optional()],
-                               description='Comma-separated countries/continents (e.g., "FRA,GBR" or "Europe,Asia")')
+                               description='Comma-separated npcs/continents (e.g., "FRA,GBR" or "Europe,Asia")')
 
     description = TextAreaField('Description',
                                 validators=[Optional()],

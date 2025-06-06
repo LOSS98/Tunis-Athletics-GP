@@ -7,7 +7,7 @@
     <h1 class="text-3xl font-bold mb-4">Competition Records</h1>
     <form method="GET" class="max-w-md">
         <div class="flex">
-            <input type="text" name="search" value="{{ search }}" placeholder="Search athlete, event, country..."
+            <input type="text" name="search" value="{{ search }}" placeholder="Search athlete, event, npc..."
                    class="flex-1 px-4 py-2 border rounded-l-lg focus:outline-none focus:border-red-500">
             <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded-r-lg hover:bg-red-700">
                 <i class="fas fa-search"></i> Search
@@ -68,9 +68,9 @@
                         </div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                        <img src="/static/images/flags/{{ record.country }}.svg" alt="{{ record.country }}"
+                        <img src="/static/images/flags/{{ record.npc }}.svg" alt="{{ record.npc }}"
                              class="inline w-8 h-5 mr-2">
-                        {{ record.country }}
+                        {{ record.npc }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap font-medium">{{ record.event }}</td>
                     <td class="px-6 py-4 whitespace-nowrap">{{ record.gender }}</td>

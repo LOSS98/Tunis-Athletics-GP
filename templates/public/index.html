@@ -9,7 +9,7 @@
         <p class="text-xl mb-8">19th Edition World Para Athletics Grand Prix</p>
         <div class="grid grid-cols-2 md:grid-cols-5 gap-8">
             <div class="text-center">
-                <div class="text-4xl font-bold">{{ config.COUNTRIES_COUNT }}</div>
+                <div class="text-4xl font-bold">{{ config.NPCS_COUNT }}</div>
                 <div class="text-sm opacity-90">NPCs</div>
             </div>
             <div class="text-center">
@@ -76,9 +76,9 @@
                                 <div>
                                     <span class="font-medium">{{ result.firstname }} {{ result.lastname }}</span>
                                     <span class="ml-2">
-                                        <img src="/static/images/flags/{{ result.country }}.svg" alt="{{ result.country }}"
+                                        <img src="/static/images/flags/{{ result.npc }}.svg" alt="{{ result.npc }}"
                                              class="inline w-6 h-4 mr-1" onerror="this.style.display='none'">
-                                        {{ result.country }}
+                                        {{ result.npc }}
                                     </span>
                                     <span class="ml-2 px-2 py-0.5 text-xs bg-blue-100 text-blue-800 rounded">{{ result.athlete_class }}</span>
                                 </div>

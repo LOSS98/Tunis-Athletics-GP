@@ -124,9 +124,9 @@
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap font-medium">{{ result.firstname }} {{ result.lastname }}</td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                        <img src="/static/images/flags/{{ result.country }}.svg" alt="{{ result.country }}"
+                        <img src="/static/images/flags/{{ result.npc }}.svg" alt="{{ result.npc }}"
                              class="inline w-8 h-5 mr-2" onerror="this.style.display='none'">
-                        {{ result.country }}
+                        {{ result.npc }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <span class="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">{{ result.athlete_class }}</span>
@@ -330,9 +330,9 @@
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap font-medium">{{ entry.firstname }} {{ entry.lastname }}</td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                        <img src="/static/images/flags/{{ entry.country }}.svg" alt="{{ entry.country }}"
+                        <img src="/static/images/flags/{{ entry.npc }}.svg" alt="{{ entry.npc }}"
                              class="inline w-6 h-4 mr-1" onerror="this.style.display='none'">
-                        {{ entry.country }}
+                        {{ entry.npc }}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <span class="px-2 py-1 text-xs bg-green-100 text-green-800 rounded">{{ entry.class }}</span>

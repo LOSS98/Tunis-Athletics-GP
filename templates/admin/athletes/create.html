@@ -16,7 +16,7 @@
 
                 <div class="mb-4">
                     <label class="block text-gray-700 text-sm font-bold mb-2">NPC Code</label>
-                    {{ form.country(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500", placeholder="e.g., TUN") }}
+                    {{ form.npc(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500", placeholder="e.g., TUN") }}
                 </div>
 
                 <div class="mb-4">
@@ -34,14 +34,26 @@
                     {{ form.gender(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
                 </div>
 
-                <div class="mb-4">
-                    <label class="block text-gray-700 text-sm font-bold mb-2">Class</label>
-                    {{ form.athlete_class(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
-                </div>
-
                 <div class="mb-4 flex items-center">
                     {{ form.is_guide(class="mr-2") }}
                     <label class="text-gray-700 text-sm font-bold" for="is_guide">Is Guide</label>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2">Classes</label>
+                {{ form.athlete_classes(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500", placeholder="e.g., T54,T53,T52 or F32,F33") }}
+                <p class="text-sm text-gray-600 mt-1">Enter multiple classes separated by commas</p>
+                <div class="mt-2">
+                    <p class="text-xs text-gray-500">Available classes:</p>
+                    <div class="flex flex-wrap gap-1 mt-1">
+                        {% for class in config.CLASSES %}
+                        <button type="button" onclick="addClassToAthleteInput('{{ class }}')"
+                                class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">
+                            {{ class }}
+                        </button>
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
 
@@ -62,4 +74,21 @@
         </form>
     </div>
 </div>
+
+<script>
+function addClassToAthleteInput(className) {
+    const classInput = document.getElementById('athlete_classes');
+    const currentValue = classInput.value.trim();
+
+    if (currentValue === '') {
+        classInput.value = className;
+    } else {
+        const classes = currentValue.split(',').map(c => c.trim());
+        if (!classes.includes(className)) {
+            classes.push(className);
+            classInput.value = classes.join(',');
+        }
+    }
+}
+</script>
 {% endblock %}

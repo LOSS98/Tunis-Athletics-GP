@@ -1,5 +1,6 @@
 from flask import render_template, request
-from database.models import Game, StartList
+from database.models.game import Game
+from database.models import StartList
 
 def register_routes(bp):
     @bp.route('/startlists')

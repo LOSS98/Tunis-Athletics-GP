@@ -1,7 +1,8 @@
+# utils/pdf_generator.py - Complete rewrite
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import mm, inch
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, PageBreak, Image
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER, TA_LEFT, TA_RIGHT
 from io import BytesIO
@@ -15,26 +16,20 @@ class PDFGenerator:
         self.title_style = ParagraphStyle(
             'CustomTitle',
             parent=self.styles['Heading1'],
-            fontSize=18,
+            fontSize=20,
             alignment=TA_CENTER,
-            spaceAfter=20,
-            fontName='Helvetica-Bold'
+            spaceAfter=15,
+            fontName='Helvetica-Bold',
+            textColor=colors.HexColor('#1a365d')
         )
         self.subtitle_style = ParagraphStyle(
             'CustomSubtitle',
             parent=self.styles['Heading2'],
-            fontSize=14,
+            fontSize=16,
             alignment=TA_CENTER,
-            spaceAfter=15,
-            fontName='Helvetica-Bold'
-        )
-        self.date_style = ParagraphStyle(
-            'DateStyle',
-            parent=self.styles['Normal'],
-            fontSize=11,
-            alignment=TA_CENTER,
-            spaceAfter=20,
-            fontName='Helvetica'
+            spaceAfter=12,
+            fontName='Helvetica-Bold',
+            textColor=colors.HexColor('#2d3748')
         )
         self.info_style = ParagraphStyle(
             'Info',
@@ -44,275 +39,243 @@ class PDFGenerator:
             fontName='Helvetica'
         )
 
-    def create_header_with_logos(self, canvas, doc):
-        """Créer l'en-tête avec les logos partenaires en paysage"""
-        page_width = landscape(A4)[0]
-        y = landscape(A4)[1] - 60
+    def create_header(self, canvas, doc):
+        page_width = doc.pagesize[0]
+        page_height = doc.pagesize[1]
 
-        # 3 logos alignés horizontalement (comme dans les images)
-        logo_positions = [
-            ("static/images/logos/wpa.png", 80),
-            ("static/images/logos/tunisian.png", page_width / 2 - 30),
-            ("static/images/logos/monoprix.png", page_width - 140)
+        # Main logo top left
+        logo_path = "static/images/logos/logo.png"
+        if os.path.exists(logo_path):
+            canvas.drawImage(logo_path, 30, page_height - 80, width=80, height=50,
+                             preserveAspectRatio=True, mask='auto')
+
+        # WPA logo top right
+        wpa_logo_path = "static/images/logos/wpa.png"
+        if os.path.exists(wpa_logo_path):
+            canvas.drawImage(wpa_logo_path, page_width - 110, page_height - 80, width=80, height=50,
+                             preserveAspectRatio=True, mask='auto')
+
+    def create_footer(self, canvas, doc):
+        page_width = doc.pagesize[0]
+
+        # Partner logos in footer
+        footer_logos = [
+            ("static/images/logos/tunisian.png", 150),
+            ("static/images/logos/monoprix.png", page_width / 2 - 30),
+            ("static/images/logos/partner3.png", page_width - 180)
         ]
 
-        for logo_path, x_pos in logo_positions:
+        for logo_path, x_pos in footer_logos:
             if os.path.exists(logo_path):
-                canvas.drawImage(logo_path, x_pos, y, width=60, height=40,
+                canvas.drawImage(logo_path, x_pos, 20, width=60, height=30,
                                  preserveAspectRatio=True, mask='auto')
 
     def generate_results_pdf(self, game, results, include_attempts=True):
-        """Générer un PDF de résultats en format paysage"""
         buffer = BytesIO()
-        pagesize = landscape(A4)  # PAYSAGE obligatoire
-        doc = SimpleDocTemplate(buffer, pagesize=pagesize,
-                                topMargin=100, rightMargin=30, leftMargin=30, bottomMargin=50)
+        doc = SimpleDocTemplate(buffer, pagesize=A4,
+                                topMargin=100, rightMargin=30, leftMargin=30, bottomMargin=70)
         story = []
 
-        # Titre principal
-        title = "RESULTS"
-        story.append(Paragraph(title, self.title_style))
+        # Title
+        story.append(Paragraph("RESULTS", self.title_style))
 
-        # Sous-titre avec event et classes
-        event_title = f"{game['gender']}'s {game['event']} {game['classes']}"
+        # Event details
+        genders = game['gender'].split(',') if ',' in game['gender'] else [game['gender']]
+        gender_text = ' & '.join(genders)
+        event_title = f"{gender_text} {game['event']} {game['classes']}"
         story.append(Paragraph(event_title, self.subtitle_style))
 
-        # Date de la compétition
-        competition_date = "Tunis 5-7 March 2024"
-        story.append(Paragraph(competition_date, self.date_style))
-
-        # Informations de l'événement (gauche et droite)
-        info_data = []
-        left_info = f"Round: {game.get('phase', 'Final')}"
-        right_info = f"Venue: Rades Athletics Stadium<br/>Date: 05/03/2024<br/>Time: {game['time']}"
-
-        info_data.append([left_info, right_info])
-
-        info_table = Table(info_data, colWidths=[350, 350])
-        info_table.setStyle(TableStyle([
-            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
-            ('ALIGN', (0, 0), (0, -1), 'LEFT'),
-            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ]))
-        story.append(info_table)
+        # Competition info
+        story.append(Paragraph("Tunis Grand Prix 2025", self.info_style))
         story.append(Spacer(1, 20))
 
-        # Générer le tableau selon le type d'événement
+        # Event information table
+        info_data = [
+            ['Event:', game['event'], 'Day:', f"Day {game['day']}"],
+            ['Gender:', gender_text, 'Time:', str(game['time'])],
+            ['Classes:', game['classes'], 'Phase:', game.get('phase', 'Final')],
+            ['Athletes:', str(len(results)), 'Status:', game['status'].title()]
+        ]
+
+        info_table = Table(info_data, colWidths=[60, 120, 60, 120])
+        info_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
+            ('ALIGN', (2, 0), (2, -1), 'RIGHT'),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('TEXTCOLOR', (0, 0), (0, -1), colors.HexColor('#4a5568')),
+            ('TEXTCOLOR', (2, 0), (2, -1), colors.HexColor('#4a5568')),
+        ]))
+        story.append(info_table)
+        story.append(Spacer(1, 25))
+
+        # Results table based on event type
         if game['event'] in Config.get_track_events():
-            table = self._create_track_event_table(game, results)
+            table = self._create_track_results_table(game, results)
         elif game['event'] == 'High Jump':
             table = self._create_high_jump_table(game, results)
-        elif game['event'] in ['Long Jump', 'Triple Jump']:
-            table = self._create_jump_table(game, results)
-        elif game['event'] in ['Shot Put', 'Discus Throw', 'Javelin Throw', 'Club Throw']:
-            table = self._create_throw_table(game, results)
+        elif game['event'] in Config.get_field_events():
+            table = self._create_field_results_table(game, results)
         else:
-            table = self._create_generic_field_table(game, results)
+            table = self._create_generic_table(game, results)
 
         story.append(table)
 
-        # Ajouter page photo finish si disponible
-        if game.get('photo_finish'):
-            story.append(PageBreak())
-            story.append(Paragraph("Photo Finish", self.title_style))
+        # Official status
+        if game.get('official'):
             story.append(Spacer(1, 20))
+            official_para = Paragraph(
+                f"<b>OFFICIAL RESULTS</b> - Approved on {game.get('official_date', 'N/A')}",
+                ParagraphStyle('Official', fontSize=10, alignment=TA_CENTER,
+                               textColor=colors.HexColor('#38a169'))
+            )
+            story.append(official_para)
 
-            photo_path = f"static/uploads/photo_finish/{game['photo_finish']}"
-            if os.path.exists(photo_path):
-                from reportlab.platypus import Image
-                img = Image(photo_path, width=700, height=400)
-                story.append(img)
-
-        doc.build(story, onFirstPage=self.create_header_with_logos,
-                  onLaterPages=self.create_header_with_logos)
+        doc.build(story, onFirstPage=self.create_header, onLaterPages=self.create_header)
         buffer.seek(0)
         return buffer
 
-    def _create_throw_table(self, game, results):
-        """Créer tableau pour lancers avec format correct"""
-        # Headers selon le format exact des images
-        headers = ['O', 'SDMS', 'Last Name', 'First Name', 'NPC', 'Gender', 'Class', 'Weight']
+    def generate_startlist_pdf(self, game, startlist):
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=A4,
+                                topMargin=100, rightMargin=30, leftMargin=30, bottomMargin=70)
+        story = []
 
-        # Ajouter les colonnes pour les 6 tentatives (A1, R(), A1, A2, R(), A2, etc.)
-        for i in range(1, 7):
-            headers.extend([f'A{i}', f'R()', f'A{i}'])
+        # Title
+        story.append(Paragraph("START LIST", self.title_style))
 
-        headers.extend(['A6', 'R()', 'A6', 'Result', 'Score', 'Rank'])
+        # Event details
+        genders = game['gender'].split(',') if ',' in game['gender'] else [game['gender']]
+        gender_text = ' & '.join(genders)
+        event_title = f"{gender_text} {game['event']} {game['classes']}"
+        story.append(Paragraph(event_title, self.subtitle_style))
 
-        # Calculer les largeurs de colonnes pour le format paysage
-        page_width = landscape(A4)[0] - 60  # Marges
+        story.append(Paragraph("Tunis Grand Prix 2025", self.info_style))
+        story.append(Spacer(1, 20))
 
-        # Largeurs optimisées pour paysage
-        col_widths = [
-            25,  # O
-            35,  # SDMS
-            60,  # Last Name
-            60,  # First Name
-            35,  # NPC
-            45,  # Gender
-            35,  # Class
-            45,  # Weight
+        # Event information
+        info_data = [
+            ['Event:', game['event'], 'Day:', f"Day {game['day']}"],
+            ['Gender:', gender_text, 'Time:', str(game['time'])],
+            ['Classes:', game['classes'], 'Phase:', game.get('phase', 'Final')],
+            ['Expected Athletes:', str(game['nb_athletes']), 'Registered:', str(len(startlist))]
         ]
 
-        # 6 tentatives × 3 colonnes = 18 colonnes
-        attempt_width = 25
-        for i in range(18):
-            col_widths.append(attempt_width)
+        info_table = Table(info_data, colWidths=[80, 120, 60, 120])
+        info_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('ALIGN', (0, 0), (0, -1), 'RIGHT'),
+            ('ALIGN', (2, 0), (2, -1), 'RIGHT'),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('TEXTCOLOR', (0, 0), (0, -1), colors.HexColor('#4a5568')),
+            ('TEXTCOLOR', (2, 0), (2, -1), colors.HexColor('#4a5568')),
+        ]))
+        story.append(info_table)
+        story.append(Spacer(1, 25))
 
-        # Colonnes finales
-        col_widths.extend([50, 40, 35])  # Result, Score, Rank
+        # Start list table
+        if game['event'] in Config.get_track_events():
+            table = self._create_track_startlist_table(game, startlist)
+        elif game['event'] in Config.get_field_events():
+            table = self._create_field_startlist_table(game, startlist)
+        else:
+            table = self._create_generic_startlist_table(game, startlist)
 
-        data = []
-        for i, result in enumerate(results):
-            row = [
-                str(i + 1),  # O (Order)
-                str(result['athlete_sdms']),
-                result['lastname'],
-                result['firstname'],
-                result['country'],
-                result['athlete_gender'],
-                result['athlete_class'],
-                self._format_weight(result.get('weight')) if result.get('weight') else '-'
-            ]
+        story.append(table)
 
-            # Traiter les tentatives
-            attempts = result.get('attempts', [])
-            for attempt_num in range(1, 7):
-                attempt = next((a for a in attempts if a['attempt_number'] == attempt_num), None)
-                if attempt and attempt.get('value'):
-                    value = attempt['value']
-                    if value.upper() in ['X', 'F']:
-                        row.extend([value, '/', value])
-                    else:
-                        try:
-                            formatted_value = f"{float(value):.2f}"
-                            row.extend([formatted_value, '/', formatted_value])
-                        except (ValueError, TypeError):
-                            row.extend([value, '/', value])
-                else:
-                    row.extend(['', '', ''])
+        doc.build(story, onFirstPage=self.create_header, onLaterPages=self.create_header)
+        buffer.seek(0)
+        return buffer
 
-            # Résultat final, score et rang
-            final_result = self._format_performance(result['value'], game['event'])
-            score = str(result.get('raza_score', '')) if game.get('wpa_points') else ''
-            rank = str(result.get('rank', ''))
+    def _create_track_results_table(self, game, results):
+        headers = ['Rank', 'Lane', 'SDMS', 'Name', 'NPC', 'Class', 'Result']
 
-            row.extend([final_result, score, rank])
-            data.append(row)
+        if game.get('wpa_points'):
+            headers.append('Points')
 
-        # Créer le tableau
-        table = Table([headers] + data, colWidths=col_widths, repeatRows=1)
-        table.setStyle(self._get_throw_table_style(len(headers), len(data)))
-        return table
+        if game['event'] in Config.get_wind_affected_field_events():
+            headers.append('Wind')
 
-    def _create_track_event_table(self, game, results):
-        """Créer tableau pour épreuves de piste"""
-        headers = ['L', 'SDMS', 'Last Name', 'First Name', 'NPC', 'Gender', 'Class', 'Electronic']
-
-        if game.get('wpa_points') and len(game['classes'].split(',')) > 1:
-            headers.append('Score')
-
-        headers.append('Rank')
-
-        # Largeurs pour format paysage
-        col_widths = [30, 40, 80, 80, 50, 60, 50, 80]
+        col_widths = [40, 40, 50, 120, 40, 50, 80]
         if game.get('wpa_points'):
             col_widths.append(50)
-        col_widths.append(50)
+        if game['event'] in Config.get_wind_affected_field_events():
+            col_widths.append(50)
 
         data = []
         for i, result in enumerate(results):
             row = [
+                result.get('rank', str(i + 1)),
                 str(i + 1),
                 str(result['athlete_sdms']),
-                result['lastname'],
-                result['firstname'],
-                result['country'],
-                result['athlete_gender'],
+                f"{result['firstname']} {result['lastname']}",
+                result['npc'],
                 result['athlete_class'],
                 self._format_performance(result['value'], game['event'])
             ]
 
-            if game.get('wpa_points') and len(game['classes'].split(',')) > 1:
+            if game.get('wpa_points'):
                 row.append(str(result.get('raza_score', '')))
 
-            row.append(str(result.get('rank', '')))
+            if game['event'] in Config.get_wind_affected_field_events():
+                wind = result.get('wind_velocity') or game.get('wind_velocity')
+                row.append(f"{wind:+.1f}" if wind is not None else '')
+
             data.append(row)
 
         table = Table([headers] + data, colWidths=col_widths, repeatRows=1)
-        table.setStyle(self._get_official_table_style(len(headers), len(data)))
+        table.setStyle(self._get_results_table_style(len(headers), len(data)))
         return table
 
-    def _create_jump_table(self, game, results):
-        """Créer tableau pour sauts avec vent"""
-        headers = ['O', 'SDMS', 'Last Name', 'First Name', 'NPC', 'Gender', 'Class']
+    def _create_field_results_table(self, game, results):
+        headers = ['Rank', 'SDMS', 'Name', 'NPC', 'Class']
 
-        # 6 tentatives
-        for i in range(1, 7):
+        # Add attempt columns
+        max_attempts = 6 if game['event'] != 'High Jump' else 0
+        for i in range(1, max_attempts + 1):
             headers.append(f'A{i}')
 
-        headers.extend(['Result', 'Score', 'Rank'])
+        headers.extend(['Result', 'Points'] if game.get('wpa_points') else ['Result'])
 
-        # Largeurs optimisées
-        col_widths = [25, 35, 60, 60, 35, 45, 35] + [40] * 6 + [50, 40, 35]
+        base_widths = [40, 50, 100, 40, 50]
+        attempt_widths = [35] * max_attempts
+        final_widths = [60, 50] if game.get('wpa_points') else [60]
+        col_widths = base_widths + attempt_widths + final_widths
 
         data = []
         for i, result in enumerate(results):
-            # Ligne principale
-            row1 = [
-                str(i + 1),
+            row = [
+                result.get('rank', str(i + 1)),
                 str(result['athlete_sdms']),
-                result['lastname'],
-                result['firstname'],
-                result['country'],
-                result['athlete_gender'],
+                f"{result['firstname']} {result['lastname']}",
+                result['npc'],
                 result['athlete_class']
             ]
 
-            # Ligne pour les vents
-            row2 = ['', '', '', '', '', '', '']
-
+            # Add attempts
             attempts = result.get('attempts', [])
-            has_wind = False
-
-            for attempt_num in range(1, 7):
+            for attempt_num in range(1, max_attempts + 1):
                 attempt = next((a for a in attempts if a['attempt_number'] == attempt_num), None)
                 if attempt and attempt.get('value'):
-                    value = attempt['value']
-                    wind = attempt.get('wind_velocity')
-
-                    row1.append(value)
-
-                    if wind is not None:
-                        row2.append(f"{wind:+.1f}")
-                        has_wind = True
-                    else:
-                        row2.append('')
+                    row.append(self._format_attempt_value(attempt['value']))
                 else:
-                    row1.append('')
-                    row2.append('')
+                    row.append('')
 
-            # Résultat final
-            row1.extend([
-                self._format_performance(result['value'], game['event']),
-                str(result.get('raza_score', '')) if game.get('wpa_points') else '',
-                str(result.get('rank', ''))
-            ])
-            row2.extend(['', '', ''])
+            row.append(self._format_performance(result['value'], game['event']))
 
-            data.append(row1)
-            if has_wind:
-                data.append(row2)
+            if game.get('wpa_points'):
+                row.append(str(result.get('raza_score', '')))
+
+            data.append(row)
 
         table = Table([headers] + data, colWidths=col_widths, repeatRows=1)
-        table.setStyle(self._get_jump_table_style(len(headers), len(data)))
+        table.setStyle(self._get_results_table_style(len(headers), len(data)))
         return table
 
     def _create_high_jump_table(self, game, results):
-        """Créer tableau pour saut en hauteur"""
-        # Collecter toutes les hauteurs
+        # Collect all heights
         all_heights = set()
         for result in results:
             if result.get('attempts'):
@@ -322,30 +285,27 @@ class PDFGenerator:
 
         sorted_heights = sorted(all_heights)
 
-        headers = ['O', 'SDMS', 'Last Name', 'First Name', 'NPC', 'Gender', 'Class']
+        headers = ['Rank', 'SDMS', 'Name', 'NPC', 'Class']
         for height in sorted_heights:
-            headers.append(f"{height:.2f}")
-        headers.extend(['Result', 'Rank'])
+            headers.append(f"{height:.2f}m")
+        headers.append('Result')
 
-        # Largeurs adaptées
-        base_widths = [25, 35, 60, 60, 35, 45, 35]
+        base_widths = [40, 50, 100, 40, 50]
         height_widths = [40] * len(sorted_heights)
-        final_widths = [50, 35]
+        final_widths = [60]
         col_widths = base_widths + height_widths + final_widths
 
         data = []
         for i, result in enumerate(results):
             row = [
-                str(i + 1),
+                result.get('rank', str(i + 1)),
                 str(result['athlete_sdms']),
-                result['lastname'],
-                result['firstname'],
-                result['country'],
-                result['athlete_gender'],
+                f"{result['firstname']} {result['lastname']}",
+                result['npc'],
                 result['athlete_class']
             ]
 
-            # Traiter les hauteurs
+            # Process heights
             attempts_by_height = {}
             if result.get('attempts'):
                 for attempt in result['attempts']:
@@ -362,98 +322,160 @@ class PDFGenerator:
                 else:
                     row.append('-')
 
-            row.extend([
-                self._format_performance(result['value'], game['event']),
-                str(result.get('rank', ''))
-            ])
-
+            row.append(self._format_performance(result['value'], game['event']))
             data.append(row)
 
         table = Table([headers] + data, colWidths=col_widths, repeatRows=1)
-        table.setStyle(self._get_official_table_style(len(headers), len(data)))
+        table.setStyle(self._get_results_table_style(len(headers), len(data)))
         return table
 
-    def _create_generic_field_table(self, game, results):
-        """Tableau générique pour autres épreuves"""
-        return self._create_throw_table(game, results)
+    def _create_track_startlist_table(self, game, startlist):
+        headers = ['Lane', 'SDMS', 'Name', 'NPC', 'Class', 'Guide', 'Result']
+        col_widths = [40, 50, 120, 40, 50, 60, 80]
+
+        data = []
+        for i, entry in enumerate(startlist):
+            row = [
+                str(entry.get('lane_order', i + 1)),
+                str(entry['athlete_sdms']),
+                f"{entry['firstname']} {entry['lastname']}",
+                entry['npc'],
+                entry['class'],
+                str(entry['guide_sdms']) if entry.get('guide_sdms') else '',
+                ''  # Empty result column
+            ]
+            data.append(row)
+
+        table = Table([headers] + data, colWidths=col_widths, repeatRows=1)
+        table.setStyle(self._get_startlist_table_style(len(headers), len(data)))
+        return table
+
+    def _create_field_startlist_table(self, game, startlist):
+        headers = ['Order', 'SDMS', 'Name', 'NPC', 'Class', 'Guide']
+
+        # Add attempt columns
+        max_attempts = 6 if game['event'] != 'High Jump' else 8
+        for i in range(1, max_attempts + 1):
+            headers.append(f'A{i}')
+
+        headers.append('Result')
+
+        base_widths = [40, 50, 100, 40, 50, 60]
+        attempt_widths = [30] * max_attempts
+        final_widths = [60]
+        col_widths = base_widths + attempt_widths + final_widths
+
+        data = []
+        for i, entry in enumerate(startlist):
+            row = [
+                str(entry.get('final_order', i + 1)),
+                str(entry['athlete_sdms']),
+                f"{entry['firstname']} {entry['lastname']}",
+                entry['npc'],
+                entry['class'],
+                str(entry['guide_sdms']) if entry.get('guide_sdms') else ''
+            ]
+
+            # Add empty attempt columns
+            for _ in range(max_attempts):
+                row.append('')
+
+            row.append('')  # Empty result column
+            data.append(row)
+
+        table = Table([headers] + data, colWidths=col_widths, repeatRows=1)
+        table.setStyle(self._get_startlist_table_style(len(headers), len(data)))
+        return table
+
+    def _create_generic_table(self, game, results):
+        return self._create_track_results_table(game, results)
+
+    def _create_generic_startlist_table(self, game, startlist):
+        return self._create_track_startlist_table(game, startlist)
 
     def _format_performance(self, value, event):
-        """Formater la performance"""
         if value in Config.get_result_special_values():
             return value
 
         if event in Config.get_field_events():
             try:
-                return f"{float(value):.2f}"
+                return f"{float(value):.2f}m"
             except (ValueError, TypeError):
                 return str(value)
 
         return str(value)
 
-    def _format_weight(self, weight):
-        """Formater le poids"""
-        if weight:
-            try:
-                return f"{float(weight):.3f}kg"
-            except (ValueError, TypeError):
-                return str(weight)
-        return '-'
+    def _format_attempt_value(self, value):
+        if value in ['X', 'O', '-']:
+            return value
+        try:
+            return f"{float(value):.2f}"
+        except (ValueError, TypeError):
+            return str(value)
 
-    def _get_official_table_style(self, num_cols, num_rows):
-        """Style de tableau officiel"""
+    def _get_results_table_style(self, num_cols, num_rows):
         style = [
-            # En-tête
-            ('BACKGROUND', (0, 0), (-1, 0), colors.white),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.black),
+            # Header
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#4a5568')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-            ('FONTSIZE', (0, 0), (-1, 0), 8),
+            ('FONTSIZE', (0, 0), (-1, 0), 9),
             ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
 
-            # Corps
+            # Body
             ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 1), (-1, -1), 7),
+            ('FONTSIZE', (0, 1), (-1, -1), 8),
             ('ALIGN', (0, 1), (-1, -1), 'CENTER'),
+            ('ALIGN', (3, 1), (3, -1), 'LEFT'),  # Name column left aligned
 
-            # Bordures
+            # Borders
             ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
             ('LINEBELOW', (0, 0), (-1, 0), 1, colors.black),
 
-            # Padding réduit
-            ('LEFTPADDING', (0, 0), (-1, -1), 2),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 2),
-            ('TOPPADDING', (0, 0), (-1, -1), 1),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 1),
+            # Padding
+            ('LEFTPADDING', (0, 0), (-1, -1), 3),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 3),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
         ]
 
-        # Podiums
+        # Podium colors
         if num_rows > 1:
-            style.append(('BACKGROUND', (0, 1), (-1, 1), colors.HexColor('#FFD700')))  # Or
+            style.append(('BACKGROUND', (0, 1), (-1, 1), colors.HexColor('#ffd700')))  # Gold
         if num_rows > 2:
-            style.append(('BACKGROUND', (0, 2), (-1, 2), colors.HexColor('#C0C0C0')))  # Argent
+            style.append(('BACKGROUND', (0, 2), (-1, 2), colors.HexColor('#c0c0c0')))  # Silver
         if num_rows > 3:
-            style.append(('BACKGROUND', (0, 3), (-1, 3), colors.HexColor('#CD7F32')))  # Bronze
+            style.append(('BACKGROUND', (0, 3), (-1, 3), colors.HexColor('#cd7f32')))  # Bronze
 
         return TableStyle(style)
 
-    def _get_throw_table_style(self, num_cols, num_rows):
-        """Style spécial pour les lancers"""
-        style = self._get_official_table_style(num_cols, num_rows)
+    def _get_startlist_table_style(self, num_cols, num_rows):
+        style = [
+            # Header
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2d3748')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 9),
+            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
 
-        # Colonnes R() en gris clair
-        for col in range(8, num_cols - 3, 3):  # Colonnes R()
-            style.add('BACKGROUND', (col, 0), (col, -1), colors.HexColor('#F0F0F0'))
-            style.add('FONTSIZE', (col, 0), (col, -1), 6)
+            # Body
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 8),
+            ('ALIGN', (0, 1), (-1, -1), 'CENTER'),
+            ('ALIGN', (2, 1), (2, -1), 'LEFT'),  # Name column left aligned
 
-        return style
+            # Borders
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+            ('LINEBELOW', (0, 0), (-1, 0), 1, colors.black),
 
-    def _get_jump_table_style(self, num_cols, num_rows):
-        """Style pour les sauts avec lignes de vent"""
-        style = self._get_official_table_style(num_cols, num_rows)
+            # Alternating rows
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f7fafc')]),
 
-        # Lignes de vent (plus petites, italiques)
-        for i in range(2, num_rows + 1, 2):
-            style.add('FONTSIZE', (0, i), (-1, i), 6)
-            style.add('FONTSTYLE', (0, i), (-1, i), 'Italic')
-            style.add('TEXTCOLOR', (0, i), (-1, i), colors.grey)
+            # Padding
+            ('LEFTPADDING', (0, 0), (-1, -1), 3),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 3),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ]
 
-        return style
+        return TableStyle(style)

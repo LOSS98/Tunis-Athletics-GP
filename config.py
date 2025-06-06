@@ -125,14 +125,6 @@ class Config:
             return ['Long Jump', 'Triple Jump', '100m', '200m']
 
     @staticmethod
-    def get_weight_field_events():
-        try:
-            from database.config_manager import ConfigManager
-            return ConfigManager.get_config_tags('weight_field_events')
-        except (ImportError, Exception):
-            return ['Shot Put', 'Discus Throw', 'Javelin Throw', 'Hammer Throw', 'Club Throw', 'Weight Throw']
-
-    @staticmethod
     def get_guide_classes():
         try:
             from database.config_manager import ConfigManager
@@ -153,12 +145,12 @@ class Config:
                 return 1
 
     @staticmethod
-    def get_countries_count():
+    def get_npcs_count():
         try:
             from database.config_manager import ConfigManager
-            return ConfigManager.get_config('countries_count', 61)
+            return ConfigManager.get_config('npcs_count', 61)
         except (ImportError, Exception):
-            return int(os.getenv('COUNTRIES_COUNT', 61))
+            return int(os.getenv('NPCS_COUNT', 61))
 
     @staticmethod
     def get_athletes_count():
@@ -193,10 +185,10 @@ class Config:
             return int(os.getenv('OFFICIALS_COUNT', 80))
 
     @staticmethod
-    def get_countries():
+    def get_npcs():
         try:
             from database.config_manager import ConfigManager
-            return ConfigManager.get_countries()
+            return ConfigManager.get_npcs()
         except (ImportError, Exception):
             return []
 
@@ -258,6 +250,14 @@ class Config:
     def get_genders():
         return ['Male', 'Female']
 
+    @staticmethod
+    def get_weight_field_events():
+        try:
+            from database.config_manager import ConfigManager
+            return ConfigManager.get_config_tags('weight_field_events')
+        except (ImportError, Exception):
+            return ['Shot Put', 'Discus Throw', 'Javelin Throw', 'Hammer Throw', 'Club Throw', 'Weight Throw']
+
     @property
     def CLASSES(self):
         return self.get_classes()
@@ -295,8 +295,8 @@ class Config:
         return self.get_current_day()
 
     @property
-    def COUNTRIES_COUNT(self):
-        return self.get_countries_count()
+    def NPCS_COUNT(self):
+        return self.get_npcs_count()
 
     @property
     def ATHLETES_COUNT(self):

@@ -30,7 +30,7 @@ def create_app():
 
     @login_manager.user_loader
     def load_user(user_id):
-        from database.models import User
+        from database.models.user import User
         return User.get(user_id)
 
     app.register_blueprint(admin_bp, url_prefix='/admin')
@@ -84,8 +84,8 @@ def create_app():
                 return Config.get_current_day()
 
             @property
-            def COUNTRIES_COUNT(self):
-                return Config.get_countries_count()
+            def NPCS_COUNT(self):
+                return Config.get_npcs_count()
 
             @property
             def ATHLETES_COUNT(self):

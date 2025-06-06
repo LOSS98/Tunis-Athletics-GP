@@ -312,7 +312,7 @@
                 <div>
                     <label class="block text-gray-700 text-sm font-bold mb-2">Athlete *</label>
                     <div class="relative">
-                        <input type="text" id="athleteSearch" placeholder="Search by SDMS, name, country..."
+                        <input type="text" id="athleteSearch" placeholder="Search by SDMS, name, npc..."
                                class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500"
                                autocomplete="off">
                         <div id="athleteResults" class="absolute z-10 w-full bg-white border rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto"></div>
@@ -451,7 +451,7 @@
             <div class="border rounded p-2 text-sm cursor-pointer hover:bg-gray-50 transition-colors"
                  onclick="selectFromStartList('{{ entry.athlete_sdms }}', '{{ entry.firstname|e }} {{ entry.lastname|e }}', '{{ entry.gender }}', '{{ entry.class }}', '{{ entry.guide_sdms or '' }}')">
                 <span class="font-semibold">{{ entry.athlete_sdms }}</span> -
-                {{ entry.firstname }} {{ entry.lastname }} ({{ entry.country }})
+                {{ entry.firstname }} {{ entry.lastname }} ({{ entry.npc }})
                 <span class="text-xs bg-blue-100 text-blue-800 px-1 rounded">{{ entry.class }}</span>
                 {% if entry.guide_sdms %}
                     <div class="text-xs text-gray-500">Guide: {{ entry.guide_sdms }}</div>
@@ -569,11 +569,11 @@
 
                     <td class="px-4 py-4">
                         <div class="flex items-center">
-                            <img src="{{ url_for('static', filename='images/flags/' + result.country + '.svg') }}"
-                                 alt="{{ result.country }}"
+                            <img src="{{ url_for('static', filename='images/flags/' + result.npc + '.svg') }}"
+                                 alt="{{ result.npc }}"
                                  class="inline w-6 h-4 mr-1"
                                  onerror="this.style.display='none'">
-                            {{ result.country }}
+                            {{ result.npc }}
                         </div>
                     </td>
 

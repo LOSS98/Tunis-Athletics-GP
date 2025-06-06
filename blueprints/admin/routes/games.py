@@ -6,7 +6,8 @@ from config import Config
 from utils.pdf_generator import PDFGenerator
 from ..auth import admin_required, loc_required
 from ..forms import GameForm
-from database.models import Game, Result, Attempt
+from database.models import Game, Result, Attempt, StartList
+
 from utils.helpers import save_uploaded_file
 
 def register_routes(bp):
@@ -276,3 +277,31 @@ def register_routes(bp):
             print(f"Error generating PDF: {e}")
             flash(f'Error generating PDF: {str(e)}', 'danger')
             return redirect(url_for('admin.game_results', id=game_id))
+
+    @bp.route('/games/<int:game_id>/generate-startlist-pdf')
+    @admin_required
+    def generate_startlist_pdf(game_id):
+        try:
+            game = Game.get_by_id(game_id)
+            if not game:
+                flash('Game not found', 'danger')
+                return redirect(url_for('admin.games_list'))
+
+            startlist = StartList.get_by_game(game_id)
+
+            generator = PDFGenerator()
+            pdf_buffer = generator.generate_startlist_pdf(game, startlist)
+
+            filename = f"startlist_{game['event']}_{game['gender']}_{game['day']}.pdf"
+
+            return send_file(
+                pdf_buffer,
+                as_attachment=False,
+                download_name=filename,
+                mimetype='application/pdf'
+            )
+
+        except Exception as e:
+            print(f"Error generating startlist PDF: {e}")
+            flash(f'Error generating PDF: {str(e)}', 'danger')
+            return redirect(url_for('admin.game_startlist', id=game_id))

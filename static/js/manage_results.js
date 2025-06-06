@@ -73,7 +73,7 @@ function initializeAthleteSearch() {
                             div.innerHTML = `
                                 <div class="flex justify-between items-center">
                                     <div>
-                                        <strong>${athlete.sdms}</strong> - ${athlete.name} (${athlete.country})
+                                        <strong>${athlete.sdms}</strong> - ${athlete.name} (${athlete.npc})
                                     </div>
                                     <div class="text-right">
                                         <span class="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">${athlete.class}</span>
@@ -122,7 +122,7 @@ function initializeGuideSearch() {
                         athletes.forEach(athlete => {
                             const div = document.createElement('div');
                             div.className = 'p-2 hover:bg-gray-100 cursor-pointer border-b';
-                            div.innerHTML = `<strong>${athlete.sdms}</strong> - ${athlete.name} (${athlete.country})`;
+                            div.innerHTML = `<strong>${athlete.sdms}</strong> - ${athlete.name} (${athlete.npc})`;
                             div.onclick = () => selectGuide(athlete);
                             guideResults.appendChild(div);
                         });

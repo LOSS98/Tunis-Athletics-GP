@@ -67,7 +67,7 @@ jobs:
           
           CURRENT_DAY=${{ secrets.CURRENT_DAY }}
           
-          COUNTRIES_COUNT=${{ secrets.COUNTRIES_COUNT }}
+          NPCS_COUNT=${{ secrets.NPCS_COUNT }}
           ATHLETES_COUNT=${{ secrets.ATHLETES_COUNT }}
           VOLUNTEERS_COUNT=${{ secrets.VOLUNTEERS_COUNT }}
           LOC_COUNT=${{ secrets.LOC_COUNT }}

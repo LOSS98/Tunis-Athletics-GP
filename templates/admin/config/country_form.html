@@ -7,7 +7,7 @@
     <div class="mb-6">
         <div class="flex items-center justify-between">
             <h2 class="text-2xl font-bold">{{ title }}</h2>
-            <a href="{{ url_for('admin.config_countries') }}" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+            <a href="{{ url_for('admin.config_npcs') }}" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
                 <i class="fas fa-arrow-left mr-2"></i>Back to NPCs
             </a>
         </div>
@@ -86,11 +86,11 @@
         </div>
 
         <div class="mt-8 flex justify-end space-x-4">
-            <a href="{{ url_for('admin.config_countries') }}" class="bg-gray-500 text-white px-6 py-2 rounded hover:bg-gray-600">
+            <a href="{{ url_for('admin.config_npcs') }}" class="bg-gray-500 text-white px-6 py-2 rounded hover:bg-gray-600">
                 Cancel
             </a>
             <button type="submit" class="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600">
-                <i class="fas fa-save mr-2"></i>{{ 'Update' if country else 'Create' }} NPC
+                <i class="fas fa-save mr-2"></i>{{ 'Update' if npc else 'Create' }} NPC
             </button>
         </div>
     </form>
@@ -103,7 +103,7 @@
         </h4>
         <div class="text-sm text-yellow-800 space-y-2">
             <p><strong>1. Flag File:</strong> Upload the flag as an SVG file to <code>/static/images/flags/</code></p>
-            <p><strong>2. Naming:</strong> Name the file with the country code (e.g., <code>TUN.svg</code>, <code>FRA.svg</code>)</p>
+            <p><strong>2. Naming:</strong> Name the file with the npc code (e.g., <code>TUN.svg</code>, <code>FRA.svg</code>)</p>
             <p><strong>3. Format:</strong> Use SVG format for scalability (recommended size: 64x40 pixels)</p>
             <p><strong>4. Enable:</strong> Check "Flag Available" only after uploading the actual file</p>
             <p><strong>5. Test:</strong> Verify the flag displays correctly in the athletes and results pages</p>
@@ -145,7 +145,7 @@ document.addEventListener('DOMContentLoaded', function() {
         updateFlagPreview();
     });
 
-    // Auto-uppercase country code
+    // Auto-uppercase npc code
     codeInput.addEventListener('blur', function() {
         this.value = this.value.toUpperCase();
     });

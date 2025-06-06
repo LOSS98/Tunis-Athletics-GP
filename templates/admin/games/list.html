@@ -26,7 +26,7 @@
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alerts</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gender</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Genders</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Classes</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phase</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Day</th>
@@ -51,8 +51,27 @@
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm">{{ game.id }}</td>
                     <td class="px-6 py-4 whitespace-nowrap">{{ game.event }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap">{{ game.gender }}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm">{{ game.classes }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% set genders = game.gender.split(',') %}
+                        <div class="flex flex-wrap gap-1">
+                            {% for gender in genders %}
+                            <span class="px-2 py-1 text-xs {% if gender.strip() == 'Male' %}bg-blue-100 text-blue-800{% else %}bg-pink-100 text-pink-800{% endif %} rounded">
+                                {{ gender.strip() }}
+                            </span>
+                            {% endfor %}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        {% set classes = game.classes.split(',') %}
+                        <div class="flex flex-wrap gap-1">
+                            {% for class in classes[:3] %}
+                            <span class="px-1 py-1 text-xs bg-gray-100 text-gray-800 rounded">{{ class.strip() }}</span>
+                            {% endfor %}
+                            {% if classes|length > 3 %}
+                            <span class="px-1 py-1 text-xs bg-gray-200 text-gray-600 rounded">+{{ classes|length - 3 }}</span>
+                            {% endif %}
+                        </div>
+                    </td>
                     <td class="px-6 py-4 whitespace-nowrap">{{ game.phase or '-' }}</td>
                     <td class="px-6 py-4 whitespace-nowrap">Day {{ game.day }}</td>
                     <td class="px-6 py-4 whitespace-nowrap">{{ game.time }}</td>
@@ -105,6 +124,7 @@
                         </a>
                         <form method="POST" action="{{ url_for('admin.game_delete', id=game.id) }}" class="inline"
                               onsubmit="return confirm('Are you sure you want to delete this game?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                             <button type="submit" class="text-red-600 hover:text-red-900" title="Delete">
                                 <i class="fas fa-trash"></i>
                             </button>

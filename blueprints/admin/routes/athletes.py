@@ -1,3 +1,4 @@
+# blueprints/admin/routes/athletes.py
 from flask import render_template, redirect, url_for, flash, request, jsonify
 from ..auth import admin_required
 from ..forms import AthleteForm
@@ -30,11 +31,11 @@ def register_routes(bp):
             athletes = []
 
         return jsonify([{
-            'id': a['id'],
             'sdms': a['sdms'],
             'name': f"{a['firstname']} {a['lastname']}",
-            'country': a['country'],
-            'class': a['class'],
+            'npc': a['npc'],
+            'classes': a.get('classes_list', []),
+            'class': a['class'],  # Pour compatibilité
             'gender': a['gender']
         } for a in athletes])
 
@@ -47,9 +48,11 @@ def register_routes(bp):
                 'sdms': form.sdms.data,
                 'firstname': form.firstname.data,
                 'lastname': form.lastname.data,
-                'country': form.country.data.upper(),
+                'npc': form.npc.data.upper(),
                 'gender': form.gender.data,
-                'class': form.athlete_class.data,
+                'class': form.athlete_classes.data,  # Stocké comme chaîne séparée par des virgules
+                'date_of_birth': form.date_of_birth.data,
+                'region_code': form.region_code.data if form.region_code.data else None,
                 'is_guide': form.is_guide.data
             }
 
@@ -67,10 +70,10 @@ def register_routes(bp):
 
         return render_template('admin/athletes/create.html', form=form)
 
-    @bp.route('/athletes/<int:id>/edit', methods=['GET', 'POST'])
+    @bp.route('/athletes/<int:sdms>/edit', methods=['GET', 'POST'])
     @admin_required
-    def athlete_edit(id):
-        athlete = Athlete.get_by_id(id)
+    def athlete_edit(sdms):
+        athlete = Athlete.get_by_sdms(sdms)
         if not athlete:
             flash('Athlete not found', 'danger')
             return redirect(url_for('admin.athletes_list'))
@@ -79,12 +82,13 @@ def register_routes(bp):
 
         if form.validate_on_submit():
             data = {
-                'sdms': form.sdms.data,
                 'firstname': form.firstname.data,
                 'lastname': form.lastname.data,
-                'country': form.country.data.upper(),
+                'npc': form.npc.data.upper(),
                 'gender': form.gender.data,
-                'class': form.athlete_class.data,
+                'class': form.athlete_classes.data,
+                'date_of_birth': form.date_of_birth.data,
+                'region_code': form.region_code.data if form.region_code.data else None,
                 'is_guide': form.is_guide.data
             }
 
@@ -96,7 +100,7 @@ def register_routes(bp):
                         os.remove(os.path.join('static/images/athletes', athlete['photo']))
 
             try:
-                Athlete.update(id, **data)
+                Athlete.update(sdms, **data)
                 flash('Athlete updated successfully', 'success')
                 return redirect(url_for('admin.athletes_list'))
             except Exception as e:
@@ -106,24 +110,26 @@ def register_routes(bp):
             form.sdms.data = athlete['sdms']
             form.firstname.data = athlete['firstname']
             form.lastname.data = athlete['lastname']
-            form.country.data = athlete['country']
+            form.npc.data = athlete['npc']
             form.gender.data = athlete['gender']
-            form.athlete_class.data = athlete['class']
+            form.athlete_classes.data = athlete['class']
+            form.date_of_birth.data = athlete['date_of_birth']
+            form.region_code.data = athlete['region_code']
             form.is_guide.data = athlete['is_guide']
 
         return render_template('admin/athletes/edit.html', form=form, athlete=athlete)
 
-    @bp.route('/athletes/<int:id>/delete', methods=['POST'])
+    @bp.route('/athletes/<int:sdms>/delete', methods=['POST'])
     @admin_required
-    def athlete_delete(id):
+    def athlete_delete(sdms):
         try:
-            athlete = Athlete.get_by_id(id)
+            athlete = Athlete.get_by_sdms(sdms)
             if athlete and athlete['photo']:
                 photo_path = os.path.join('static/images/athletes', athlete['photo'])
                 if os.path.exists(photo_path):
                     os.remove(photo_path)
 
-            Athlete.delete(id)
+            Athlete.delete(sdms)
             flash('Athlete deleted successfully', 'success')
         except Exception as e:
             flash(f'Error deleting athlete: {str(e)}', 'danger')

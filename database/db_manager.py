@@ -96,6 +96,8 @@ def execute_one(query, params=None):
         raise
 
 
+# database/db_manager.py - Mise à jour de la fonction init_db()
+
 def init_db():
     queries = [
         """CREATE TABLE IF NOT EXISTS users (
@@ -106,13 +108,21 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )""",
 
-        """CREATE TABLE IF NOT EXISTS countries (
-            id SERIAL PRIMARY KEY,
-            code VARCHAR(3) UNIQUE NOT NULL,
+        """CREATE TABLE IF NOT EXISTS regions (
+            code VARCHAR(10) PRIMARY KEY,
             name VARCHAR(100) NOT NULL,
             continent VARCHAR(50) NOT NULL,
-            flag_available BOOLEAN DEFAULT FALSE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )""",
+
+        """CREATE TABLE IF NOT EXISTS npcs (
+            code VARCHAR(3) PRIMARY KEY,
+            name VARCHAR(100) NOT NULL,
+            continent VARCHAR(50) NOT NULL,
+            region_code VARCHAR(10),
+            flag_available BOOLEAN DEFAULT FALSE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (region_code) REFERENCES regions(code) ON DELETE SET NULL
         )""",
 
         """CREATE TABLE IF NOT EXISTS record_types (
@@ -126,22 +136,25 @@ def init_db():
         )""",
 
         """CREATE TABLE IF NOT EXISTS athletes (
-            id SERIAL PRIMARY KEY,
-            sdms INTEGER UNIQUE NOT NULL,
+            sdms INTEGER PRIMARY KEY,
             firstname VARCHAR(100) NOT NULL,
             lastname VARCHAR(100) NOT NULL,
-            country VARCHAR(3) NOT NULL,
+            npc VARCHAR(3) NOT NULL,
             gender VARCHAR(10) NOT NULL,
             class VARCHAR(10) NOT NULL,
+            date_of_birth DATE,
+            region_code VARCHAR(10),
             photo VARCHAR(255),
             is_guide BOOLEAN DEFAULT FALSE,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (npc) REFERENCES npcs(code) ON DELETE RESTRICT,
+            FOREIGN KEY (region_code) REFERENCES regions(code) ON DELETE SET NULL
         )""",
 
         """CREATE TABLE IF NOT EXISTS games (
             id SERIAL PRIMARY KEY,
             event VARCHAR(100) NOT NULL,
-            gender VARCHAR(10) NOT NULL,
+            gender TEXT NOT NULL,
             classes TEXT NOT NULL,
             phase VARCHAR(50),
             area VARCHAR(50),
@@ -176,6 +189,8 @@ def init_db():
             best_attempt VARCHAR(20),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE,
+            FOREIGN KEY (athlete_sdms) REFERENCES athletes(sdms) ON DELETE CASCADE,
+            FOREIGN KEY (guide_sdms) REFERENCES athletes(sdms) ON DELETE SET NULL,
             UNIQUE (game_id, athlete_sdms)
         )""",
 
@@ -188,6 +203,8 @@ def init_db():
             final_order INTEGER,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (game_id) REFERENCES games(id) ON DELETE CASCADE,
+            FOREIGN KEY (athlete_sdms) REFERENCES athletes(sdms) ON DELETE CASCADE,
+            FOREIGN KEY (guide_sdms) REFERENCES athletes(sdms) ON DELETE SET NULL,
             UNIQUE (game_id, athlete_sdms)
         )""",
 
@@ -203,6 +220,52 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (result_id) REFERENCES results(id) ON DELETE CASCADE,
             UNIQUE (result_id, attempt_number)
+        )""",
+
+        """CREATE TABLE IF NOT EXISTS world_records (
+            id SERIAL PRIMARY KEY,
+            sdms INTEGER,
+            event VARCHAR(100) NOT NULL,
+            athlete_class VARCHAR(10) NOT NULL,
+            performance VARCHAR(20) NOT NULL,
+            location VARCHAR(100) NOT NULL,
+            npc VARCHAR(3),
+            region_code VARCHAR(10),
+            record_date DATE NOT NULL,
+            record_type VARCHAR(10) NOT NULL,
+            approved BOOLEAN DEFAULT FALSE,
+            approved_by INTEGER,
+            approved_date TIMESTAMP,
+            made_in_competition BOOLEAN DEFAULT FALSE,
+            competition_id INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (sdms) REFERENCES athletes(sdms) ON DELETE SET NULL,
+            FOREIGN KEY (npc) REFERENCES npcs(code) ON DELETE SET NULL,
+            FOREIGN KEY (region_code) REFERENCES regions(code) ON DELETE SET NULL,
+            FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL,
+            FOREIGN KEY (competition_id) REFERENCES games(id) ON DELETE SET NULL
+        )""",
+
+        """CREATE TABLE IF NOT EXISTS personal_bests (
+            id SERIAL PRIMARY KEY,
+            sdms INTEGER NOT NULL,
+            event VARCHAR(100) NOT NULL,
+            athlete_class VARCHAR(10) NOT NULL,
+            performance VARCHAR(20) NOT NULL,
+            location VARCHAR(100) NOT NULL,
+            npc VARCHAR(3) NOT NULL,
+            record_date DATE NOT NULL,
+            approved BOOLEAN DEFAULT FALSE,
+            approved_by INTEGER,
+            approved_date TIMESTAMP,
+            made_in_competition BOOLEAN DEFAULT FALSE,
+            competition_id INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (sdms) REFERENCES athletes(sdms) ON DELETE CASCADE,
+            FOREIGN KEY (npc) REFERENCES npcs(code) ON DELETE RESTRICT,
+            FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL,
+            FOREIGN KEY (competition_id) REFERENCES games(id) ON DELETE SET NULL,
+            UNIQUE (sdms, event, athlete_class)
         )""",
 
         """CREATE TABLE IF NOT EXISTS competition_config (
@@ -251,18 +314,44 @@ def init_db():
             print("✓ Database initialization completed successfully")
 
         insert_default_config()
-        insert_default_countries()
+        insert_default_regions()
+        insert_default_npcs()
         insert_default_record_types()
 
     except Exception as e:
         print(f"✗ Critical error during database initialization: {e}")
         raise
 
+def insert_default_regions():
+    default_regions = [
+        ('AFR', 'Africa', 'Africa'),
+        ('AME', 'Americas', 'Americas'),
+        ('ASI', 'Asia', 'Asia'),
+        ('EUR', 'Europe', 'Europe'),
+        ('OCE', 'Oceania', 'Oceania'),
+    ]
+
+    for code, name, continent in default_regions:
+        try:
+            existing = execute_one(
+                "SELECT code FROM regions WHERE code = %s",
+                (code,)
+            )
+            if not existing:
+                execute_query(
+                    "INSERT INTO regions (code, name, continent) VALUES (%s, %s, %s)",
+                    (code, name, continent)
+                )
+        except Exception as e:
+            print(f"✗ Warning: Could not insert region {code}: {e}")
+
+    print("✓ Default regions inserted")
+
 
 def insert_default_config():
     default_configs = [
         ('current_day', '1', 'integer', 'Current competition day'),
-        ('countries_count', '61', 'integer', 'Number of participating countries'),
+        ('npcs_count', '61', 'integer', 'Number of participating npcs'),
         ('athletes_count', '529', 'integer', 'Number of registered athletes'),
         ('volunteers_count', '50', 'integer', 'Number of volunteers'),
         ('loc_count', '15', 'integer', 'Number of LOC members'),
@@ -402,7 +491,7 @@ def insert_default_record_types():
         ('AR', 'Area Record', 'continental', 'Africa,Asia,Europe,North America,South America,Oceania',
          'Continental area record'),
         ('CR', 'Championship Record', 'competition', None, 'Record for this specific competition'),
-        ('NR', 'National Record', 'national', None, 'National record for athlete\'s country'),
+        ('NR', 'National Record', 'national', None, 'National record for athlete\'s npc'),
         ('PB', 'Personal Best', 'personal', None, 'Athlete\'s personal best performance'),
         ('SB', 'Season Best', 'seasonal', None, 'Athlete\'s best performance this season'),
         ('ER', 'European Record', 'continental', 'Europe', 'European continental record'),
@@ -428,8 +517,8 @@ def insert_default_record_types():
             print(f"✗ Warning: Could not insert record type {abbr}: {e}")
 
 
-def insert_default_countries():
-    default_countries = [
+def insert_default_npcs():
+    default_npcs = [
         ('TUN', 'Tunisia', 'Africa', True),
         ('FRA', 'France', 'Europe', True),
         ('USA', 'United States', 'North America', True),
@@ -493,21 +582,21 @@ def insert_default_countries():
         ('NZL', 'New Zealand', 'Oceania', True),
     ]
 
-    for code, name, continent, flag_available in default_countries:
+    for code, name, continent, flag_available in default_npcs:
         try:
             existing = execute_one(
-                "SELECT id FROM countries WHERE code = %s",
+                "SELECT code FROM npcs WHERE code = %s",
                 (code,)
             )
             if not existing:
                 execute_query(
-                    "INSERT INTO countries (code, name, continent, flag_available) VALUES (%s, %s, %s, %s)",
+                    "INSERT INTO npcs (code, name, continent, flag_available) VALUES (%s, %s, %s, %s)",
                     (code, name, continent, flag_available)
                 )
         except Exception as e:
-            print(f"✗ Warning: Could not insert country {code}: {e}")
+            print(f"✗ Warning: Could not insert npc {code}: {e}")
 
-    print("✓ Default countries inserted")
+    print("✓ Default npcs inserted")
 
 
 def test_connection():
@@ -525,7 +614,7 @@ def test_connection():
 
 def check_tables():
     required_tables = [
-        'users', 'countries', 'athletes', 'games', 'results',
+        'users', 'npcs', 'athletes', 'games', 'results',
         'startlist', 'attempts', 'competition_config', 'competition_days', 'config_tags', 'record_types'
     ]
 

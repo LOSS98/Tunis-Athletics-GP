@@ -7,7 +7,7 @@ def register_routes(bp):
     def athletes():
         search = request.args.get('search', '')
         gender_filter = request.args.get('gender', '')
-        country_filter = request.args.get('country', '')
+        npc_filter = request.args.get('npc', '')
 
         if search:
             athletes = Athlete.search(search)
@@ -15,17 +15,17 @@ def register_routes(bp):
             filters = {}
             if gender_filter:
                 filters['gender'] = gender_filter
-            if country_filter:
-                filters['country'] = country_filter
+            if npc_filter:
+                filters['npc'] = npc_filter
             athletes = Athlete.get_all(**filters)
 
-        countries = list(set([a['country'] for a in Athlete.get_all()]))
-        countries.sort()
+        npcs = list(set([a['npc'] for a in Athlete.get_all()]))
+        npcs.sort()
 
         return render_template('public/athletes.html',
                             athletes=athletes,
                             search=search,
                             gender_filter=gender_filter,
-                            country_filter=country_filter,
-                            countries=countries,
+                            npc_filter=npc_filter,
+                            npcs=npcs,
                             genders=Config.get_genders())

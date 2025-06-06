@@ -49,7 +49,7 @@ async function searchAthletes(query, resultsDiv) {
                     <div class="flex justify-between items-center">
                         <div>
                             <strong>${athlete.sdms}</strong> - ${athlete.name}
-                            <span class="text-sm text-gray-600">(${athlete.country})</span>
+                            <span class="text-sm text-gray-600">(${athlete.npc})</span>
                         </div>
                         <span class="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">${athlete.class}</span>
                     </div>
@@ -77,7 +77,7 @@ function selectAthlete(athlete, resultsDiv) {
 
     if (selectedDiv) {
         selectedDiv.innerHTML = `
-            Selected: <strong>${athlete.sdms}</strong> - ${athlete.name} (${athlete.country})
+            Selected: <strong>${athlete.sdms}</strong> - ${athlete.name} (${athlete.npc})
             <span class="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">${athlete.class}</span>
         `;
     }

@@ -2,6 +2,7 @@ from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed
 from wtforms import StringField, PasswordField, IntegerField, SelectField, TimeField, TextAreaField, BooleanField, \
     FieldList, FormField, HiddenField
+from wtforms.fields.datetime import DateField
 from wtforms.fields.numeric import DecimalField, FloatField
 from wtforms.validators import DataRequired, Length, NumberRange, Optional, ValidationError
 import re
@@ -31,31 +32,10 @@ class UserForm(FlaskForm):
         ('technical_delegate', 'Technical Delegate')
     ], validators=[DataRequired()])
 
-class AthleteForm(FlaskForm):
-    sdms = IntegerField('SDMS Number', validators=[DataRequired(), NumberRange(min=1)])
-    firstname = StringField('First Name', validators=[DataRequired(), Length(max=100)])
-    lastname = StringField('Last Name', validators=[DataRequired(), Length(max=100)])
-    country = StringField('NPC Code', validators=[DataRequired(), Length(min=3, max=3)])
-    gender = SelectField('Gender', choices=[('Male', 'Male'), ('Female', 'Female')], validators=[DataRequired()])
-    athlete_class = SelectField('Class', validators=[DataRequired()])
-    photo = FileField('Photo', validators=[FileAllowed(['jpg', 'jpeg', 'png', 'gif'])])
-    is_guide = BooleanField('Is Guide')
-
-    def __init__(self, *args, **kwargs):
-        super(AthleteForm, self).__init__(*args, **kwargs)
-
-        classes = get_config_choices('classes', [
-            'T11', 'T12', 'T13', 'T20', 'T33', 'T34', 'T35', 'T36', 'T37', 'T38', 'T40', 'T41', 'T42', 'T43', 'T44',
-            'T45', 'T46', 'T47', 'T51', 'T52', 'T53', 'T54', 'T61', 'T62', 'T63', 'T64', 'F11', 'F12', 'F13', 'F20',
-            'F31', 'F32', 'F33', 'F34', 'F35', 'F36', 'F37', 'F38', 'F40', 'F41', 'F42', 'F43', 'F44', 'F45', 'F46',
-            'F51', 'F52', 'F53', 'F54', 'F55', 'F56', 'F57', 'F61', 'F62', 'F63', 'F64'
-        ])
-        self.athlete_class.choices = [(c, c) for c in classes]
-
 
 class GameForm(FlaskForm):
     event = SelectField('Event', validators=[DataRequired()])
-    gender = SelectField('Gender', choices=[('Male', 'Male'), ('Female', 'Female')], validators=[DataRequired()])
+    genders = StringField('Genders (comma separated)', validators=[DataRequired(), Length(max=50)])
     classes = StringField('Classes (comma separated)', validators=[DataRequired(), Length(max=200)])
     phase = StringField('Phase', validators=[Optional(), Length(max=50)])
     area = StringField('Area', validators=[Optional(), Length(max=50)])
@@ -79,20 +59,122 @@ class GameForm(FlaskForm):
         super(GameForm, self).__init__(*args, **kwargs)
 
         field_events = get_config_choices('field_events',
-                                          ['Javelin', 'Shot Put', 'Discus Throw', 'Club Throw', 'Long Jump',
-                                           'High Jump'])
+                                          ['Javelin Throw', 'Shot Put', 'Discus Throw', 'Club Throw', 'Long Jump',
+                                           'High Jump', 'Triple Jump'])
         track_events = get_config_choices('track_events', ['100m', '200m', '400m', '800m', '1500m', '5000m', '4x100m',
                                                            'Universal Relay'])
         all_events = field_events + track_events
         self.event.choices = [(e, e) for e in all_events]
 
+    def validate_genders(self, field):
+        """Valide que les genres sont valides"""
+        if not field.data:
+            raise ValidationError('At least one gender is required')
+
+        genders = [g.strip() for g in field.data.split(',')]
+        valid_genders = ['Male', 'Female']
+
+        invalid_genders = [g for g in genders if g not in valid_genders]
+        if invalid_genders:
+            raise ValidationError(f'Invalid genders: {", ".join(invalid_genders)}. Valid options: Male, Female')
+
     def validate_classes(self, field):
-        if field.data:
-            valid_classes = get_config_choices('classes', [])
-            classes = [c.strip() for c in field.data.split(',')]
-            for cls in classes:
-                if cls and cls not in valid_classes:
-                    raise ValidationError(f'Invalid class: {cls}')
+        """Valide que les classes sont valides"""
+        if not field.data:
+            raise ValidationError('At least one class is required')
+
+        classes = [c.strip() for c in field.data.split(',')]
+        valid_classes = get_config_choices('classes', [])
+
+        invalid_classes = [c for c in classes if c not in valid_classes]
+        if invalid_classes:
+            raise ValidationError(f'Invalid classes: {", ".join(invalid_classes)}')
+
+
+class AthleteForm(FlaskForm):
+    sdms = IntegerField('SDMS Number', validators=[DataRequired(), NumberRange(min=1)])
+    firstname = StringField('First Name', validators=[DataRequired(), Length(max=100)])
+    lastname = StringField('Last Name', validators=[DataRequired(), Length(max=100)])
+    npc = StringField('NPC Code', validators=[DataRequired(), Length(min=3, max=3)])
+    gender = SelectField('Gender', choices=[('Male', 'Male'), ('Female', 'Female')], validators=[DataRequired()])
+    athlete_classes = StringField('Classes (comma separated)', validators=[DataRequired(), Length(max=200)])
+    date_of_birth = DateField('Date of Birth', validators=[Optional()])
+    region_code = SelectField('Region', validators=[Optional()])
+    photo = FileField('Photo', validators=[FileAllowed(['jpg', 'jpeg', 'png', 'gif'])])
+    is_guide = BooleanField('Is Guide')
+
+    def __init__(self, *args, **kwargs):
+        super(AthleteForm, self).__init__(*args, **kwargs)
+
+        try:
+            from database.models.region import Region
+            regions = Region.get_all()
+            self.region_code.choices = [('', 'Select Region')] + [(r['code'], r['name']) for r in regions]
+        except:
+            self.region_code.choices = [('', 'Select Region')]
+
+    def validate_athlete_classes(self, field):
+        if not field.data:
+            raise ValidationError('At least one class is required')
+
+        classes = [c.strip() for c in field.data.split(',')]
+        valid_classes = get_config_choices('classes', [])
+
+        invalid_classes = [c for c in classes if c not in valid_classes]
+        if invalid_classes:
+            raise ValidationError(f'Invalid classes: {", ".join(invalid_classes)}')
+
+
+class WorldRecordForm(FlaskForm):
+    sdms = IntegerField('SDMS (optional)', validators=[Optional()])
+    event = SelectField('Event', validators=[DataRequired()])
+    athlete_class = SelectField('Class', validators=[DataRequired()])
+    performance = StringField('Performance', validators=[DataRequired(), Length(max=20)])
+    location = StringField('Location', validators=[DataRequired(), Length(max=100)])
+    npc = StringField('NPC Code', validators=[Optional(), Length(min=3, max=3)])
+    region_code = SelectField('Region', validators=[Optional()])
+    record_date = DateField('Record Date', validators=[DataRequired()])
+    record_type = SelectField('Record Type', choices=[('WR', 'World Record'), ('AR', 'Area Record')],
+                              validators=[DataRequired()])
+    made_in_competition = BooleanField('Made in this competition')
+
+    def __init__(self, *args, **kwargs):
+        super(WorldRecordForm, self).__init__(*args, **kwargs)
+
+        field_events = get_config_choices('field_events', [])
+        track_events = get_config_choices('track_events', [])
+        all_events = field_events + track_events
+        self.event.choices = [(e, e) for e in all_events]
+
+        classes = get_config_choices('classes', [])
+        self.athlete_class.choices = [(c, c) for c in classes]
+
+        try:
+            from database.models.region import Region
+            regions = Region.get_all()
+            self.region_code.choices = [('', 'Select Region')] + [(r['code'], r['name']) for r in regions]
+        except:
+            self.region_code.choices = [('', 'Select Region')]
+
+class PersonalBestForm(FlaskForm):
+    sdms = IntegerField('SDMS', validators=[DataRequired()])
+    event = SelectField('Event', validators=[DataRequired()])
+    athlete_class = SelectField('Class', validators=[DataRequired()])
+    performance = StringField('Performance', validators=[DataRequired(), Length(max=20)])
+    location = StringField('Location', validators=[DataRequired(), Length(max=100)])
+    record_date = DateField('Record Date', validators=[DataRequired()])
+    made_in_competition = BooleanField('Made in this competition')
+
+    def __init__(self, *args, **kwargs):
+        super(PersonalBestForm, self).__init__(*args, **kwargs)
+
+        field_events = get_config_choices('field_events', [])
+        track_events = get_config_choices('track_events', [])
+        all_events = field_events + track_events
+        self.event.choices = [(e, e) for e in all_events]
+
+        classes = get_config_choices('classes', [])
+        self.athlete_class.choices = [(c, c) for c in classes]
 class AttemptForm(FlaskForm):
     value = StringField('Value', validators=[Optional()])
 
