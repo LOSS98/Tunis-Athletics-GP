@@ -90,3 +90,11 @@ def get_pending_personal_bests_count():
         except:
             print(f"Warning: Error getting pending personal bests count: {e}")
         return 0
+
+
+def format_gender_display(gender_string):
+    """Convert Male/Female to Men's/Women's for public display"""
+    if not gender_string:
+        return gender_string
+
+    return gender_string.replace('Male', 'Men\'s').replace('Female', 'Women\'s')

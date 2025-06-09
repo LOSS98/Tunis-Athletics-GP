@@ -159,3 +159,50 @@ class Athlete:
     @staticmethod
     def delete(sdms):
         return execute_query("DELETE FROM athletes WHERE sdms = %s", (sdms,))
+
+    @staticmethod
+    def get_athlete_detail(sdms):
+        """Get detailed athlete information with personal bests and competitions"""
+        query = """
+        SELECT a.*, n.name as npc_name, n.flag_file_path,
+               r.name as region_name, r.continent
+        FROM athletes a
+        JOIN npcs n ON a.npc = n.code
+        LEFT JOIN regions r ON n.region_code = r.code
+        WHERE a.sdms = %s
+        """
+        athlete = execute_one(query, (sdms,))
+
+        if athlete:
+            # Get personal bests
+            pb_query = """
+            SELECT event, athlete_class, performance, location, record_date
+            FROM personal_bests
+            WHERE sdms = %s AND approved = TRUE
+            ORDER BY record_date DESC
+            """
+            athlete['personal_bests'] = execute_query(pb_query, (sdms,), fetch=True)
+
+            # Get competitions (games with results)
+            comp_query = """
+            SELECT DISTINCT g.id, g.event, g.genders, g.classes, g.day, g.time,
+                   g.status, g.published, r.rank, r.value, r.record
+            FROM games g
+            JOIN results r ON g.id = r.game_id
+            WHERE r.athlete_sdms = %s
+            ORDER BY g.day DESC, g.time DESC
+            """
+            athlete['competitions'] = execute_query(comp_query, (sdms,), fetch=True)
+
+            # Get start list entries (upcoming competitions)
+            upcoming_query = """
+            SELECT DISTINCT g.id, g.event, g.genders, g.classes, g.day, g.time,
+                   g.status, s.lane_order
+            FROM games g
+            JOIN startlist s ON g.id = s.game_id
+            WHERE s.athlete_sdms = %s AND g.status NOT IN ('finished', 'cancelled')
+            ORDER BY g.day ASC, g.time ASC
+            """
+            athlete['upcoming_competitions'] = execute_query(upcoming_query, (sdms,), fetch=True)
+
+        return athlete

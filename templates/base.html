@@ -22,10 +22,12 @@
                 </a>
                 <nav class="hidden md:flex space-x-6">
                     <a href="/" class="text-gray-700 hover:text-red-600 font-medium {% if request.endpoint == 'public.index' %}text-red-600{% endif %}">Home</a>
-                    <a href="/results" class="text-gray-700 hover:text-red-600 font-medium {% if request.endpoint == 'public.results' %}text-red-600{% endif %}">Results</a>
-                    <a href="/startlists" class="text-gray-700 hover:text-red-600 font-medium {% if request.endpoint == 'public.startlists' %}text-red-600{% endif %}">Start Lists</a>
+                    <a href="/schedule" class="text-gray-700 hover:text-red-600 font-medium {% if request.endpoint == 'public.schedule' or request.endpoint == 'public.schedule_day' %}text-red-600{% endif %}">Schedule</a>
+                    <a href="/results" class="text-gray-700 hover:text-red-600 font-medium {% if request.endpoint == 'public.results' or request.endpoint == 'public.game_detail' %}text-red-600{% endif %}">Results</a>
+                    <a href="/startlists" class="text-gray-700 hover:text-red-600 font-medium {% if request.endpoint == 'public.startlists' or request.endpoint == 'public.game_startlist_detail' %}text-red-600{% endif %}">Start Lists</a>
+                    <a href="/medals" class="text-gray-700 hover:text-red-600 font-medium {% if request.endpoint == 'public.medals' %}text-red-600{% endif %}">Medals</a>
+                    <a href="/athletes" class="text-gray-700 hover:text-red-600 font-medium {% if request.endpoint == 'public.athletes' or request.endpoint == 'public.athlete_detail' %}text-red-600{% endif %}">Athletes</a>
                     <a href="/records" class="text-gray-700 hover:text-red-600 font-medium {% if request.endpoint == 'public.records' %}text-red-600{% endif %}">Records</a>
-                    <a href="/athletes" class="text-gray-700 hover:text-red-600 font-medium {% if request.endpoint == 'public.athletes' %}text-red-600{% endif %}">Athletes</a>
                     <a href="/raza" class="text-gray-700 hover:text-red-600 font-medium {% if request.endpoint == 'public.raza' %}text-red-600{% endif %}">WPA Points</a>
                     <a href="/admin" class="text-gray-700 hover:text-red-600 font-medium">Admin</a>
                 </nav>
@@ -35,21 +37,43 @@
             </div>
         </div>
         <nav id="mobileMenu" class="hidden md:hidden bg-gray-100 px-4 py-2">
-            <a href="/" class="block py-2 text-gray-700 hover:text-red-600">Home</a>
-            <a href="/results" class="block py-2 text-gray-700 hover:text-red-600">Results</a>
-            <a href="/startlists" class="block py-2 text-gray-700 hover:text-red-600">Start Lists</a>
-            <a href="/records" class="block py-2 text-gray-700 hover:text-red-600">Records</a>
-            <a href="/athletes" class="block py-2 text-gray-700 hover:text-red-600">Athletes</a>
-            <a href="/raza" class="block py-2 text-gray-700 hover:text-red-600">WPA Points Calculator</a>
-            <a href="/admin" class="block py-2 text-gray-700 hover:text-red-600">Admin</a>
+            <a href="/" class="block py-2 text-gray-700 hover:text-red-600 {% if request.endpoint == 'public.index' %}text-red-600 font-semibold{% endif %}">
+                <i class="fas fa-home mr-2"></i>Home
+            </a>
+            <a href="/schedule" class="block py-2 text-gray-700 hover:text-red-600 {% if request.endpoint == 'public.schedule' or request.endpoint == 'public.schedule_day' %}text-red-600 font-semibold{% endif %}">
+                <i class="fas fa-calendar mr-2"></i>Schedule
+            </a>
+            <a href="/results" class="block py-2 text-gray-700 hover:text-red-600 {% if request.endpoint == 'public.results' or request.endpoint == 'public.game_detail' %}text-red-600 font-semibold{% endif %}">
+                <i class="fas fa-trophy mr-2"></i>Results
+            </a>
+            <a href="/startlists" class="block py-2 text-gray-700 hover:text-red-600 {% if request.endpoint == 'public.startlists' or request.endpoint == 'public.game_startlist_detail' %}text-red-600 font-semibold{% endif %}">
+                <i class="fas fa-list mr-2"></i>Start Lists
+            </a>
+            <a href="/medals" class="block py-2 text-gray-700 hover:text-red-600 {% if request.endpoint == 'public.medals' %}text-red-600 font-semibold{% endif %}">
+                <i class="fas fa-medal mr-2"></i>Medals
+            </a>
+            <a href="/athletes" class="block py-2 text-gray-700 hover:text-red-600 {% if request.endpoint == 'public.athletes' or request.endpoint == 'public.athlete_detail' %}text-red-600 font-semibold{% endif %}">
+                <i class="fas fa-users mr-2"></i>Athletes
+            </a>
+            <a href="/records" class="block py-2 text-gray-700 hover:text-red-600 {% if request.endpoint == 'public.records' %}text-red-600 font-semibold{% endif %}">
+                <i class="fas fa-star mr-2"></i>Records
+            </a>
+            <a href="/raza" class="block py-2 text-gray-700 hover:text-red-600 {% if request.endpoint == 'public.raza' %}text-red-600 font-semibold{% endif %}">
+                <i class="fas fa-calculator mr-2"></i>WPA Points
+            </a>
+            <a href="/admin" class="block py-2 text-gray-700 hover:text-red-600">
+                <i class="fas fa-cogs mr-2"></i>Admin
+            </a>
         </nav>
     </header>
+
     <div class="pattern-bg text-white py-8">
         <div class="container mx-auto px-4 text-center">
             <h2 class="text-3xl font-bold">19th EDITION</h2>
             <p class="text-xl mt-2">FROM 16TH TO 18TH OF JUNE</p>
         </div>
     </div>
+
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
             <div class="container mx-auto px-4 mt-4">
@@ -64,9 +88,11 @@
             </div>
         {% endif %}
     {% endwith %}
+
     <main class="container mx-auto px-4 py-8">
         {% block content %}{% endblock %}
     </main>
+
     <footer class="bg-gray-800 text-white mt-16">
         <div class="container mx-auto px-4 py-8">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -109,11 +135,13 @@
             </div>
         </div>
     </footer>
+
     <script>
         function toggleMobileMenu() {
             const menu = document.getElementById('mobileMenu');
             menu.classList.toggle('hidden');
         }
+
         // Auto-hide flash messages after 5 seconds
         setTimeout(() => {
             document.querySelectorAll('[class*="bg-green-100"], [class*="bg-red-100"], [class*="bg-yellow-100"], [class*="bg-blue-100"]').forEach(el => {

@@ -223,6 +223,17 @@ class Config:
             return ConfigManager.get_config_tags('weight_field_events')
         except (ImportError, Exception):
             return ['Shot Put', 'Discus Throw', 'Javelin Throw', 'Hammer Throw', 'Club Throw', 'Weight Throw']
+
+    @staticmethod
+    def format_gender_for_display(gender):
+        """Format gender for public display"""
+        if gender == 'Male':
+            return "Men's"
+        elif gender == 'Female':
+            return "Women's"
+        else:
+            # Handle combined genders like "Male, Female"
+            return gender.replace('Male', "Men's").replace('Female', "Women's")
     @property
     def CLASSES(self):
         return self.get_classes()

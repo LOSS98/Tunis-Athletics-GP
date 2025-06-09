@@ -265,7 +265,20 @@ def init_db():
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (sdms) REFERENCES athletes(sdms) ON DELETE CASCADE,
                     UNIQUE (sdms, event_name)
-                )"""
+                )""",
+        """CREATE TABLE IF NOT EXISTS medals (
+            id SERIAL PRIMARY KEY,
+            npc VARCHAR(3) NOT NULL,
+            gold INTEGER DEFAULT 0,
+            silver INTEGER DEFAULT 0,
+            bronze INTEGER DEFAULT 0,
+            total INTEGER DEFAULT 0,
+            manual_override BOOLEAN DEFAULT FALSE,
+            last_calculated TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (npc) REFERENCES npcs(code) ON DELETE CASCADE
+        )"""
     ]
     try:
         with get_db_connection() as conn:

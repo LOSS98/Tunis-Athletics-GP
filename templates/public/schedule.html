@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+{% block title %}Competition Schedule - World Para Athletics Grand Prix{% endblock %}
+{% block content %}
+
+<div class="mb-8">
+    <h1 class="text-3xl font-bold mb-4">Competition Schedule</h1>
+    <p class="text-gray-600">Complete schedule of all events - Tunisia 2025</p>
+</div>
+
+<!-- Filters -->
+<div class="mb-6 bg-white rounded-lg shadow p-4">
+    <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div>
+            <label class="block text-sm font-medium mb-1">Filter by Day</label>
+            <select name="day" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500">
+                <option value="">All Days</option>
+                {% for day in days %}
+                    <option value="{{ day }}" {% if day_filter == day|string %}selected{% endif %}>
+                        Day {{ day }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm font-medium mb-1">Filter by Event</label>
+            <select name="event" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500">
+                <option value="">All Events</option>
+                {% for event in events %}
+                    <option value="{{ event }}" {% if event_filter == event %}selected{% endif %}>
+                        {{ event }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="flex items-end">
+            <button type="submit" class="bg-red-600 text-white px-6 py-2 rounded-lg hover:bg-red-700 mr-2">
+                <i class="fas fa-filter mr-2"></i>Filter
+            </button>
+            <a href="{{ url_for('public.schedule') }}" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">
+                Clear
+            </a>
+        </div>
+    </form>
+</div>
+
+<!-- Day Navigation -->
+<div class="mb-6">
+    <div class="flex flex-wrap gap-2">
+        {% for day in days %}
+            <a href="{{ url_for('public.schedule_day', day=day) }}"
+               class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 {% if day_filter == day|string %}bg-blue-700{% endif %}">
+                Day {{ day }}
+            </a>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Schedule by Day -->
+{% if games %}
+    {% set grouped_games = games | groupby('day') %}
+    {% for day, day_games in grouped_games %}
+    <div class="mb-8">
+        <div class="bg-gradient-to-r from-red-600 to-red-700 text-white rounded-t-lg p-4">
+            <h2 class="text-2xl font-bold">Day {{ day }} - {{ day_games | list | first }}<!-- Get date info if available --></h2>
+        </div>
+
+        <div class="bg-white rounded-b-lg shadow overflow-hidden">
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Time</th>
+                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Event</th>
+                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Category</th>
+                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Classes</th>
+                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Phase</th>
+                            <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Area</th>
+                            <th class="px-4 py-3 text-center text-sm font-medium text-gray-700">Athletes</th>
+                            <th class="px-4 py-3 text-center text-sm font-medium text-gray-700">Status</th>
+                            <th class="px-4 py-3 text-center text-sm font-medium text-gray-700">Links</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        {% for game in day_games | list | sort(attribute='time') %}
+                        <tr class="hover:bg-gray-50 {% if game.status == 'finished' %}bg-green-50{% elif game.status == 'in_progress' %}bg-yellow-50{% elif game.status == 'cancelled' %}bg-red-50{% endif %}">
+                            <td class="px-4 py-4 whitespace-nowrap font-mono text-lg">
+                                {{ game.time.strftime('%H:%M') }}
+                            </td>
+                            <td class="px-4 py-4">
+                                <div class="font-semibold text-lg">{{ game.event }}</div>
+                                {% if game.event in config.FIELD_EVENTS %}
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                                        <i class="fas fa-bullseye mr-1"></i>Field Event
+                                    </span>
+                                {% else %}
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                        <i class="fas fa-running mr-1"></i>Track Event
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-4 py-4">
+                                <div class="font-medium">
+                                    {% if game.genders == 'Male' %}
+                                        Men's
+                                    {% elif game.genders == 'Female' %}
+                                        Women's
+                                    {% else %}
+                                        {{ game.genders|replace('Male', 'Men\'s')|replace('Female', 'Women\'s') }}
+                                    {% endif %}
+                                </div>
+                                {% if game.wpa_points %}
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                        <i class="fas fa-calculator mr-1"></i>WPA Points
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-4 py-4">
+                                <div class="text-sm">{{ game.classes }}</div>
+                                {% if game.classes_list|length > 1 %}
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                        Multi-Class
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-4 py-4">
+                                {% if game.phase %}
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                        {{ game.phase }}
+                                    </span>
+                                {% else %}
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        Final
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-4 py-4 text-sm text-gray-600">
+                                {{ game.area or '-' }}
+                            </td>
+                            <td class="px-4 py-4 text-center">
+                                <div class="text-lg font-semibold">{{ game.nb_athletes }}</div>
+                                {% if game.has_results %}
+                                    <div class="text-xs text-green-600">{{ game.result_count }} results</div>
+                                {% elif game.has_startlist %}
+                                    <div class="text-xs text-blue-600">Start list ready</div>
+                                {% endif %}
+                            </td>
+                            <td class="px-4 py-4 text-center">
+                                {% if game.status == 'finished' %}
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        <i class="fas fa-check-circle mr-1"></i>Finished
+                                    </span>
+                                {% elif game.status == 'in_progress' %}
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                        <i class="fas fa-play-circle mr-1"></i>In Progress
+                                    </span>
+                                {% elif game.status == 'cancelled' %}
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                        <i class="fas fa-times-circle mr-1"></i>Cancelled
+                                    </span>
+                                {% elif game.status == 'started' %}
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                        <i class="fas fa-flag mr-1"></i>Started
+                                    </span>
+                                {% else %}
+                                    <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                                        <i class="fas fa-clock mr-1"></i>Scheduled
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="px-4 py-4 text-center">
+                                <div class="flex flex-col gap-1">
+                                    {% if game.has_startlist %}
+                                        <a href="{{ url_for('public.game_startlist_detail', id=game.id) }}"
+                                           class="text-blue-600 hover:text-blue-800 text-xs font-medium">
+                                            <i class="fas fa-list mr-1"></i>Start List
+                                        </a>
+                                    {% endif %}
+                                    {% if game.has_results and game.published %}
+                                        <a href="{{ url_for('public.game_detail', id=game.id) }}"
+                                           class="text-green-600 hover:text-green-800 text-xs font-medium">
+                                            <i class="fas fa-trophy mr-1"></i>Results
+                                        </a>
+                                    {% elif game.has_results %}
+                                        <span class="text-orange-500 text-xs">Results Pending</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+{% else %}
+    <div class="text-center py-16 bg-white rounded-lg shadow">
+        <div class="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+            <i class="fas fa-calendar text-4xl text-gray-300"></i>
+        </div>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">No events scheduled</h3>
+        <p class="text-gray-500">No events match your current filters.</p>
+    </div>
+{% endif %}
+
+<!-- Legend -->
+<div class="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
+    <h3 class="text-lg font-bold text-blue-900 mb-4">Schedule Information</h3>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+            <h4 class="font-semibold text-blue-800 mb-2">Event Types:</h4>
+            <div class="space-y-1 text-sm text-blue-700">
+                <div><span class="inline-block w-4 h-4 bg-blue-100 rounded mr-2"></span>Track Events: Running races</div>
+                <div><span class="inline-block w-4 h-4 bg-orange-100 rounded mr-2"></span>Field Events: Throwing and jumping</div>
+                <div><span class="inline-block w-4 h-4 bg-purple-100 rounded mr-2"></span>WPA Points: Multi-class scoring</div>
+            </div>
+        </div>
+        <div>
+            <h4 class="font-semibold text-blue-800 mb-2">Event Status:</h4>
+            <div class="space-y-1 text-sm text-blue-700">
+                <div><span class="inline-block w-4 h-4 bg-gray-100 rounded mr-2"></span>Scheduled: Awaiting start</div>
+                <div><span class="inline-block w-4 h-4 bg-yellow-100 rounded mr-2"></span>In Progress: Currently competing</div>
+                <div><span class="inline-block w-4 h-4 bg-green-100 rounded mr-2"></span>Finished: Competition complete</div>
+                <div><span class="inline-block w-4 h-4 bg-red-100 rounded mr-2"></span>Cancelled: Event cancelled</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

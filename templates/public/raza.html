@@ -11,15 +11,49 @@
         <p class="mb-4">The WPA Points system is the official method used by World Para Athletics to compare performances across different disability classes in athletics competitions.</p>
         <p class="mb-4">Named after mathematician Purshottam Raza, the system uses a mathematical formula to convert performances into points, allowing fair competition between athletes with different disabilities.</p>
         <div class="bg-blue-50 p-4 rounded-lg">
-            <h3 class="font-bold mb-2">Official Formula (Gompertz):</h3>
-            <div class="font-mono text-lg mb-2">
-                Points = <strong>FLOOR</strong>(A × e<sup>(-e<sup>B-C×Performance</sup>)</sup>)
+            <h3 class="font-bold mb-2">Official WPA Points Formula (Gompertz Function):</h3>
+            <div class="space-y-3">
+                <div class="bg-white p-3 rounded border">
+                    <h4 class="font-semibold mb-2">Formula:</h4>
+                    <div class="font-mono text-lg">
+                        Points = <strong>A</strong> × e<sup>(-e<sup>(B - C×Performance)</sup>)</sup>
+                    </div>
+                    <p class="text-sm mt-2 text-gray-700">
+                        Where A, B, and C are event and class-specific constants
+                    </p>
+                </div>
+
+                <div class="bg-white p-3 rounded border">
+                    <h4 class="font-semibold mb-2">Track Events (Time-based):</h4>
+                    <div class="font-mono text-sm">
+                        Points = A × exp(-exp(B - C/Performance))
+                    </div>
+                    <p class="text-sm mt-1 text-gray-700">
+                        Performance in seconds
+                    </p>
+                </div>
+
+                <div class="bg-white p-3 rounded border">
+                    <h4 class="font-semibold mb-2">Field Events (Distance-based):</h4>
+                    <div class="font-mono text-sm">
+                        Points = A × exp(-exp(B - C×Performance))
+                    </div>
+                    <p class="text-sm mt-1 text-gray-700">
+                        Performance in meters
+                    </p>
+                </div>
+
+                <div class="bg-white p-3 rounded border">
+                    <h4 class="font-semibold mb-2">Inverse Formula (Performance from Points):</h4>
+                    <div class="font-mono text-sm">
+                        <div class="mb-1"><strong>Track Events:</strong> Performance = C / (B - ln(ln(A/Points)))</div>
+                        <div><strong>Field Events:</strong> Performance = (B - ln(ln(A/Points))) / C</div>
+                    </div>
+                </div>
             </div>
-            <h3 class="font-bold mb-2">Inverse formula:</h3>
-            <div class="font-mono text-lg mb-2">
-                Performance = <strong>CEILING</strong>((B - ln(ln(Points/A))) / C)
-            </div>
-            <p class="text-sm mt-2">Where A, B, and C are constants specific to each class and event</p>
+            <p class="text-sm mt-3 text-blue-800">
+                <strong>Note:</strong> The system uses FLOOR() for points calculation and CEILING() for performance calculation to ensure integer points and achievable performance targets.
+            </p>
         </div>
     </div>
     <div class="bg-white rounded-lg shadow p-6">

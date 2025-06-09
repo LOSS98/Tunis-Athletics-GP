@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Medal Standings - World Para Athletics Grand Prix{% endblock %}
+{% block content %}
+
+<div class="mb-8">
+    <h1 class="text-3xl font-bold mb-4">Medal Standings</h1>
+    <p class="text-gray-600">Official medal count by National Paralympic Committee</p>
+</div>
+
+<div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-4 text-left font-bold">Rank</th>
+                    <th class="px-6 py-4 text-left font-bold">NPC</th>
+                    <th class="px-6 py-4 text-center font-bold">🥇 Gold</th>
+                    <th class="px-6 py-4 text-center font-bold">🥈 Silver</th>
+                    <th class="px-6 py-4 text-center font-bold">🥉 Bronze</th>
+                    <th class="px-6 py-4 text-center font-bold">Total</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for medal in medals %}
+                <tr class="hover:bg-gray-50 {% if loop.index <= 3 %}{% if loop.index == 1 %}bg-yellow-50{% elif loop.index == 2 %}bg-gray-50{% elif loop.index == 3 %}bg-orange-50{% endif %}{% endif %}">
+                    <td class="px-6 py-4">
+                        <div class="flex items-center">
+                            {% if loop.index == 1 %}
+                                <span class="text-3xl mr-2">🥇</span>
+                            {% elif loop.index == 2 %}
+                                <span class="text-3xl mr-2">🥈</span>
+                            {% elif loop.index == 3 %}
+                                <span class="text-3xl mr-2">🥉</span>
+                            {% endif %}
+                            <span class="text-2xl font-bold {% if loop.index <= 3 %}text-yellow-600{% endif %}">{{ loop.index }}</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center">
+                            <img src="/static/images/flags/{{ medal.npc }}.svg" alt="{{ medal.npc }}"
+                                 class="w-12 h-8 mr-4 object-cover rounded shadow"
+                                 onerror="this.style.display='none'">
+                            <div>
+                                <div class="font-bold text-lg">{{ medal.npc }}</div>
+                                <div class="text-gray-600">{{ medal.npc_name }}</div>
+                                {% if medal.region_name %}
+                                <div class="text-sm text-gray-500">{{ medal.region_name }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        <span class="text-2xl font-bold text-yellow-600">{{ medal.gold }}</span>
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        <span class="text-2xl font-bold text-gray-600">{{ medal.silver }}</span>
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        <span class="text-2xl font-bold text-orange-600">{{ medal.bronze }}</span>
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        <span class="text-2xl font-bold">{{ medal.total }}</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if not medals %}
+<div class="text-center py-16">
+    <div class="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+        <i class="fas fa-medal text-4xl text-gray-300"></i>
+    </div>
+    <h3 class="text-lg font-medium text-gray-900 mb-2">No medals awarded yet</h3>
+    <p class="text-gray-500">Medal standings will appear here as competitions are completed.</p>
+</div>
+{% endif %}
+
+<div class="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
+    <h3 class="text-lg font-bold text-blue-900 mb-4">Ranking System</h3>
+    <div class="text-blue-800 space-y-2">
+        <p><strong>Ranking Order:</strong> Countries are ranked by gold medals first, then silver, then bronze.</p>
+        <p><strong>Medal Count:</strong> Only includes results from official competitions where athletes finished 1st, 2nd, or 3rd place.</p>
+        <p><strong>Updates:</strong> Medal standings are updated in real-time as official results are published.</p>
+    </div>
+</div>
+
+{% endblock %}
