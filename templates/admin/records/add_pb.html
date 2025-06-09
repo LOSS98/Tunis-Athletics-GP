@@ -1,0 +1,174 @@
+{% extends "admin/base_admin.html" %}
+{% block page_title %}Add Personal Best{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="mb-6">
+        <div class="flex items-center justify-between">
+            <h2 class="text-2xl font-bold">Add Personal Best</h2>
+            <a href="{{ url_for('admin.personal_bests_list') }}" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+                <i class="fas fa-arrow-left mr-2"></i>Back to Personal Bests
+            </a>
+        </div>
+        <p class="text-gray-600 mt-2">Manually add a personal best performance for an athlete</p>
+    </div>
+    <div class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6">
+        <div class="flex items-center">
+            <i class="fas fa-exclamation-triangle text-yellow-600 mr-2"></i>
+            <span class="font-medium text-yellow-800">Manual Entry</span>
+        </div>
+        <p class="text-yellow-700 text-sm mt-1">
+            This form is for manually entering personal bests achieved outside this competition.
+            Competition results automatically generate personal bests when marked as official.
+        </p>
+    </div>
+    <form method="POST" class="bg-white rounded-lg shadow p-6">
+        {{ form.hidden_tag() }}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Athlete SDMS -->
+            <div class="md:col-span-2">
+                <label class="block text-gray-700 text-sm font-bold mb-2">
+                    Athlete SDMS <span class="text-red-500">*</span>
+                </label>
+                {{ form.sdms(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500", placeholder="Enter SDMS number") }}
+                {% if form.sdms.errors %}
+                    <div class="text-red-500 text-sm mt-1">
+                        {% for error in form.sdms.errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                <p class="text-sm text-gray-600 mt-1">The athlete's SDMS number (must exist in the system)</p>
+            </div>
+            <!-- Event -->
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">
+                    Event <span class="text-red-500">*</span>
+                </label>
+                {{ form.event(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
+                {% if form.event.errors %}
+                    <div class="text-red-500 text-sm mt-1">
+                        {% for error in form.event.errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            <!-- Class -->
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">
+                    Classification <span class="text-red-500">*</span>
+                </label>
+                {{ form.athlete_class(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
+                {% if form.athlete_class.errors %}
+                    <div class="text-red-500 text-sm mt-1">
+                        {% for error in form.athlete_class.errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            <!-- Performance -->
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">
+                    Performance <span class="text-red-500">*</span>
+                </label>
+                {{ form.performance(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500", placeholder="e.g., 10.50 or 1:23.45") }}
+                {% if form.performance.errors %}
+                    <div class="text-red-500 text-sm mt-1">
+                        {% for error in form.performance.errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                <p class="text-sm text-gray-600 mt-1">Time format: MM:SS.SS or distance in meters</p>
+            </div>
+            <!-- Location -->
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">
+                    Location <span class="text-red-500">*</span>
+                </label>
+                {{ form.location(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500", placeholder="e.g., Paris, France") }}
+                {% if form.location.errors %}
+                    <div class="text-red-500 text-sm mt-1">
+                        {% for error in form.location.errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            <!-- Record Date -->
+            <div class="md:col-span-2">
+                <label class="block text-gray-700 text-sm font-bold mb-2">
+                    Date Achieved <span class="text-red-500">*</span>
+                </label>
+                {{ form.record_date(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
+                {% if form.record_date.errors %}
+                    <div class="text-red-500 text-sm mt-1">
+                        {% for error in form.record_date.errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            <!-- Made in Competition -->
+            <div class="md:col-span-2">
+                <label class="flex items-center">
+                    {{ form.made_in_competition(class="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded") }}
+                    <span class="ml-2 text-gray-700">{{ form.made_in_competition.label.text }}</span>
+                </label>
+                <p class="text-sm text-gray-600 mt-1">Check if this performance was achieved in this competition</p>
+            </div>
+        </div>
+        <div class="mt-8 flex justify-end space-x-4">
+            <a href="{{ url_for('admin.personal_bests_list') }}" class="bg-gray-500 text-white px-6 py-2 rounded hover:bg-gray-600">
+                Cancel
+            </a>
+            <button type="submit" class="bg-green-500 text-white px-6 py-2 rounded hover:bg-green-600">
+                <i class="fas fa-save mr-2"></i>Add Personal Best
+            </button>
+        </div>
+    </form>
+    <!-- Help Section -->
+    <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h4 class="font-bold text-blue-900 mb-2">
+            <i class="fas fa-question-circle mr-2"></i>How to Add Personal Bests
+        </h4>
+        <div class="text-sm text-blue-800 space-y-2">
+            <p><strong>1. Athlete SDMS:</strong> Enter the athlete's SDMS number. The athlete must already exist in the system.</p>
+            <p><strong>2. Event & Class:</strong> Select the event and classification for this performance.</p>
+            <p><strong>3. Performance:</strong> Enter the performance value (time for track events, distance for field events).</p>
+            <p><strong>4. Location:</strong> Where this performance was achieved (city, country).</p>
+            <p><strong>5. Date:</strong> When this performance was achieved.</p>
+            <p><strong>6. Competition Flag:</strong> Check if this was achieved in this competition (usually unchecked for manual entries).</p>
+        </div>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const sdmsInput = document.getElementById('sdms');
+    const eventSelect = document.getElementById('event');
+    const classSelect = document.getElementById('athlete_class');
+    // Auto-populate athlete info when SDMS is entered
+    sdmsInput.addEventListener('blur', function() {
+        const sdms = this.value;
+        if (sdms) {
+            // You could add an AJAX call here to fetch athlete info and pre-populate fields
+            console.log('Looking up athlete with SDMS:', sdms);
+        }
+    });
+    // Performance format helper
+    const performanceInput = document.getElementById('performance');
+    performanceInput.addEventListener('input', function() {
+        const event = eventSelect.value;
+        const value = this.value;
+        // Add format hints based on event type
+        if (event && (event.includes('m') && !event.includes('Jump'))) {
+            // Track event - suggest time format
+            if (value && !value.includes(':') && !value.includes('.')) {
+                // Could add auto-formatting logic here
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

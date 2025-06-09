@@ -1,0 +1,134 @@
+{% extends "admin/base_admin.html" %}
+{% block page_title %}World & Area Records{% endblock %}
+{% block content %}
+{% if current_user.is_technical_delegate() and pending_records %}
+<div class="mb-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+    <h3 class="text-lg font-bold text-yellow-800 mb-3">
+        <i class="fas fa-clock mr-2"></i>Pending Approval ({{ pending_records|length }})
+    </h3>
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead class="bg-yellow-100">
+                <tr>
+                    <th class="px-4 py-2 text-left">Athlete</th>
+                    <th class="px-4 py-2 text-left">Event</th>
+                    <th class="px-4 py-2 text-left">Class</th>
+                    <th class="px-4 py-2 text-left">Performance</th>
+                    <th class="px-4 py-2 text-left">Type</th>
+                    <th class="px-4 py-2 text-left">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for record in pending_records %}
+                <tr class="border-b">
+                    <td class="px-4 py-2">
+                        {% if record.firstname %}
+                            {{ record.lastname }} {{ record.firstname }}
+                        {% else %}
+                            SDMS: {{ record.sdms or 'Unknown' }}
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-2">{{ record.event }}</td>
+                    <td class="px-4 py-2">{{ record.class }}</td>
+                    <td class="px-4 py-2 font-bold">{{ record.performance }}</td>
+                    <td class="px-4 py-2">
+                        <span class="px-2 py-1 text-xs rounded {% if record.record_type == 'WR' %}bg-gold text-yellow-800{% else %}bg-blue-100 text-blue-800{% endif %}">
+                            {{ record.record_type }}
+                        </span>
+                    </td>
+                    <td class="px-4 py-2">
+                        <form method="POST" action="{{ url_for('admin.record_approve', record_id=record.id) }}" class="inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="bg-green-500 text-white px-3 py-1 rounded text-sm hover:bg-green-600">
+                                <i class="fas fa-check"></i> Approve
+                            </button>
+                        </form>
+                        <form method="POST" action="{{ url_for('admin.record_delete', record_id=record.id) }}" class="inline ml-2">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600"
+                                    onclick="return confirm('Delete this record?')">
+                                <i class="fas fa-trash"></i> Delete
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+<div class="flex justify-between items-center mb-6">
+    <h2 class="text-2xl font-bold">Approved Records</h2>
+    {% if current_user.is_technical_delegate() %}
+    <a href="{{ url_for('admin.record_add') }}" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+        <i class="fas fa-plus mr-2"></i>Add Record
+    </a>
+    {% endif %}
+</div>
+<div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left">Type</th>
+                    <th class="px-6 py-3 text-left">Athlete</th>
+                    <th class="px-6 py-3 text-left">NPC</th>
+                    <th class="px-6 py-3 text-left">Event</th>
+                    <th class="px-6 py-3 text-left">Class</th>
+                    <th class="px-6 py-3 text-left">Performance</th>
+                    <th class="px-6 py-3 text-left">Location</th>
+                    <th class="px-6 py-3 text-left">Date</th>
+                    {% if current_user.is_technical_delegate() %}
+                    <th class="px-6 py-3 text-left">Actions</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for record in records %}
+                <tr>
+                    <td class="px-6 py-4">
+                        <span class="px-3 py-1 text-sm font-bold rounded {% if record.record_type == 'WR' %}bg-yellow-100 text-yellow-800{% else %}bg-blue-100 text-blue-800{% endif %}">
+                            {{ record.record_type }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        {% if record.firstname %}
+                            {{ record.lastname }} {{ record.firstname }}
+                        {% else %}
+                            <span class="text-gray-500">SDMS: {{ record.sdms or 'Unknown' }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4">
+                        {% if record.npc %}
+                            <img src="/static/images/flags/{{ record.npc }}.svg" alt="{{ record.npc }}" class="inline w-6 h-4 mr-1">
+                            {{ record.npc }}
+                        {% else %}
+                            <span class="text-gray-500">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 font-medium">{{ record.event }}</td>
+                    <td class="px-6 py-4">
+                        <span class="px-2 py-1 text-xs bg-gray-100 text-gray-800 rounded">{{ record.class }}</span>
+                    </td>
+                    <td class="px-6 py-4 font-bold text-lg">{{ record.performance }}</td>
+                    <td class="px-6 py-4">{{ record.location }}</td>
+                    <td class="px-6 py-4">{{ record.record_date.strftime('%Y-%m-%d') }}</td>
+                    {% if current_user.is_technical_delegate() %}
+                    <td class="px-6 py-4">
+                        <form method="POST" action="{{ url_for('admin.record_delete', record_id=record.id) }}" class="inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="text-red-600 hover:text-red-900"
+                                    onclick="return confirm('Delete this record?')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    </td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

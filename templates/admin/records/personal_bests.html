@@ -1,0 +1,252 @@
+{% extends "admin/base_admin.html" %}
+{% block page_title %}Personal Bests{% endblock %}
+{% block content %}
+<div class="mb-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h2 class="text-2xl font-bold">Personal Bests</h2>
+            <p class="text-gray-600 mt-1">Manage athlete personal best performances</p>
+        </div>
+        <div class="flex space-x-2">
+            {% if current_user.is_technical_delegate() %}
+            <a href="{{ url_for('admin.personal_best_add') }}" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                <i class="fas fa-plus mr-2"></i>Add Personal Best
+            </a>
+            {% endif %}
+            <a href="{{ url_for('admin.records_list') }}" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+                <i class="fas fa-arrow-left mr-2"></i>Back to Records
+            </a>
+        </div>
+    </div>
+</div>
+<!-- Statistics Cards -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-lg shadow p-4 text-center">
+        <div class="text-2xl font-bold text-blue-600">{{ personal_bests|length }}</div>
+        <div class="text-sm text-gray-600">Total Personal Bests</div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4 text-center">
+        <div class="text-2xl font-bold text-green-600">{{ personal_bests|selectattr('approved')|list|length }}</div>
+        <div class="text-sm text-gray-600">Approved</div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4 text-center">
+        <div class="text-2xl font-bold text-orange-600">{{ pending_pbs|length }}</div>
+        <div class="text-sm text-gray-600">Pending Approval</div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4 text-center">
+        <div class="text-2xl font-bold text-purple-600">{{ personal_bests|selectattr('made_in_competition')|list|length }}</div>
+        <div class="text-sm text-gray-600">Made in Competition</div>
+    </div>
+</div>
+<!-- Pending Personal Bests -->
+{% if current_user.is_technical_delegate() and pending_pbs %}
+<div class="bg-white rounded-lg shadow mb-6">
+    <div class="p-6 border-b border-yellow-200 bg-yellow-50">
+        <h3 class="text-lg font-bold text-yellow-800">
+            <i class="fas fa-clock mr-2"></i>Pending Approval ({{ pending_pbs|length }})
+        </h3>
+        <p class="text-yellow-700 text-sm mt-1">Personal bests waiting for technical delegate approval</p>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Athlete</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Performance</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for pb in pending_pbs %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div>
+                                <div class="text-sm font-medium text-gray-900">
+                                    {{ pb.firstname }} {{ pb.lastname }}
+                                </div>
+                                <div class="text-sm text-gray-500">
+                                    SDMS: {{ pb.sdms }}
+                                    {% if pb.npc_name %}
+                                        • {{ pb.npc_name }}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {{ pb.event }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                            {{ pb.athlete_class }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium text-gray-900">{{ pb.performance }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-900">{{ pb.location }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-900">{{ pb.record_date.strftime('%Y-%m-%d') }}</div>
+                        {% if pb.made_in_competition %}
+                            <div class="text-xs text-green-600">
+                                <i class="fas fa-trophy mr-1"></i>Competition
+                            </div>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <div class="flex space-x-2">
+                            <form method="POST" action="{{ url_for('admin.personal_best_approve', pb_id=pb.id) }}" class="inline">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="text-green-600 hover:text-green-900" title="Approve">
+                                    <i class="fas fa-check"></i>
+                                </button>
+                            </form>
+                            <form method="POST" action="{{ url_for('admin.personal_best_delete', pb_id=pb.id) }}"
+                                  class="inline" onsubmit="return confirm('Are you sure you want to delete this personal best?');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="text-red-600 hover:text-red-900" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+<!-- Approved Personal Bests -->
+<div class="bg-white rounded-lg shadow">
+    <div class="p-6 border-b">
+        <h3 class="text-lg font-bold">Approved Personal Bests</h3>
+    </div>
+    {% if personal_bests %}
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Athlete</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Performance</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Location</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    {% if current_user.is_technical_delegate() %}
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for pb in personal_bests %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <div>
+                                <div class="text-sm font-medium text-gray-900">
+                                    {{ pb.firstname }} {{ pb.lastname }}
+                                </div>
+                                <div class="text-sm text-gray-500">
+                                    SDMS: {{ pb.sdms }}
+                                    {% if pb.npc_name %}
+                                        • {{ pb.npc_name }}
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {{ pb.event }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                            {{ pb.athlete_class }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium text-gray-900">{{ pb.performance }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-900">{{ pb.location }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-900">{{ pb.record_date.strftime('%Y-%m-%d') }}</div>
+                        {% if pb.made_in_competition %}
+                            <div class="text-xs text-green-600">
+                                <i class="fas fa-trophy mr-1"></i>Competition
+                            </div>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if pb.approved %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                <i class="fas fa-check mr-1"></i>Approved
+                            </span>
+                            {% if pb.approved_by_username %}
+                                <div class="text-xs text-gray-500 mt-1">
+                                    by {{ pb.approved_by_username }}
+                                </div>
+                            {% endif %}
+                        {% else %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                <i class="fas fa-clock mr-1"></i>Pending
+                            </span>
+                        {% endif %}
+                    </td>
+                    {% if current_user.is_technical_delegate() %}
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <form method="POST" action="{{ url_for('admin.personal_best_delete', pb_id=pb.id) }}"
+                              class="inline" onsubmit="return confirm('Are you sure you want to delete this personal best?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="text-red-600 hover:text-red-900" title="Delete">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    </td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="p-8 text-center">
+        <div class="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+            <i class="fas fa-medal text-4xl text-gray-300"></i>
+        </div>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">No Personal Bests</h3>
+        <p class="text-gray-500 mb-6">No personal best performances have been recorded yet.</p>
+        {% if current_user.is_technical_delegate() %}
+        <a href="{{ url_for('admin.personal_best_add') }}" class="bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600">
+            <i class="fas fa-plus mr-2"></i>Add First Personal Best
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+<div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+    <h4 class="font-bold text-blue-900 mb-2">
+        <i class="fas fa-info-circle mr-2"></i>Personal Best Information
+    </h4>
+    <div class="text-sm text-blue-800 space-y-2">
+        <p><strong>Automatic Detection:</strong> Personal bests are automatically detected when results are marked as official</p>
+        <p><strong>Manual Entry:</strong> Technical delegates can manually add personal bests for performances outside this competition</p>
+        <p><strong>Approval Process:</strong> All personal bests require technical delegate approval before being officially recognized</p>
+        <p><strong>Competition Marks:</strong> Personal bests achieved in this competition are automatically flagged</p>
+        <p><strong>Updates:</strong> If a better performance is recorded, the personal best is automatically updated</p>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,23 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap');
+body { font-family: 'Inter', sans-serif; }
+.gradient-text {
+    background: linear-gradient(135deg, #AE191B 0%, #DA191D 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+.pattern-bg {
+    background-color: #AE191B;
+    background-image: url("/static/images/pattern.svg");
+}
+@media (max-width: 768px) {
+    table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+}
+@media print {
+    .no-print {
+        display: none !important;
+    }
+}

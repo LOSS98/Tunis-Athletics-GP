@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Admin - World Para Athletics{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .gradient-text {
+            background: linear-gradient(135deg, #AE191B 0%, #DA191D 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="flex h-screen">
+        <aside class="w-64 bg-gray-900 text-white">
+            <div class="p-4">
+                <h1 class="text-2xl font-bold gradient-text">Admin Panel</h1>
+                <p class="text-sm text-gray-400">World Para Athletics</p>
+                <div class="mt-2 text-xs text-gray-500">
+                    <i class="fas fa-user mr-1"></i>{{ current_user.username }}
+                    <span class="ml-1 px-1 py-0.5 text-white rounded text-xs
+                        {% if current_user.is_loc() %}bg-purple-600
+                        {% elif current_user.is_technical_delegate() %}bg-green-600
+                        {% else %}bg-gray-600{% endif %}">
+                        {% if current_user.is_technical_delegate() %}
+                            TD
+                        {% else %}
+                            {{ current_user.admin_type.upper() }}
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+                <nav class="mt-8">
+                    <a href="/admin" class="block px-4 py-2 hover:bg-gray-800 {% if request.endpoint == 'admin.dashboard' %}bg-gray-800{% endif %}">
+                        <i class="fas fa-dashboard mr-2"></i> Dashboard
+                    </a>
+                    <a href="/admin/games" class="block px-4 py-2 hover:bg-gray-800 {% if 'games' in request.endpoint %}bg-gray-800{% endif %}">
+                        <i class="fas fa-calendar mr-2"></i> Games
+                    </a>
+                    <a href="/admin/athletes" class="block px-4 py-2 hover:bg-gray-800 {% if 'athletes' in request.endpoint %}bg-gray-800{% endif %}">
+                        <i class="fas fa-users mr-2"></i> Athletes
+                    </a>
+                    <!-- Records section -->
+                    <div class="mt-4 border-t border-gray-700 pt-4">
+                        <div class="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                            Records
+                        </div>
+                        <a href="/admin/records" class="block px-4 py-2 hover:bg-gray-800 {% if 'records' in request.endpoint %}bg-gray-800{% endif %}">
+                            <i class="fas fa-trophy mr-2"></i> World & Area Records
+                            {% if current_user.is_technical_delegate() %}
+                                {% set pending_count = get_pending_records_count() %}
+                                {% if pending_count > 0 %}
+                                    <span class="bg-yellow-500 text-white text-xs px-2 py-1 rounded-full ml-2">{{ pending_count }}</span>
+                                {% endif %}
+                            {% endif %}
+                        </a>
+                        <a href="/admin/personal-bests" class="block px-4 py-2 hover:bg-gray-800 {% if 'personal-bests' in request.endpoint %}bg-gray-800{% endif %}">
+                            <i class="fas fa-medal mr-2"></i> Personal Bests
+                            {% if current_user.is_technical_delegate() %}
+                                {% set pending_pb_count = get_pending_personal_bests_count() %}
+                                {% if pending_pb_count > 0 %}
+                                    <span class="bg-yellow-500 text-white text-xs px-2 py-1 rounded-full ml-2">{{ pending_pb_count }}</span>
+                                {% endif %}
+                            {% endif %}
+                        </a>
+                    </div>
+                    <!-- LOC/TD section -->
+                    {% if current_user.has_loc_privileges() %}
+                    <a href="/admin/users" class="block px-4 py-2 hover:bg-gray-800 {% if 'users' in request.endpoint %}bg-gray-800{% endif %}">
+                        <i class="fas fa-user-cog mr-2"></i> Users
+                    </a>
+                    <div class="mt-4 border-t border-gray-700 pt-4">
+                        <div class="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                            Configuration
+                        </div>
+                        <a href="/admin/config" class="block px-4 py-2 hover:bg-gray-800 {% if 'config' in request.endpoint %}bg-gray-800{% endif %}">
+                            <i class="fas fa-cogs mr-2"></i> General Settings
+                        </a>
+                    </div>
+                    {% endif %}
+                </nav>
+        </aside>
+        <main class="flex-1 overflow-y-auto">
+            <header class="bg-white shadow-sm px-6 py-4">
+                <div class="flex justify-between items-center">
+                    <h2 class="text-2xl font-bold text-gray-800">{% block page_title %}Dashboard{% endblock %}</h2>
+                    <div class="flex items-center space-x-4">
+                        <div class="text-sm text-gray-600">
+                            Day {{ config.CURRENT_DAY }} | {{ current_date }}
+                        </div>
+                        {% if current_user.has_loc_privileges() %}
+                        <span class="px-2 py-1 rounded-full text-xs font-medium
+                            {% if current_user.is_loc() %}bg-purple-100 text-purple-800
+                            {% elif current_user.is_technical_delegate() %}bg-green-100 text-green-800
+                            {% endif %}">
+                            {% if current_user.is_technical_delegate() %}
+                                <i class="fas fa-stamp mr-1"></i>Technical Delegate
+                            {% else %}
+                                <i class="fas fa-crown mr-1"></i>LOC Access
+                            {% endif %}
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </header>
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="px-6 pt-4">
+                        {% for category, message in messages %}
+                            <div class="bg-{{ 'green' if category == 'success' else 'red' if category == 'danger' else 'yellow' if category == 'warning' else 'blue' }}-100 border border-{{ 'green' if category == 'success' else 'red' if category == 'danger' else 'yellow' if category == 'warning' else 'blue' }}-400 text-{{ 'green' if category == 'success' else 'red' if category == 'danger' else 'yellow' if category == 'warning' else 'blue' }}-700 px-4 py-3 rounded mb-4">
+                                <div class="flex items-center">
+                                    <i class="fas fa-{{ 'check-circle' if category == 'success' else 'exclamation-circle' if category == 'danger' else 'exclamation-triangle' if category == 'warning' else 'info-circle' }} mr-2"></i>
+                                    {{ message }}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+            <div class="p-6">
+                {% block content %}{% endblock %}
+            </div>
+        </main>
+    </div>
+    <script>
+        setTimeout(() => {
+            document.querySelectorAll('[class*="bg-green-100"], [class*="bg-red-100"], [class*="bg-yellow-100"], [class*="bg-blue-100"]').forEach(el => {
+                if (el.classList.contains('px-4') && el.classList.contains('py-3')) {
+                    el.style.transition = 'opacity 0.5s';
+                    el.style.opacity = '0';
+                    setTimeout(() => el.remove(), 500);
+                }
+            });
+        }, 5000);
+        document.addEventListener('click', function(e) {
+            if (e.target.matches('[onclick*="delete"], [onclick*="Delete"]') ||
+                e.target.closest('[onclick*="delete"], [onclick*="Delete"]')) {
+                if (!confirm('Are you sure you want to delete this item?')) {
+                    e.preventDefault();
+                    return false;
+                }
+            }
+        });
+        function getCSRFToken() {
+            // Essayer plusieurs méthodes pour obtenir le token CSRF
+            const meta = document.querySelector('meta[name="csrf-token"]');
+            if (meta) return meta.getAttribute('content');
+            const input = document.querySelector('input[name="csrf_token"]');
+            if (input) return input.value;
+            // Essayer de trouver le token dans n'importe quel formulaire
+            const forms = document.querySelectorAll('form');
+            for (let form of forms) {
+                const csrfInput = form.querySelector('input[name="csrf_token"]');
+                if (csrfInput) return csrfInput.value;
+            }
+            return '';
+        }
+        // Fonction pour tous les appels AJAX
+        function ajaxRequest(url, options = {}) {
+            const defaults = {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCSRFToken()
+                }
+            };
+            return fetch(url, { ...defaults, ...options });
+        }
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

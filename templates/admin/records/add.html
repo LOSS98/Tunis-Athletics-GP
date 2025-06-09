@@ -1,0 +1,224 @@
+{% extends "admin/base_admin.html" %}
+{% block page_title %}Add World/Area Record{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="mb-6">
+        <div class="flex items-center justify-between">
+            <h2 class="text-2xl font-bold">Add World/Area Record</h2>
+            <a href="{{ url_for('admin.records_list') }}" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+                <i class="fas fa-arrow-left mr-2"></i>Back to Records
+            </a>
+        </div>
+        <p class="text-gray-600 mt-2">Manually add a world or area record performance</p>
+    </div>
+    <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+        <div class="flex items-center">
+            <i class="fas fa-exclamation-circle text-red-600 mr-2"></i>
+            <span class="font-medium text-red-800">Technical Delegate Only</span>
+        </div>
+        <p class="text-red-700 text-sm mt-1">
+            Only technical delegates can manually add world and area records.
+            This action will immediately approve the record upon submission.
+        </p>
+    </div>
+    <form method="POST" class="bg-white rounded-lg shadow p-6">
+        {{ form.hidden_tag() }}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Athlete SDMS (Optional) -->
+            <div class="md:col-span-2">
+                <label class="block text-gray-700 text-sm font-bold mb-2">
+                    Athlete SDMS <span class="text-gray-500">(Optional)</span>
+                </label>
+                {{ form.sdms(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500", placeholder="Enter SDMS number if athlete is in system") }}
+                {% if form.sdms.errors %}
+                    <div class="text-red-500 text-sm mt-1">
+                        {% for error in form.sdms.errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                <p class="text-sm text-gray-600 mt-1">Leave empty if athlete is not in the system</p>
+            </div>
+            <!-- Event -->
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">
+                    Event <span class="text-red-500">*</span>
+                </label>
+                {{ form.event(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
+                {% if form.event.errors %}
+                    <div class="text-red-500 text-sm mt-1">
+                        {% for error in form.event.errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            <!-- Class -->
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">
+                    Classification <span class="text-red-500">*</span>
+                </label>
+                {{ form.athlete_class(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
+                {% if form.athlete_class.errors %}
+                    <div class="text-red-500 text-sm mt-1">
+                        {% for error in form.athlete_class.errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            <!-- Performance -->
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">
+                    Performance <span class="text-red-500">*</span>
+                </label>
+                {{ form.performance(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500", placeholder="e.g., 10.50 or 1:23.45") }}
+                {% if form.performance.errors %}
+                    <div class="text-red-500 text-sm mt-1">
+                        {% for error in form.performance.errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                <p class="text-sm text-gray-600 mt-1">Time format: MM:SS.SS or distance in meters</p>
+            </div>
+            <!-- Location -->
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">
+                    Location <span class="text-red-500">*</span>
+                </label>
+                {{ form.location(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500", placeholder="e.g., Paris, France") }}
+                {% if form.location.errors %}
+                    <div class="text-red-500 text-sm mt-1">
+                        {% for error in form.location.errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            <!-- NPC Code -->
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">
+                    NPC Code <span class="text-gray-500">(Optional)</span>
+                </label>
+                {{ form.npc(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500", placeholder="e.g., TUN", style="text-transform: uppercase", maxlength="3") }}
+                {% if form.npc.errors %}
+                    <div class="text-red-500 text-sm mt-1">
+                        {% for error in form.npc.errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                <p class="text-sm text-gray-600 mt-1">3-letter NPC code (auto-filled if athlete SDMS provided)</p>
+            </div>
+            <!-- Region -->
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">
+                    Region <span class="text-gray-500">(Optional)</span>
+                </label>
+                {{ form.region_code(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
+                {% if form.region_code.errors %}
+                    <div class="text-red-500 text-sm mt-1">
+                        {% for error in form.region_code.errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                <p class="text-sm text-gray-600 mt-1">Required for Area Records (auto-filled if athlete SDMS provided)</p>
+            </div>
+            <!-- Record Type -->
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">
+                    Record Type <span class="text-red-500">*</span>
+                </label>
+                {{ form.record_type(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
+                {% if form.record_type.errors %}
+                    <div class="text-red-500 text-sm mt-1">
+                        {% for error in form.record_type.errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            <!-- Record Date -->
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">
+                    Date Achieved <span class="text-red-500">*</span>
+                </label>
+                {{ form.record_date(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
+                {% if form.record_date.errors %}
+                    <div class="text-red-500 text-sm mt-1">
+                        {% for error in form.record_date.errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            <!-- Made in Competition -->
+            <div class="md:col-span-2">
+                <label class="flex items-center">
+                    {{ form.made_in_competition(class="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded") }}
+                    <span class="ml-2 text-gray-700">{{ form.made_in_competition.label.text }}</span>
+                </label>
+                <p class="text-sm text-gray-600 mt-1">Check if this record was achieved in this competition</p>
+            </div>
+        </div>
+        <div class="mt-8 flex justify-end space-x-4">
+            <a href="{{ url_for('admin.records_list') }}" class="bg-gray-500 text-white px-6 py-2 rounded hover:bg-gray-600">
+                Cancel
+            </a>
+            <button type="submit" class="bg-red-500 text-white px-6 py-2 rounded hover:bg-red-600">
+                <i class="fas fa-trophy mr-2"></i>Add Record
+            </button>
+        </div>
+    </form>
+    <!-- Help Section -->
+    <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h4 class="font-bold text-blue-900 mb-2">
+            <i class="fas fa-question-circle mr-2"></i>Record Entry Guidelines
+        </h4>
+        <div class="text-sm text-blue-800 space-y-2">
+            <p><strong>World Records (WR):</strong> Best performance globally in the event/class combination</p>
+            <p><strong>Area Records (AR):</strong> Best performance within a continental region (requires region selection)</p>
+            <p><strong>Athlete SDMS:</strong> If the athlete is in the system, their NPC and region will be auto-filled</p>
+            <p><strong>Manual Entry:</strong> For athletes not in the system, manually enter NPC and region information</p>
+            <p><strong>Verification:</strong> Ensure all information is accurate as records are immediately approved</p>
+            <p><strong>Performance Format:</strong> Use standard formats (MM:SS.SS for times, meters for distances)</p>
+        </div>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const sdmsInput = document.getElementById('sdms');
+    const npcInput = document.getElementById('npc');
+    const regionSelect = document.getElementById('region_code');
+    const recordTypeSelect = document.getElementById('record_type');
+    // Auto-uppercase NPC code
+    npcInput.addEventListener('input', function() {
+        this.value = this.value.toUpperCase();
+    });
+    // Show/hide region requirement based on record type
+    recordTypeSelect.addEventListener('change', function() {
+        const regionGroup = regionSelect.closest('div');
+        const regionLabel = regionGroup.querySelector('label');
+        if (this.value === 'AR') {
+            regionLabel.innerHTML = 'Region <span class="text-red-500">*</span>';
+            regionSelect.required = true;
+        } else {
+            regionLabel.innerHTML = 'Region <span class="text-gray-500">(Optional)</span>';
+            regionSelect.required = false;
+        }
+    });
+    // Trigger initial state
+    recordTypeSelect.dispatchEvent(new Event('change'));
+    // Auto-populate athlete info when SDMS is entered
+    sdmsInput.addEventListener('blur', function() {
+        const sdms = this.value;
+        if (sdms) {
+            // You could add an AJAX call here to fetch athlete info
+            console.log('Looking up athlete with SDMS:', sdms);
+        }
+    });
+});
+</script>
+{% endblock %}

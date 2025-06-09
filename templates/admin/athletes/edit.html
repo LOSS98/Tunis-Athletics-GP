@@ -1,0 +1,60 @@
+{% extends "admin/base_admin.html" %}
+{% block page_title %}Edit Athlete{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="bg-white rounded-lg shadow p-6">
+        <form method="POST" enctype="multipart/form-data">
+            {{ form.hidden_tag() }}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">SDMS Number</label>
+                    {{ form.sdms(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">NPC Code</label>
+                    {{ form.npc(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">First Name</label>
+                    {{ form.firstname(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Last Name</label>
+                    {{ form.lastname(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Gender</label>
+                    {{ form.gender(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Class</label>
+                    {{ form.athlete_class(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
+                </div>
+                <div class="mb-4 flex items-center">
+                    {{ form.is_guide(class="mr-2") }}
+                    <label class="text-gray-700 text-sm font-bold" for="is_guide">Is Guide</label>
+                </div>
+            </div>
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2">Photo</label>
+                {% if athlete.photo %}
+                    <div class="mb-2">
+                        <img src="/static/images/athletes/{{ athlete.photo }}" alt="{{ athlete.firstname }}" class="w-32 h-32 object-cover rounded">
+                        <p class="text-sm text-gray-600 mt-1">Current photo</p>
+                    </div>
+                {% endif %}
+                {{ form.photo(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
+                <p class="text-sm text-gray-600 mt-1">Upload new photo to replace current one</p>
+            </div>
+            <div class="flex justify-between">
+                <a href="{{ url_for('admin.athletes_list') }}" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">
+                    Cancel
+                </a>
+                <button type="submit" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
+                    Update Athlete
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,155 @@
+{% extends "admin/base_admin.html" %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="mb-6">
+        <div class="flex items-center justify-between">
+            <h2 class="text-2xl font-bold">{{ title }}</h2>
+            <a href="{{ url_for('admin.config_npcs') }}" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+                <i class="fas fa-arrow-left mr-2"></i>Back to NPCs
+            </a>
+        </div>
+    </div>
+    <form method="POST" enctype="multipart/form-data" class="bg-white rounded-lg shadow p-6">
+        {{ form.hidden_tag() }}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">
+                    NPC Code <span class="text-red-500">*</span>
+                </label>
+                {{ form.code(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500", maxlength="3", style="text-transform: uppercase") }}
+                <p class="text-sm text-gray-600 mt-1">{{ form.code.description }}</p>
+                {% if form.code.errors %}
+                    <div class="text-red-500 text-sm mt-1">
+                        {% for error in form.code.errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">
+                    NPC Name <span class="text-red-500">*</span>
+                </label>
+                {{ form.name(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
+                <p class="text-sm text-gray-600 mt-1">{{ form.name.description }}</p>
+                {% if form.name.errors %}
+                    <div class="text-red-500 text-sm mt-1">
+                        {% for error in form.name.errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">
+                    Region
+                </label>
+                {{ form.region_code(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
+                <p class="text-sm text-gray-600 mt-1">{{ form.region_code.description }}</p>
+                {% if form.region_code.errors %}
+                    <div class="text-red-500 text-sm mt-1">
+                        {% for error in form.region_code.errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">
+                    Flag File (SVG Only)
+                </label>
+                {{ form.flag_file(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500", accept=".svg") }}
+                <p class="text-sm text-gray-600 mt-1">{{ form.flag_file.description }}</p>
+                {% if form.flag_file.errors %}
+                    <div class="text-red-500 text-sm mt-1">
+                        {% for error in form.flag_file.errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        <!-- Current Flag Preview -->
+        {% if npc and npc.flag_exists and npc.flag_url %}
+        <div class="mt-6">
+            <label class="block text-gray-700 text-sm font-bold mb-2">Current Flag</label>
+            <div class="border rounded-lg p-4 bg-gray-50">
+                <img src="{{ npc.flag_url }}" alt="{{ npc.name }}" class="w-16 h-10 border border-gray-300 rounded">
+                <p class="text-xs text-gray-600 mt-2">
+                    <span class="text-green-600"><i class="fas fa-check"></i> Flag file exists</span>
+                    {% if npc.flag_file_path %}
+                    <br>Custom path: {{ npc.flag_file_path }}
+                    {% else %}
+                    <br>Standard path: /static/images/flags/{{ npc.code }}.svg
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+        {% elif npc %}
+        <div class="mt-6">
+            <label class="block text-gray-700 text-sm font-bold mb-2">Flag Status</label>
+            <div class="border rounded-lg p-4 bg-red-50 border-red-200">
+                <div class="flex items-center text-red-600">
+                    <i class="fas fa-exclamation-triangle mr-2"></i>
+                    <span>No flag file found</span>
+                </div>
+                <p class="text-xs text-red-600 mt-2">
+                    Expected paths:<br>
+                    • Standard: /static/images/flags/{{ npc.code }}.svg<br>
+                    {% if npc.flag_file_path %}
+                    • Custom: {{ npc.flag_file_path }} (file missing)
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+        {% endif %}
+        <div class="mt-8 flex justify-end space-x-4">
+            <a href="{{ url_for('admin.config_npcs') }}" class="bg-gray-500 text-white px-6 py-2 rounded hover:bg-gray-600">
+                Cancel
+            </a>
+            <button type="submit" class="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600">
+                <i class="fas fa-save mr-2"></i>{{ 'Update' if npc else 'Create' }} NPC
+            </button>
+        </div>
+    </form>
+</div>
+<div class="max-w-2xl mx-auto mt-6">
+    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+        <h4 class="font-bold text-green-900 mb-2">
+            <i class="fas fa-lightbulb mr-2"></i>Automatic Flag Detection
+        </h4>
+        <div class="text-sm text-green-800 space-y-2">
+            <p><strong>1. Automatic Detection:</strong> Flag availability is automatically detected by checking file existence</p>
+            <p><strong>2. File Format:</strong> Only SVG files are accepted for optimal scalability</p>
+            <p><strong>3. File Naming:</strong> Files are automatically named as NPC_CODE.svg</p>
+            <p><strong>4. Storage Location:</strong> Files are saved to /static/images/flags/</p>
+            <p><strong>5. Real-time Updates:</strong> Flag status updates immediately when files are added or removed</p>
+            <p><strong>6. Fallback Detection:</strong> System checks both custom paths and standard naming convention</p>
+        </div>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const codeInput = document.getElementById('code');
+    const flagFileInput = document.getElementById('flag_file');
+    // Auto-uppercase npc code
+    codeInput.addEventListener('input', function() {
+        this.value = this.value.toUpperCase();
+    });
+    codeInput.addEventListener('blur', function() {
+        this.value = this.value.toUpperCase();
+    });
+    // Preview uploaded SVG file
+    flagFileInput.addEventListener('change', function(e) {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            if (file.type === 'image/svg+xml') {
+                console.log('SVG file selected:', file.name);
+                // Vous pourriez ajouter ici une prévisualisation du fichier uploadé
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

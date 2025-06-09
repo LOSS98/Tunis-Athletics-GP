@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Records - World Para Athletics Grand Prix{% endblock %}
+{% block content %}
+<div class="mb-8">
+    <h1 class="text-3xl font-bold mb-4">Competition Records</h1>
+    <form method="GET" class="max-w-md">
+        <div class="flex">
+            <input type="text" name="search" value="{{ search }}" placeholder="Search athlete, event, npc..."
+                   class="flex-1 px-4 py-2 border rounded-l-lg focus:outline-none focus:border-red-500">
+            <button type="submit" class="bg-red-600 text-white px-4 py-2 rounded-r-lg hover:bg-red-700">
+                <i class="fas fa-search"></i> Search
+            </button>
+        </div>
+    </form>
+</div>
+<div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Day/Time</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Record</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Medal</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Athlete</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">NPC</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Event</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gender</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Classes</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">View</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for record in records %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="text-gray-900">Day {{ record.day }} - {{ record.time }}</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                            {{ record.record }} - {{ record.value }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if record.rank == '1' %}
+                            <span class="text-2xl">🥇 GOLD</span>
+                        {% elif record.rank == '2' %}
+                            <span class="text-2xl">🥈 SILVER</span>
+                        {% elif record.rank == '3' %}
+                            <span class="text-2xl">🥉 BRONZE</span>
+                        {% else %}
+                            <span class="text-gray-500">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            {% if record.photo %}
+                                <img src="/static/images/athletes/{{ record.photo }}" alt="{{ record.firstname }}"
+                                     class="w-10 h-10 rounded-full object-cover mr-3">
+                            {% else %}
+                                <div class="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center mr-3">
+                                    <i class="fas fa-user text-gray-600"></i>
+                                </div>
+                            {% endif %}
+                            <span class="font-medium">{{ record.lastname }} {{ record.firstname }}</span>
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <img src="/static/images/flags/{{ record.npc }}.svg" alt="{{ record.npc }}"
+                             class="inline w-8 h-5 mr-2">
+                        {{ record.npc }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap font-medium">{{ record.event }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">{{ record.gender }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">{{ record.classes }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <a href="{{ url_for('public.game_detail', id=record.game_id) }}"
+                           class="text-green-600 hover:text-green-800 font-medium underline">
+                            View
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% if not records %}
+<div class="text-center py-8">
+    <p class="text-gray-500">No records found matching your search criteria.</p>
+</div>
+{% endif %}
+<div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+    <h4 class="font-bold text-blue-900 mb-2">Record Types:</h4>
+    <div class="grid grid-cols-2 md:grid-cols-3 gap-2 text-sm text-blue-800">
+        <div><span class="font-semibold">WR:</span> World Record</div>
+        <div><span class="font-semibold">AR:</span> Area Record</div>
+        <div><span class="font-semibold">CR:</span> Championship Record</div>
+        <div><span class="font-semibold">NR:</span> National Record</div>
+        <div><span class="font-semibold">PB:</span> Personal Best</div>
+        <div><span class="font-semibold">SB:</span> Season Best</div>
+    </div>
+</div>
+{% endblock %}

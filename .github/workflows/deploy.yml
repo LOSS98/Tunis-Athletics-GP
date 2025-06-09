@@ -1,0 +1,110 @@
+name: Deploy to Production
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Pull latest code
+      uses: appleboy/ssh-action@v0.1.7
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        password: ${{ secrets.PASSWORD }}
+        port: 6534
+        timeout: 120s
+        script: |
+          cd /home/khalil/tunis-gp25
+          git pull origin main --force
+    - name: Stop containers
+      uses: appleboy/ssh-action@v0.1.7
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        password: ${{ secrets.PASSWORD }}
+        port: 6534
+        timeout: 60s
+        script: |
+          cd /home/khalil/tunis-gp25
+          docker-compose down || true
+    - name: Create environment file
+      uses: appleboy/ssh-action@v0.1.7
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        password: ${{ secrets.PASSWORD }}
+        port: 6534
+        timeout: 60s
+        script: |
+          cd /home/khalil/tunis-gp25
+          cat > .env << EOF
+          SECRET_KEY=${{ secrets.SECRET_KEY }}
+          DATABASE_URL=${{ secrets.DATABASE_URL }}
+          FLASK_ENV=${{ secrets.FLASK_ENV }}
+          FLASK_DEBUG=${{ secrets.FLASK_DEBUG }}
+          ADMIN_USERNAME=${{ secrets.ADMIN_USERNAME }}
+          ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}
+          UPLOAD_FOLDER=${{ secrets.UPLOAD_FOLDER }}
+          MAX_CONTENT_LENGTH=${{ secrets.MAX_CONTENT_LENGTH }}
+          CLASSES=${{ secrets.CLASSES }}
+          GENDERS=${{ secrets.GENDERS }}
+          RECORD_TYPES=${{ secrets.RECORD_TYPES }}
+          RESULT_SPECIAL_VALUES=${{ secrets.RESULT_SPECIAL_VALUES }}
+          FIELD_EVENTS=${{ secrets.FIELD_EVENTS }}
+          TRACK_EVENTS=${{ secrets.TRACK_EVENTS }}
+          CURRENT_DAY=${{ secrets.CURRENT_DAY }}
+          NPCS_COUNT=${{ secrets.NPCS_COUNT }}
+          ATHLETES_COUNT=${{ secrets.ATHLETES_COUNT }}
+          VOLUNTEERS_COUNT=${{ secrets.VOLUNTEERS_COUNT }}
+          LOC_COUNT=${{ secrets.LOC_COUNT }}
+          OFFICIALS_COUNT=${{ secrets.OFFICIALS_COUNT }}
+          POSTGRES_DB=tunis_gp25_db
+          POSTGRES_USER=tunis_user
+          POSTGRES_PASSWORD=TunisGP25_SecurePass_2024
+          FLASK_SECRET_KEY=${{ secrets.SECRET_KEY }}
+          EOF
+    - name: Build containers
+      uses: appleboy/ssh-action@v0.1.7
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        password: ${{ secrets.PASSWORD }}
+        port: 6534
+        timeout: 240s
+        script: |
+          cd /home/khalil/tunis-gp25
+          docker-compose build --no-cache
+    - name: Start containers
+      uses: appleboy/ssh-action@v0.1.7
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        password: ${{ secrets.PASSWORD }}
+        port: 6534
+        timeout: 120s
+        script: |
+          cd /home/khalil/tunis-gp25
+          docker-compose up -d
+    - name: Wait for services
+      uses: appleboy/ssh-action@v0.1.7
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        password: ${{ secrets.PASSWORD }}
+        port: 6534
+        timeout: 30s
+        script: |
+          sleep 15
+    - name: Check deployment status
+      uses: appleboy/ssh-action@v0.1.7
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        password: ${{ secrets.PASSWORD }}
+        port: 6534
+        timeout: 30s
+        script: |
+          cd /home/khalil/tunis-gp25
+          docker-compose ps

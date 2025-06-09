@@ -1,0 +1,400 @@
+{% extends "admin/base_admin.html" %}
+{% block page_title %}Start List - {{ game.event }} {% endblock %}
+{% block content %}
+<div class="mb-6">
+    <div class="bg-white rounded-lg shadow p-4">
+        <h3 class="text-lg font-bold">
+            Game Information
+            <span class="bg-amber-100 text-amber-500 px-2 py-1 rounded-full text-xs font-medium">
+                #{{ game.id }}
+            </span>
+        </h3>
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mt-3 text-sm">
+            <div><span class="font-semibold">Event:</span> {{ game.event }}</div>
+            <div><span class="font-semibold">Gender:</span> {{ game.gender }}</div>
+            <div><span class="font-semibold">Classes:</span> {{ game.classes }}</div>
+            <div><span class="font-semibold">Phase:</span> {{ game.phase or 'Final' }}</div>
+            <div><span class="font-semibold">Day {{ game.day }}</span> - {{ game.time }}</div>
+        </div>
+    </div>
+</div>
+<div class="mb-6">
+    <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-lg font-bold mb-4">Add Athlete to Start List</h3>
+        <form method="POST" action="{{ url_for('admin.startlist_add', game_id=game.id) }}">
+            {{ form.hidden_tag() }}
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Athlete</label>
+                    <div class="relative">
+                        <input type="text" id="athleteSearch" placeholder="Search by SDMS, name, npc..."
+                               class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500">
+                        <div id="athleteResults" class="absolute z-10 w-full bg-white border rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto"></div>
+                    </div>
+                    <input type="hidden" name="athlete_sdms" id="selectedSdms" required>
+                    <div id="selectedAthlete" class="mt-2 text-sm text-gray-600" data-game-classes="{{ game.classes }}" data-game-gender="{{ game.gender }}"></div>
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Guide (optional)</label>
+                    <div class="relative">
+                        <input type="text" id="guideSearch" placeholder="Search guide"
+                               class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500">
+                        <div id="guideResults" class="absolute z-10 w-full bg-white border rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto"></div>
+                    </div>
+                    <input type="hidden" name="guide_sdms" id="selectedGuideSdms">
+                    <div id="selectedGuide" class="mt-2 text-sm text-gray-600"></div>
+                </div>
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Lane/Order (optional)</label>
+                    {{ form.lane_order(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
+                </div>
+                <div class="flex items-end">
+                    <button type="submit" class="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600">
+                        <i class="fas fa-plus mr-2"></i>Add to Start List
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+<div class="bg-white rounded-lg shadow">
+    <div class="p-6 border-b">
+        <h3 class="text-lg font-bold">Current Start List ({{ startlist|length }} athletes)</h3>
+        {% if startlist|length != game.nb_athletes %}
+            <div class="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm">
+                <i class="fas fa-info-circle text-yellow-600 mr-1"></i>
+                <span class="text-yellow-800">Expected {{ game.nb_athletes }} athletes, currently {{ startlist|length }} registered.</span>
+            </div>
+        {% endif %}
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Alerts</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Lane/Order</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SDMS</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">NPC</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gender</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guide</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for entry in startlist %}
+                <tr class="hover:bg-gray-50 {% if entry.gender != game.gender %}bg-yellow-50{% endif %}">
+                    <!-- Alerts -->
+                    <td class="px-6 py-4 whitespace-nowrap text-center">
+                        {% if entry.gender != game.gender or entry.class not in game.classes_list %}
+                            <i class="fas fa-exclamation-triangle text-red-500" title="Gender or class mismatch"></i>
+                        {% else %}
+                            <i class="fas fa-check-circle text-green-500" title="No alerts"></i>
+                        {% endif %}
+                    </td>
+                    <!-- Lane/Order -->
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if entry.lane_order %}
+                            <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-semibold">{{ entry.lane_order }}</span>
+                        {% else %}
+                            <span class="text-gray-400">-</span>
+                        {% endif %}
+                    </td>
+                    <!-- SDMS -->
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="bg-indigo-100 text-indigo-800 px-2 py-1 rounded text-sm font-semibold">{{ entry.athlete_sdms }}</span>
+                    </td>
+                    <!-- Name -->
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {{ entry.lastname }} {{ entry.firstname }}
+                        {% if entry.gender != game.gender %}
+                            <div class="text-xs text-red-600 mt-1">
+                                <i class="fas fa-exclamation-triangle"></i> Gender: {{ entry.gender }} (Expected: {{ game.gender }})
+                            </div>
+                        {% endif %}
+                    </td>
+                    <!-- NPC -->
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flex items-center">
+                            <img src="/static/images/flags/{{ entry.npc }}.svg" alt="{{ entry.npc }}"
+                                 class="w-6 h-4 mr-2" onerror="this.style.display='none'">
+                            <span>{{ entry.npc }}</span>
+                        </div>
+                    </td>
+                    <!-- Gender -->
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 py-1 text-xs {% if entry.gender != game.gender %}bg-red-100 text-red-800{% else %}bg-green-100 text-green-800{% endif %} rounded">
+                            {{ entry.gender }}
+                        </span>
+                    </td>
+                    <!-- Class -->
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 py-1 text-xs {% if entry.class not in game.classes_list %}bg-red-100 text-red-800{% else %}bg-blue-100 text-blue-800{% endif %} rounded">
+                            {{ entry.class }}
+                        </span>
+                        {% if entry.class not in game.classes_list %}
+                            <span class="text-red-500 ml-1" title="Class not in event">
+                                <i class="fas fa-exclamation-triangle"></i>
+                            </span>
+                        {% endif %}
+                    </td>
+                    <!-- Guide -->
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if entry.guide_sdms %}
+                            <span class="bg-indigo-100 text-indigo-800 px-2 py-1 rounded text-sm font-semibold">{{ entry.guide_sdms }}</span>
+                            <div class="text-xs text-gray-600">{{ entry.guide_lastname }} {{ entry.guide_firstname }}</div>
+                        {% else %}
+                            <span class="text-gray-400">-</span>
+                        {% endif %}
+                    </td>
+                    <!-- Actions -->
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <form method="POST" action="{{ url_for('admin.startlist_delete', game_id=game.id, athlete_sdms=entry.athlete_sdms) }}" class="inline"
+                              onsubmit="return confirm('Remove this athlete from start list?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="text-red-600 hover:text-red-900" title="Remove from Start List">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="8" class="px-6 py-8 text-center">
+                        <div class="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+                            <i class="fas fa-list text-4xl text-gray-300"></i>
+                        </div>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">No athletes in start list</h3>
+                        <p class="text-gray-500">Start adding athletes to the start list for this event.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+<!-- Summary Section -->
+{% if startlist %}
+<div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div class="bg-white rounded-lg shadow p-4">
+        <div class="flex items-center">
+            <div class="text-2xl font-bold {% if startlist|length == game.nb_athletes %}text-green-600{% else %}text-orange-600{% endif %}">
+                {{ startlist|length }}
+            </div>
+            <div class="ml-3">
+                <div class="text-sm font-medium text-gray-900">Athletes Registered</div>
+                <div class="text-sm text-gray-500">Expected: {{ game.nb_athletes }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4">
+        <div class="flex items-center">
+            <div class="text-2xl font-bold {% set gender_mismatches = startlist|selectattr('gender', '!=', game.gender)|list %}{% if gender_mismatches|length == 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                {{ gender_mismatches|length }}
+            </div>
+            <div class="ml-3">
+                <div class="text-sm font-medium text-gray-900">Gender Mismatches</div>
+                <div class="text-sm text-gray-500">Expected: {{ game.gender }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4">
+        <div class="flex items-center">
+            <div class="text-2xl font-bold {% set class_mismatches = startlist|rejectattr('class', 'in', game.classes_list)|list %}{% if class_mismatches|length == 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                {{ class_mismatches|length }}
+            </div>
+            <div class="ml-3">
+                <div class="text-sm font-medium text-gray-900">Class Mismatches</div>
+                <div class="text-sm text-gray-500">Classes: {{ game.classes }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+<!-- Action Buttons -->
+<div class="mt-6 flex justify-between">
+    <a href="{{ url_for('admin.games_list') }}" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">
+        <i class="fas fa-arrow-left mr-2"></i>Back to Games
+    </a>
+    <div class="flex gap-2">
+        <a href="{{ url_for('admin.game_results', id=game.id) }}" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
+            <i class="fas fa-medal mr-2"></i>Manage Results
+        </a>
+        {% if startlist %}
+            <a href="{{ url_for('admin.generate_startlist_pdf', game_id=game.id) }}"
+               class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600"
+               target="_blank">
+                <i class="fas fa-file-pdf mr-2"></i>Export PDF
+            </a>
+        {% endif %}
+    </div>
+</div>
+<!-- Information Panel -->
+<div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+    <h4 class="font-bold text-blue-900 mb-2">
+        <i class="fas fa-info-circle mr-2"></i>Start List Information
+    </h4>
+    <div class="text-sm text-blue-800 space-y-2">
+        <p><strong>Gender Matching:</strong> Athletes must match the event gender ({{ game.gender }})</p>
+        <p><strong>Class Matching:</strong> Athletes should be in event classes: {{ game.classes }}</p>
+        <p><strong>Lane/Order:</strong> Optional field for starting position or running order</p>
+        <p><strong>Capacity:</strong> Expected {{ game.nb_athletes }} athletes for this event</p>
+        {% if game.area %}
+        <p><strong>Area:</strong> {{ game.area }}</p>
+        {% endif %}
+    </div>
+</div>
+<script>
+let searchTimeout;
+const athleteSearch = document.getElementById('athleteSearch');
+const athleteResults = document.getElementById('athleteResults');
+const selectedSdms = document.getElementById('selectedSdms');
+const selectedAthlete = document.getElementById('selectedAthlete');
+const guideSearch = document.getElementById('guideSearch');
+const guideResults = document.getElementById('guideResults');
+const selectedGuideSdms = document.getElementById('selectedGuideSdms');
+const selectedGuide = document.getElementById('selectedGuide');
+athleteSearch.addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    const query = this.value.trim();
+    if (query.length < 2) {
+        athleteResults.classList.add('hidden');
+        return;
+    }
+    searchTimeout = setTimeout(() => {
+        fetch(`/admin/athletes/search?q=${encodeURIComponent(query)}&guides=1`)
+            .then(response => response.json())
+            .then(athletes => {
+                athleteResults.innerHTML = '';
+                if (athletes.length === 0) {
+                    athleteResults.innerHTML = '<div class="p-2 text-gray-500">No athletes found</div>';
+                } else {
+                    athletes.forEach(athlete => {
+                        const div = document.createElement('div');
+                        div.className = 'p-2 hover:bg-gray-100 cursor-pointer border-b';
+                        const gameClasses = '{{ game.classes }}'.split(',').map(c => c.trim());
+                        const gameGender = '{{ game.gender }}';
+                        let alertClass = '';
+                        if (athlete.gender !== gameGender || !gameClasses.includes(athlete.class)) {
+                            alertClass = 'bg-yellow-50 border-yellow-300';
+                        }
+                        div.className += ` ${alertClass}`;
+                        div.innerHTML = `
+                            <div class="flex justify-between items-center">
+                                <div>
+                                    <strong>${athlete.sdms}</strong> - ${athlete.name} (${athlete.npc})
+                                    ${athlete.gender !== gameGender ? '<span class="text-red-600 text-xs block">⚠️ Gender mismatch</span>' : ''}
+                                    ${!gameClasses.includes(athlete.class) ? '<span class="text-red-600 text-xs block">⚠️ Class mismatch</span>' : ''}
+                                </div>
+                                <div class="text-right">
+                                    <span class="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">${athlete.class}</span>
+                                    <div class="text-xs text-gray-500 mt-1">${athlete.gender}</div>
+                                </div>
+                            </div>
+                        `;
+                        div.onclick = () => selectAthlete(athlete);
+                        athleteResults.appendChild(div);
+                    });
+                }
+                athleteResults.classList.remove('hidden');
+            })
+            .catch(error => {
+                console.error('Search error:', error);
+                athleteResults.innerHTML = '<div class="p-2 text-red-500">Search failed</div>';
+                athleteResults.classList.remove('hidden');
+            });
+    }, 300);
+});
+guideSearch.addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    const query = this.value.trim();
+    if (query.length < 2) {
+        guideResults.classList.add('hidden');
+        return;
+    }
+    searchTimeout = setTimeout(() => {
+        fetch(`/admin/athletes/search?q=${encodeURIComponent(query)}`)
+            .then(response => response.json())
+            .then(athletes => {
+                guideResults.innerHTML = '';
+                if (athletes.length === 0) {
+                    guideResults.innerHTML = '<div class="p-2 text-gray-500">No athletes found</div>';
+                } else {
+                    athletes.forEach(athlete => {
+                        const div = document.createElement('div');
+                        div.className = 'p-2 hover:bg-gray-100 cursor-pointer border-b';
+                        div.innerHTML = `<strong>${athlete.sdms}</strong> - ${athlete.name} (${athlete.npc})`;
+                        div.onclick = () => selectGuide(athlete);
+                        guideResults.appendChild(div);
+                    });
+                }
+                guideResults.classList.remove('hidden');
+            });
+    }, 300);
+});
+function selectGuide(athlete) {
+    selectedGuideSdms.value = athlete.sdms;
+    guideSearch.value = '';
+    guideResults.classList.add('hidden');
+    selectedGuide.innerHTML = `Guide: <strong>${athlete.sdms}</strong> - ${athlete.name}`;
+}
+function selectAthlete(athlete) {
+    checkAthleteCompatibility(athlete);
+    selectedSdms.value = athlete.sdms;
+    athleteSearch.value = '';
+    athleteResults.classList.add('hidden');
+}
+function checkAthleteCompatibility(athlete) {
+    const gameClasses = selectedAthlete.dataset.gameClasses.split(',').map(c => c.trim());
+    const gameGender = selectedAthlete.dataset.gameGender;
+    let warnings = [];
+    selectedAthlete.innerHTML = `Selected: <strong>${athlete.sdms}</strong> - ${athlete.name} (${athlete.npc})`;
+    if (athlete.gender !== gameGender) {
+        warnings.push(`Gender mismatch: ${athlete.gender} (Expected: ${gameGender})`);
+    }
+    if (!gameClasses.includes(athlete.class)) {
+        warnings.push(`Class mismatch: ${athlete.class} (Expected: ${gameClasses.join(', ')})`);
+    }
+    if (warnings.length > 0) {
+        selectedAthlete.innerHTML += `
+            <div class="mt-2 p-2 bg-red-100 border border-red-400 text-red-700 rounded">
+                <i class="fas fa-exclamation-triangle mr-1"></i> Warnings:
+                <ul class="mt-1 ml-4 list-disc">
+                    ${warnings.map(w => `<li>${w}</li>`).join('')}
+                </ul>
+            </div>
+        `;
+    }
+}
+function exportStartList() {
+    window.print();
+}
+// Close search when clicking outside
+document.addEventListener('click', function(e) {
+    if (!athleteSearch.contains(e.target) && !athleteResults.contains(e.target)) {
+        athleteResults.classList.add('hidden');
+    }
+    if (!guideSearch.contains(e.target) && !guideResults.contains(e.target)) {
+        guideResults.classList.add('hidden');
+    }
+});
+</script>
+<style>
+@media print {
+    .no-print {
+        display: none !important;
+    }
+    .bg-yellow-50 {
+        background-color: #fefce8 !important;
+        -webkit-print-color-adjust: exact;
+        color-adjust: exact;
+    }
+    .text-red-600 {
+        color: #dc2626 !important;
+        -webkit-print-color-adjust: exact;
+        color-adjust: exact;
+    }
+}
+</style>
+{% endblock %}

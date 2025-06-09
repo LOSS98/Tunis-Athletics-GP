@@ -1,0 +1,461 @@
+{% extends "admin/base_admin.html" %}
+{% block page_title %}General Configuration{% endblock %}
+{% block content %}
+<form id="csrf-form" style="display: none;">
+    {{ csrf_token() }}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+</form>
+<div class="max-w-6xl mx-auto">
+    <div class="mb-6">
+        <div class="flex items-center justify-between">
+            <h2 class="text-2xl font-bold">General Configuration</h2>
+            <a href="{{ url_for('admin.config_index') }}" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+                <i class="fas fa-arrow-left mr-2"></i>Back to Configuration
+            </a>
+        </div>
+        <p class="text-gray-600 mt-2">Configure events, classes, and competition parameters using tags</p>
+    </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Classes -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="text-lg font-bold mb-4">Disability Classes</h3>
+            <div class="tag-manager" data-config-key="classes">
+                <div class="flex flex-wrap gap-2 mb-3 min-h-[40px] p-2 border rounded bg-gray-50" id="classes-tags">
+                    {% for class in configs.get('classes', []) %}
+                    <span class="tag inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+                        {{ class }}
+                        <button type="button" class="ml-2 text-blue-600 hover:text-blue-800" onclick="removeTag('classes', '{{ class }}')">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </span>
+                    {% endfor %}
+                </div>
+                <div class="flex">
+                    <input type="text" id="classes-input" placeholder="Add class (e.g., T54)" class="flex-1 px-3 py-2 border rounded-l-lg">
+                    <button type="button" onclick="addTag('classes')" class="bg-blue-500 text-white px-4 py-2 rounded-r-lg hover:bg-blue-600">
+                        Add
+                    </button>
+                </div>
+                <div class="mt-2">
+                    <p class="text-xs text-gray-500 mb-2">Quick add:</p>
+                    <div class="flex flex-wrap gap-1">
+                        <button type="button" onclick="addTagDirect('classes', 'T11')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">T11</button>
+                        <button type="button" onclick="addTagDirect('classes', 'T54')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">T54</button>
+                        <button type="button" onclick="addTagDirect('classes', 'F32')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">F32</button>
+                        <button type="button" onclick="addTagDirect('classes', 'F42')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">F42</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Classes With Guides -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="text-lg font-bold mb-4">Guide Allowed Classes</h3>
+            <div class="tag-manager" data-config-key="guide_classes">
+                <div class="flex flex-wrap gap-2 mb-3 min-h-[40px] p-2 border rounded bg-gray-50" id="guide_classes-tags">
+                    {% for cls in configs.get('guide_classes', []) %}
+                    <span class="tag inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
+                        {{ cls }}
+                        <button type="button" class="ml-2 text-purple-600 hover:text-purple-800" onclick="removeTag('guide_classes', '{{ cls }}')">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </span>
+                    {% endfor %}
+                </div>
+                <div class="flex">
+                    <input type="text" id="guide_classes-input" placeholder="Add class (e.g., T11)" class="flex-1 px-3 py-2 border rounded-l-lg">
+                    <button type="button" onclick="addTag('guide_classes')" class="bg-purple-500 text-white px-4 py-2 rounded-r-lg hover:bg-purple-600">
+                        Add
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- Record Types -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="text-lg font-bold mb-4">Record Types</h3>
+            <div class="tag-manager" data-config-key="record_types">
+                <div class="flex flex-wrap gap-2 mb-3 min-h-[40px] p-2 border rounded bg-gray-50" id="record_types-tags">
+                    {% for record in configs.get('record_types', []) %}
+                    <span class="tag inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-800">
+                        {{ record }}
+                        <button type="button" class="ml-2 text-yellow-600 hover:text-yellow-800" onclick="removeTag('record_types', '{{ record }}')">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </span>
+                    {% endfor %}
+                </div>
+                <div class="flex">
+                    <input type="text" id="record_types-input" placeholder="Add record type (e.g., WR)" class="flex-1 px-3 py-2 border rounded-l-lg">
+                    <button type="button" onclick="addTag('record_types')" class="bg-yellow-500 text-white px-4 py-2 rounded-r-lg hover:bg-yellow-600">
+                        Add
+                    </button>
+                </div>
+                <div class="mt-2">
+                    <p class="text-xs text-gray-500 mb-2">Quick add:</p>
+                    <div class="flex flex-wrap gap-1">
+                        <button type="button" onclick="addTagDirect('record_types', 'WR')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">WR</button>
+                        <button type="button" onclick="addTagDirect('record_types', 'AR')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">AR</button>
+                        <button type="button" onclick="addTagDirect('record_types', 'NR')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">NR</button>
+                        <button type="button" onclick="addTagDirect('record_types', 'PB')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">PB</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Special Result Values -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="text-lg font-bold mb-4">Special Result Values</h3>
+            <div class="tag-manager" data-config-key="result_special_values">
+                <div class="flex flex-wrap gap-2 mb-3 min-h-[40px] p-2 border rounded bg-gray-50" id="result_special_values-tags">
+                    {% for value in configs.get('result_special_values', []) %}
+                    <span class="tag inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
+                        {{ value }}
+                        <button type="button" class="ml-2 text-red-600 hover:text-red-800" onclick="removeTag('result_special_values', '{{ value }}')">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </span>
+                    {% endfor %}
+                </div>
+                <div class="flex">
+                    <input type="text" id="result_special_values-input" placeholder="Add special value (e.g., DNS)" class="flex-1 px-3 py-2 border rounded-l-lg">
+                    <button type="button" onclick="addTag('result_special_values')" class="bg-red-500 text-white px-4 py-2 rounded-r-lg hover:bg-red-600">
+                        Add
+                    </button>
+                </div>
+                <div class="mt-2">
+                    <p class="text-xs text-gray-500 mb-2">Quick add:</p>
+                    <div class="flex flex-wrap gap-1">
+                        <button type="button" onclick="addTagDirect('result_special_values', 'DNS')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">DNS</button>
+                        <button type="button" onclick="addTagDirect('result_special_values', 'DNF')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">DNF</button>
+                        <button type="button" onclick="addTagDirect('result_special_values', 'DSQ')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">DSQ</button>
+                        <button type="button" onclick="addTagDirect('result_special_values', 'NM')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">NM</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Field Events -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="text-lg font-bold mb-4">Field Events</h3>
+            <div class="tag-manager" data-config-key="field_events">
+                <div class="flex flex-wrap gap-2 mb-3 min-h-[40px] p-2 border rounded bg-gray-50" id="field_events-tags">
+                    {% for event in configs.get('field_events', []) %}
+                    <span class="tag inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                        {{ event }}
+                        <button type="button" class="ml-2 text-green-600 hover:text-green-800" onclick="removeTag('field_events', '{{ event }}')">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </span>
+                    {% endfor %}
+                </div>
+                <div class="flex">
+                    <input type="text" id="field_events-input" placeholder="Add field event (e.g., Javelin)" class="flex-1 px-3 py-2 border rounded-l-lg">
+                    <button type="button" onclick="addTag('field_events')" class="bg-green-500 text-white px-4 py-2 rounded-r-lg hover:bg-green-600">
+                        Add
+                    </button>
+                </div>
+                <div class="mt-2">
+                    <p class="text-xs text-gray-500 mb-2">Quick add:</p>
+                    <div class="flex flex-wrap gap-1">
+                        <button type="button" onclick="addTagDirect('field_events', 'Javelin')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">Javelin</button>
+                        <button type="button" onclick="addTagDirect('field_events', 'Shot Put')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">Shot Put</button>
+                        <button type="button" onclick="addTagDirect('field_events', 'Long Jump')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">Long Jump</button>
+                        <button type="button" onclick="addTagDirect('field_events', 'High Jump')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">High Jump</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Track Events -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="text-lg font-bold mb-4">Track Events</h3>
+            <div class="tag-manager" data-config-key="track_events">
+                <div class="flex flex-wrap gap-2 mb-3 min-h-[40px] p-2 border rounded bg-gray-50" id="track_events-tags">
+                    {% for event in configs.get('track_events', []) %}
+                    <span class="tag inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800">
+                        {{ event }}
+                        <button type="button" class="ml-2 text-purple-600 hover:text-purple-800" onclick="removeTag('track_events', '{{ event }}')">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </span>
+                    {% endfor %}
+                </div>
+                <div class="flex">
+                    <input type="text" id="track_events-input" placeholder="Add track event (e.g., 100m)" class="flex-1 px-3 py-2 border rounded-l-lg">
+                    <button type="button" onclick="addTag('track_events')" class="bg-purple-500 text-white px-4 py-2 rounded-r-lg hover:bg-purple-600">
+                        Add
+                    </button>
+                </div>
+                <div class="mt-2">
+                    <p class="text-xs text-gray-500 mb-2">Quick add:</p>
+                    <div class="flex flex-wrap gap-1">
+                        <button type="button" onclick="addTagDirect('track_events', '100m')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">100m</button>
+                        <button type="button" onclick="addTagDirect('track_events', '200m')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">200m</button>
+                        <button type="button" onclick="addTagDirect('track_events', '400m')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">400m</button>
+                        <button type="button" onclick="addTagDirect('track_events', '1500m')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">1500m</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Wind Affected Field Events -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="text-lg font-bold mb-4">Wind-Affected Field Events</h3>
+            <div class="tag-manager" data-config-key="wind_affected_field_events">
+                <div class="flex flex-wrap gap-2 mb-3 min-h-[40px] p-2 border rounded bg-gray-50" id="wind_affected_field_events-tags">
+                    {% for event in configs.get('wind_affected_field_events', []) %}
+                    <span class="tag inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-cyan-100 text-cyan-800">
+                        {{ event }}
+                        <button type="button" class="ml-2 text-cyan-600 hover:text-cyan-800" onclick="removeTag('wind_affected_field_events', '{{ event }}')">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </span>
+                    {% endfor %}
+                </div>
+                <div class="flex">
+                    <input type="text" id="wind_affected_field_events-input" placeholder="Add wind-affected event" class="flex-1 px-3 py-2 border rounded-l-lg">
+                    <button type="button" onclick="addTag('wind_affected_field_events')" class="bg-cyan-500 text-white px-4 py-2 rounded-r-lg hover:bg-cyan-600">
+                        Add
+                    </button>
+                </div>
+                <div class="mt-2">
+                    <p class="text-xs text-gray-500 mb-2">Quick add:</p>
+                    <div class="flex flex-wrap gap-1">
+                        <button type="button" onclick="addTagDirect('wind_affected_field_events', 'Long Jump')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">Long Jump</button>
+                        <button type="button" onclick="addTagDirect('wind_affected_field_events', 'Triple Jump')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">Triple Jump</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Weight Field Events -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="text-lg font-bold mb-4">Weight Field Events</h3>
+            <p class="text-sm text-gray-600 mb-3">Events where weight implements are used</p>
+            <div class="tag-manager" data-config-key="weight_field_events">
+                <div class="flex flex-wrap gap-2 mb-3 min-h-[40px] p-2 border rounded bg-gray-50" id="weight_field_events-tags">
+                    {% for event in configs.get('weight_field_events', []) %}
+                    <span class="tag inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-orange-100 text-orange-800">
+                        {{ event }}
+                        <button type="button" class="ml-2 text-orange-600 hover:text-orange-800" onclick="removeTag('weight_field_events', '{{ event }}')">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </span>
+                    {% endfor %}
+                </div>
+                <div class="flex">
+                    <input type="text" id="weight_field_events-input" placeholder="Add weight event (e.g., Shot Put)" class="flex-1 px-3 py-2 border rounded-l-lg">
+                    <button type="button" onclick="addTag('weight_field_events')" class="bg-orange-500 text-white px-4 py-2 rounded-r-lg hover:bg-orange-600">
+                        Add
+                    </button>
+                </div>
+                <div class="mt-2">
+                    <p class="text-xs text-gray-500 mb-2">Quick add:</p>
+                    <div class="flex flex-wrap gap-1">
+                        <button type="button" onclick="addTagDirect('weight_field_events', 'Shot Put')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">Shot Put</button>
+                        <button type="button" onclick="addTagDirect('weight_field_events', 'Discus Throw')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">Discus Throw</button>
+                        <button type="button" onclick="addTagDirect('weight_field_events', 'Javelin')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">Javelin</button>
+                        <button type="button" onclick="addTagDirect('weight_field_events', 'Club Throw')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">Club Throw</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h4 class="font-bold text-blue-900 mb-2">
+            <i class="fas fa-info-circle mr-2"></i>Configuration Help
+        </h4>
+        <div class="text-sm text-blue-800 space-y-2">
+            <p><strong>Classes:</strong> Use official World Para Athletics classification codes (e.g., T11, T54, F32)</p>
+            <p><strong>Events:</strong> Enter exact event names as they appear in your competition program</p>
+            <p><strong>Record Types:</strong> WR=World Record, AR=Area Record, CR=Championship Record, etc.</p>
+            <p><strong>Special Values:</strong> DNS=Did Not Start, DNF=Did Not Finish, DSQ=Disqualified, etc.</p>
+            <p><strong>Wind-Affected Field Events:</strong> Field events where wind velocity measurement is relevant</p>
+            <p><strong>Weight Field Events:</strong> Events where implements have different weights for different classes</p>
+            <p><strong>Guide Allowed Classes:</strong> Classes where athletes may have a guide (e.g., T11, T12)</p>
+        </div>
+    </div>
+</div>
+<script>
+// Fix for templates/admin/config/general.html - Updated JavaScript section
+function getCSRFToken() {
+    // Try multiple methods to get CSRF token
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    if (meta) return meta.getAttribute('content');
+    const input = document.querySelector('input[name="csrf_token"]');
+    if (input) return input.value;
+    // Try to find any form's CSRF token
+    const forms = document.querySelectorAll('form');
+    for (let form of forms) {
+        const csrfInput = form.querySelector('input[name="csrf_token"]');
+        if (csrfInput) return csrfInput.value;
+    }
+    return '';
+}
+async function addTag(configKey) {
+    const input = document.getElementById(`${configKey}-input`);
+    const tagValue = input.value.trim();
+    if (!tagValue) {
+        showMessage('Please enter a value', 'error');
+        return;
+    }
+    try {
+        const csrfToken = getCSRFToken();
+        console.log('CSRF Token:', csrfToken); // Debug
+        const response = await fetch('/admin/config/api/add-tag', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+                config_key: configKey,
+                tag_value: tagValue,
+                csrf_token: csrfToken
+            })
+        });
+        console.log('Response status:', response.status); // Debug
+        const result = await response.json();
+        console.log('Response data:', result); // Debug
+        if (response.ok && result.success) {
+            addTagToDOM(configKey, tagValue);
+            input.value = '';
+            showMessage('Tag added successfully', 'success');
+        } else {
+            showMessage(result.error || 'Error adding tag', 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showMessage('Error adding tag: ' + error.message, 'error');
+    }
+}
+async function addTagDirect(configKey, tagValue) {
+    try {
+        const csrfToken = getCSRFToken();
+        const response = await fetch('/admin/config/api/add-tag', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+                config_key: configKey,
+                tag_value: tagValue,
+                csrf_token: csrfToken
+            })
+        });
+        const result = await response.json();
+        if (response.ok && result.success) {
+            addTagToDOM(configKey, tagValue);
+            showMessage(`${tagValue} added successfully`, 'success');
+        } else if (result.error && result.error.includes('already exists')) {
+            showMessage(`${tagValue} already exists`, 'warning');
+        } else {
+            showMessage(result.error || 'Error adding tag', 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showMessage('Error adding tag: ' + error.message, 'error');
+    }
+}
+async function removeTag(configKey, tagValue) {
+    try {
+        const csrfToken = getCSRFToken();
+        const response = await fetch('/admin/config/api/remove-tag', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+                config_key: configKey,
+                tag_value: tagValue,
+                csrf_token: csrfToken
+            })
+        });
+        const result = await response.json();
+        if (response.ok && result.success) {
+            removeTagFromDOM(configKey, tagValue);
+            showMessage('Tag removed successfully', 'success');
+        } else {
+            showMessage(result.error || 'Error removing tag', 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        showMessage('Error removing tag: ' + error.message, 'error');
+    }
+}
+// Rest of the functions remain the same...
+function addTagToDOM(configKey, tagValue) {
+    const tagsContainer = document.getElementById(`${configKey}-tags`);
+    const colors = {
+        'classes': 'bg-blue-100 text-blue-800',
+        'record_types': 'bg-yellow-100 text-yellow-800',
+        'result_special_values': 'bg-red-100 text-red-800',
+        'field_events': 'bg-green-100 text-green-800',
+        'track_events': 'bg-purple-100 text-purple-800',
+        'wind_affected_field_events': 'bg-cyan-100 text-cyan-800',
+        'weight_field_events': 'bg-orange-100 text-orange-800'
+    };
+    const buttonColors = {
+        'classes': 'text-blue-600 hover:text-blue-800',
+        'record_types': 'text-yellow-600 hover:text-yellow-800',
+        'result_special_values': 'text-red-600 hover:text-red-800',
+        'field_events': 'text-green-600 hover:text-green-800',
+        'track_events': 'text-purple-600 hover:text-purple-800',
+        'wind_affected_field_events': 'text-cyan-600 hover:text-cyan-800',
+        'weight_field_events': 'text-orange-600 hover:text-orange-800'
+    };
+    const tagElement = document.createElement('span');
+    tagElement.className = `tag inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${colors[configKey]}`;
+    tagElement.innerHTML = `
+        ${tagValue}
+        <button type="button" class="ml-2 ${buttonColors[configKey]}" onclick="removeTag('${configKey}', '${tagValue}')">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    tagsContainer.appendChild(tagElement);
+}
+function removeTagFromDOM(configKey, tagValue) {
+    const tagsContainer = document.getElementById(`${configKey}-tags`);
+    const tags = tagsContainer.querySelectorAll('.tag');
+    tags.forEach(tag => {
+        if (tag.textContent.trim().startsWith(tagValue)) {
+            tag.remove();
+        }
+    });
+}
+function showMessage(message, type = 'info') {
+    const colors = {
+        success: 'bg-green-100 border-green-400 text-green-700',
+        error: 'bg-red-100 border-red-400 text-red-700',
+        warning: 'bg-yellow-100 border-yellow-400 text-yellow-700',
+        info: 'bg-blue-100 border-blue-400 text-blue-700'
+    };
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `fixed top-4 right-4 z-50 p-4 border rounded-lg ${colors[type]} transition-all duration-300`;
+    messageDiv.innerHTML = `
+        <div class="flex items-center">
+            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : type === 'warning' ? 'exclamation-triangle' : 'info-circle'} mr-2"></i>
+            ${message}
+        </div>
+    `;
+    document.body.appendChild(messageDiv);
+    setTimeout(() => {
+        messageDiv.style.opacity = '0';
+        setTimeout(() => {
+            if (messageDiv.parentNode) {
+                messageDiv.parentNode.removeChild(messageDiv);
+            }
+        }, 300);
+    }, 3000);
+}
+// Enter key support
+document.addEventListener('DOMContentLoaded', function() {
+    const inputs = document.querySelectorAll('[id$="-input"]');
+    inputs.forEach(input => {
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const configKey = this.id.replace('-input', '');
+                addTag(configKey);
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

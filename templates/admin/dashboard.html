@@ -1,0 +1,36 @@
+{% extends "admin/base_admin.html" %}
+{% block page_title %}Dashboard{% endblock %}
+{% block content %}
+<div class="relative mb-8">
+    <img src="/static/images/bg-tunisia.jpg" alt="Background" class="w-full h-64 object-cover rounded-lg">
+    <div class="absolute inset-0 bg-black bg-opacity-50 rounded-lg flex items-center justify-center">
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-8 text-white text-center">
+            <div>
+                <i class="fas fa-globe text-4xl mb-2"></i>
+                <p class="text-3xl font-bold">{{ stats.npcs }}</p>
+                <p class="text-sm">NPCs</p>
+            </div>
+            <div>
+                <i class="fas fa-running text-4xl mb-2"></i>
+                <p class="text-3xl font-bold">{{ stats.athletes }}</p>
+                <p class="text-sm">Athletes</p>
+            </div>
+            <div>
+                <i class="fas fa-hands-helping text-4xl mb-2"></i>
+                <p class="text-3xl font-bold">{{ stats.volunteers }}</p>
+                <p class="text-sm">Volunteers</p>
+            </div>
+            <div>
+                <i class="fas fa-users-cog text-4xl mb-2"></i>
+                <p class="text-3xl font-bold">{{ stats.loc }}</p>
+                <p class="text-sm">LOC Members</p>
+            </div>
+            <div>
+                <i class="fas fa-user-tie text-4xl mb-2"></i>
+                <p class="text-3xl font-bold">{{ stats.officials }}</p>
+                <p class="text-sm">Officials</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,409 @@
+{% extends "base.html" %}
+{% block title %}{{ game.event }} - World Para Athletics Grand Prix{% endblock %}
+{% block content %}
+<div class="mb-8">
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold mb-2">{{ game.event }} - {{ game.gender }} {{ game.classes }}</h1>
+            <p class="text-gray-600">Day {{ game.day }} at {{ game.time }} {% if game.phase %} - {{ game.phase }}{% endif %}</p>
+        </div>
+        <div class="text-right">
+            <a href="{{ url_for('public.results') }}" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">
+                <i class="fas fa-arrow-left mr-2"></i>Back to Results
+            </a>
+        </div>
+    </div>
+</div>
+<div class="mb-6 flex flex-wrap gap-4">
+    {% if game.start_file %}
+        <a href="/{{ config.UPLOAD_FOLDER }}/startlists/{{ game.start_file }}" target="_blank"
+           class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
+            <i class="fas fa-file-download mr-2"></i>Download Start List
+        </a>
+    {% endif %}
+    {% if game.result_file %}
+        <a href="/{{ config.UPLOAD_FOLDER }}/results/{{ game.result_file }}" target="_blank"
+           class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">
+            <i class="fas fa-file-download mr-2"></i>Download Results PDF
+        </a>
+    {% endif %}
+    {% if startlist %}
+        <a href="{{ url_for('public.game_startlist_detail', id=game.id) }}"
+           class="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600">
+            <i class="fas fa-list mr-2"></i>View Start List
+        </a>
+    {% endif %}
+</div>
+{% if results %}
+<div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+    <div class="p-6 border-b bg-gray-50">
+        <h2 class="text-xl font-bold">
+            Results
+            {% if game.classes_list|length > 1 %}
+                <span class="ml-2 text-sm bg-purple-100 text-purple-800 px-2 py-1 rounded">Multi-Class Event</span>
+            {% endif %}
+            {% if game.wpa_points %}
+                <span class="ml-2 text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded">WPA Points</span>
+            {% endif %}
+        </h2>
+        {% if game.wind_velocity and game.wind_velocity != 0 %}
+        <div class="mt-2 text-sm text-gray-600">
+            <i class="fas fa-wind mr-1"></i>
+            Wind: {{ config.format_wind(game.wind_velocity) }} m/s
+            {% if game.wind_velocity > 2.0 %}
+                <span class="text-red-600 ml-1">(Wind-assisted)</span>
+            {% elif game.wind_velocity < -2.0 %}
+                <span class="text-blue-600 ml-1">(Strong headwind)</span>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead class="bg-gray-50">
+                <tr>
+                    {% if game.event in config.FIELD_EVENTS %}
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Attempts</th>
+                    {% endif %}
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Medal</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SDMS</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">NPC</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Performance</th>
+                    {% if game.classes_list|length > 1 and game.wpa_points %}
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">WPA Points</th>
+                    {% endif %}
+                    {% if game.event in config.weight_field_events %}
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Weight</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for result in results %}
+                <tr class="hover:bg-gray-50" id="result-row-{{ result.id }}">
+                    {% if game.event in config.FIELD_EVENTS %}
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if result.attempts and result.attempts|length > 0 %}
+                        <button onclick="toggleAttempts({{ result.id }})"
+                                class="text-blue-600 hover:text-blue-800 p-1 rounded transition-colors"
+                                title="Show/Hide Attempts">
+                            <i class="fas fa-plus-circle" id="attempts-icon-{{ result.id }}"></i>
+                        </button>
+                        {% else %}
+                        <span class="text-gray-400">-</span>
+                        {% endif %}
+                    </td>
+                    {% endif %}
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% set rank = result.rank %}
+                        {% if rank == '1' %}
+                            <span class="text-3xl">🥇</span>
+                        {% elif rank == '2' %}
+                            <span class="text-3xl">🥈</span>
+                        {% elif rank == '3' %}
+                            <span class="text-3xl">🥉</span>
+                        {% endif %}
+                        {% if result.record %}
+                            <span class="ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                                {{ result.record }}
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap font-semibold">{{ rank or result.rank }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="bg-indigo-100 text-indigo-800 px-2 py-1 rounded text-sm font-semibold">
+                            {{ result.athlete_sdms }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap font-medium">{{ result.firstname }} {{ result.lastname }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <img src="/static/images/flags/{{ result.npc }}.svg" alt="{{ result.npc }}"
+                             class="inline w-8 h-5 mr-2" onerror="this.style.display='none'">
+                        {{ result.npc }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">{{ result.athlete_class }}</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap font-bold text-lg">
+                        {% if result.value in config.RESULT_SPECIAL_VALUES %}
+                            <span class="text-red-600">{{ result.value }}</span>
+                        {% else %}
+                            {% if game.event in config.TRACK_EVENTS %}
+                                {{ config.format_time(result.value) }}
+                            {% elif game.event in config.FIELD_EVENTS %}
+                                {{ config.format_distance(result.value) }} m
+                            {% else %}
+                                {{ result.value }}
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                    {% if game.classes_list|length > 1 and game.wpa_points %}
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if result.raza_score %}
+                            <div class="text-lg font-bold text-purple-600 bg-purple-50 px-2 py-1 rounded text-center">
+                                {{ result.raza_score }}
+                            </div>
+                        {% else %}
+                            <span class="text-gray-400">-</span>
+                        {% endif %}
+                    </td>
+                    {% endif %}
+                    {% if game.event in config.weight_field_events %}
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if result.weight %}
+                            <span class="px-2 py-1 text-xs bg-orange-100 text-orange-800 rounded">
+                                {{ config.format_weight(result.weight) }}
+                            </span>
+                        {% else %}
+                            <span class="text-gray-400">-</span>
+                        {% endif %}
+                    </td>
+                    {% endif %}
+                </tr>
+                {% if game.event in config.FIELD_EVENTS and result.attempts and result.attempts|length > 0 %}
+                <tr class="hidden bg-blue-50" id="attempts-row-{{ result.id }}">
+                    <td colspan="{% if game.classes_list|length > 1 and game.wpa_points %}{% if game.event in config.weight_field_events %}10{% else %}9{% endif %}{% else %}{% if game.event in config.weight_field_events %}9{% else %}8{% endif %}{% endif %}" class="px-6 py-4">
+                        <div class="bg-white rounded-lg p-4 border-l-4 border-blue-500">
+                            <h4 class="font-bold text-blue-900 mb-3 flex items-center">
+                                <i class="fas fa-bullseye mr-2"></i>
+                                Attempts Details for {{ result.firstname }} {{ result.lastname }}
+                            </h4>
+                            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                                {% for attempt in result.attempts %}
+                                <div class="text-center">
+                                    <div class="bg-gray-100 rounded-lg p-3 transition-all hover:bg-gray-200
+                                        {% if attempt.value == result.best_attempt %}bg-green-100 border-2 border-green-500{% endif %}">
+                                        <div class="text-xs font-medium text-gray-600 mb-1">
+                                            Attempt {{ attempt.attempt_number }}
+                                        </div>
+                                        <div class="text-lg font-bold
+                                            {% if attempt.value == result.best_attempt %}text-green-700
+                                            {% elif attempt.value in ['X', '-', 'FOUL'] %}text-red-600
+                                            {% elif attempt.value == 'O' %}text-blue-600
+                                            {% else %}text-gray-900{% endif %}">
+                                            {% if attempt.value %}
+                                                {% if attempt.value in ['X', '-', 'O'] %}
+                                                    {{ attempt.value }}
+                                                {% else %}
+                                                    {{ attempt.value }} m
+                                                {% endif %}
+                                            {% else %}
+                                                -
+                                            {% endif %}
+                                        </div>
+                                        {% if game.classes_list|length > 1 and game.wpa_points %}
+                                            {% if attempt.raza_score %}
+                                                <div class="text-xs font-medium text-purple-600 mb-1">
+                                                    WPA {{ attempt.raza_score }}
+                                                </div>
+                                            {% endif %}
+                                        {% endif %}
+                                        {% if game.event in config.WIND_AFFECTED_FIELD_EVENTS and attempt.wind_velocity %}
+                                        <div class="text-xs text-gray-600">
+                                            Wind: {{ config.format_wind(attempt.wind_velocity) }} m/s
+                                        </div>
+                                        {% endif %}
+                                        {% if game.event == 'Long Jump' and attempt.height %}
+                                        <div class="text-xs text-blue-600">
+                                            Height: {{ attempt.height }}m
+                                        </div>
+                                        {% endif %}
+                                        {% if attempt.value == result.best_attempt %}
+                                        <div class="text-xs text-green-600 font-medium mt-1">
+                                            <i class="fas fa-star"></i> Best
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% if result.best_attempt %}
+                            <div class="mt-4 p-3 bg-green-50 rounded-lg border border-green-200">
+                                <div class="flex items-center justify-between">
+                                    <span class="text-green-800 font-medium">
+                                        <i class="fas fa-trophy mr-2"></i>Best Performance:
+                                    </span>
+                                    <span class="text-green-900 font-bold text-xl">
+                                        {{ result.best_attempt }} m
+                                    </span>
+                                </div>
+                                {% if game.classes_list|length > 1 and game.wpa_points and result.raza_score %}
+                                <div class="flex items-center justify-between mt-2">
+                                    <span class="text-purple-800 font-medium">
+                                        <i class="fas fa-calculator mr-2"></i>WPA Points:
+                                    </span>
+                                    <span class="text-purple-900 font-bold text-xl">
+                                        {{ result.raza_score }} points
+                                    </span>
+                                </div>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                            <div class="mt-3 text-xs text-gray-600">
+                                <div class="flex flex-wrap gap-4">
+                                    <div><span class="font-semibold">X:</span> Foul/Invalid attempt</div>
+                                    <div><span class="font-semibold">O:</span> Successful clearance</div>
+                                    <div><span class="font-semibold">-:</span> Pass</div>
+                                    <div><span class="font-semibold text-green-600">★:</span> Best attempt used for ranking</div>
+                                    {% if game.event == 'Long Jump' %}
+                                    <div><span class="font-semibold text-blue-600">Height:</span> Takeoff board height</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% if game.result_file %}
+<div class="bg-white rounded-lg shadow p-6">
+    <h3 class="text-lg font-bold mb-4">Official Results Document</h3>
+    <embed src="/{{ config.UPLOAD_FOLDER }}/results/{{ game.result_file }}" type="application/pdf" width="100%" height="600px" />
+</div>
+{% endif %}
+{% else %}
+<div class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center mb-6">
+    <i class="fas fa-clock text-4xl text-yellow-600 mb-4"></i>
+    <h3 class="text-lg font-semibold text-yellow-900">Results Not Yet Available</h3>
+    <p class="text-yellow-700 mt-2">Please check back later for the official results of this event.</p>
+</div>
+{% endif %}
+{% if startlist %}
+<div class="bg-white rounded-lg shadow overflow-hidden mb-6">
+    <div class="p-6 border-b bg-gray-50">
+        <div class="flex justify-between items-center">
+            <h2 class="text-xl font-bold">Start List ({{ startlist|length }} athletes)</h2>
+            <a href="{{ url_for('public.game_startlist_detail', id=game.id) }}" class="text-blue-600 hover:text-blue-800">
+                View Full Start List <i class="fas fa-arrow-right ml-1"></i>
+            </a>
+        </div>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SDMS</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">NPC</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for entry in startlist[:10] %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if entry.final_order %}
+                            <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-sm font-semibold">
+                                {{ entry.final_order }}
+                            </span>
+                        {% elif entry.lane_order %}
+                            <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-semibold">
+                                {{ entry.lane_order }}
+                            </span>
+                        {% else %}
+                            <span class="text-gray-400">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="bg-indigo-100 text-indigo-800 px-2 py-1 rounded text-sm font-semibold">
+                            {{ entry.athlete_sdms }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap font-medium">{{ entry.firstname }} {{ entry.lastname }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <img src="/static/images/flags/{{ entry.npc }}.svg" alt="{{ entry.npc }}"
+                             class="inline w-6 h-4 mr-1" onerror="this.style.display='none'">
+                        {{ entry.npc }}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 py-1 text-xs bg-green-100 text-green-800 rounded">{{ entry.class }}</span>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% if startlist|length > 10 %}
+                <tr>
+                    <td colspan="5" class="px-6 py-4 text-center text-gray-500">
+                        ... and {{ startlist|length - 10 }} more athletes
+                        <a href="{{ url_for('public.game_startlist_detail', id=game.id) }}" class="text-blue-600 hover:text-blue-800 ml-2">
+                            View All
+                        </a>
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+<div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+    <h4 class="font-bold text-blue-900 mb-2">Legend:</h4>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm text-blue-800">
+        <div><span class="font-semibold">DNS:</span> Did not start</div>
+        <div><span class="font-semibold">DNF:</span> Did not finish</div>
+        <div><span class="font-semibold">DSQ:</span> Disqualified</div>
+        <div><span class="font-semibold">NM:</span> No mark</div>
+        <div><span class="font-semibold">O:</span> Clearance</div>
+        <div><span class="font-semibold">X:</span> Failure</div>
+        <div><span class="font-semibold">-:</span> Pass</div>
+    </div>
+    {% if game.classes_list|length > 1 and game.wpa_points %}
+    <div class="mt-3 p-2 bg-purple-50 rounded">
+        <span class="font-semibold text-purple-800">WPA Points:</span>
+        <span class="text-purple-700 text-sm">Multi-class events use WPA Points for fair comparison between different disability classes. Higher scores indicate better relative performance.</span>
+    </div>
+    {% endif %}
+    {% if game.event == 'Long Jump' %}
+    <div class="mt-3 p-2 bg-orange-50 rounded">
+        <span class="font-semibold text-orange-800">Long Jump Special Rules:</span>
+        <span class="text-orange-700 text-sm">Athletes can take unlimited attempts. Final order determined by best performance after initial rounds.</span>
+    </div>
+    {% endif %}
+</div>
+<script>
+function toggleAttempts(resultId) {
+    const attemptsRow = document.getElementById(`attempts-row-${resultId}`);
+    const icon = document.getElementById(`attempts-icon-${resultId}`);
+    if (attemptsRow.classList.contains('hidden')) {
+        attemptsRow.classList.remove('hidden');
+        icon.classList.remove('fa-plus-circle');
+        icon.classList.add('fa-minus-circle');
+        attemptsRow.style.opacity = '0';
+        setTimeout(() => {
+            attemptsRow.style.transition = 'opacity 0.3s ease-in-out';
+            attemptsRow.style.opacity = '1';
+        }, 10);
+    } else {
+        attemptsRow.style.opacity = '0';
+        setTimeout(() => {
+            attemptsRow.classList.add('hidden');
+            icon.classList.remove('fa-minus-circle');
+            icon.classList.add('fa-plus-circle');
+        }, 300);
+    }
+}
+document.addEventListener('click', function(event) {
+    if (!event.target.closest('[onclick*="toggleAttempts"]') &&
+        !event.target.closest('[id*="attempts-row"]')) {
+        document.querySelectorAll('[id*="attempts-row"]:not(.hidden)').forEach(row => {
+            const resultId = row.id.replace('attempts-row-', '');
+            const icon = document.getElementById(`attempts-icon-${resultId}`);
+            row.style.opacity = '0';
+            setTimeout(() => {
+                row.classList.add('hidden');
+                if (icon) {
+                    icon.classList.remove('fa-minus-circle');
+                    icon.classList.add('fa-plus-circle');
+                }
+            }, 300);
+        });
+    }
+});
+</script>
+{% endblock %}

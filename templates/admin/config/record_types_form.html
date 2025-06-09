@@ -1,0 +1,176 @@
+{% extends "admin/base_admin.html" %}
+{% block page_title %}{{ title }}{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="mb-6">
+        <div class="flex items-center justify-between">
+            <h2 class="text-2xl font-bold">{{ title }}</h2>
+            <a href="{{ url_for('admin.config_record_types') }}" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+                <i class="fas fa-arrow-left mr-2"></i>Back to Record Types
+            </a>
+        </div>
+    </div>
+    <form method="POST" class="bg-white rounded-lg shadow p-6">
+        {{ form.hidden_tag() }}
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">
+                    Abbreviation <span class="text-red-500">*</span>
+                </label>
+                {{ form.abbreviation(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500", maxlength="10", style="text-transform: uppercase") }}
+                <p class="text-sm text-gray-600 mt-1">{{ form.abbreviation.description }}</p>
+                {% if form.abbreviation.errors %}
+                    <div class="text-red-500 text-sm mt-1">
+                        {% for error in form.abbreviation.errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            <div>
+                <label class="block text-gray-700 text-sm font-bold mb-2">
+                    Scope Type <span class="text-red-500">*</span>
+                </label>
+                {{ form.scope_type(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500", id="scope_type") }}
+                <p class="text-sm text-gray-600 mt-1">{{ form.scope_type.description }}</p>
+                {% if form.scope_type.errors %}
+                    <div class="text-red-500 text-sm mt-1">
+                        {% for error in form.scope_type.errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            <div class="md:col-span-2">
+                <label class="block text-gray-700 text-sm font-bold mb-2">
+                    Full Name <span class="text-red-500">*</span>
+                </label>
+                {{ form.full_name(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
+                <p class="text-sm text-gray-600 mt-1">{{ form.full_name.description }}</p>
+                {% if form.full_name.errors %}
+                    <div class="text-red-500 text-sm mt-1">
+                        {% for error in form.full_name.errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            <div class="md:col-span-2" id="scope_values_field">
+                <label class="block text-gray-700 text-sm font-bold mb-2">
+                    Geographic Scope
+                </label>
+                {{ form.scope_values(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500", placeholder="e.g., Europe,Asia or FRA,GBR,GER") }}
+                <p class="text-sm text-gray-600 mt-1">{{ form.scope_values.description }}</p>
+                <div class="mt-2">
+                    <p class="text-xs text-gray-500 mb-2">Quick add continents:</p>
+                    <div class="flex flex-wrap gap-1">
+                        <button type="button" onclick="addScopeValue('Europe')" class="text-xs bg-blue-100 hover:bg-blue-200 px-2 py-1 rounded">Europe</button>
+                        <button type="button" onclick="addScopeValue('Asia')" class="text-xs bg-blue-100 hover:bg-blue-200 px-2 py-1 rounded">Asia</button>
+                        <button type="button" onclick="addScopeValue('Africa')" class="text-xs bg-blue-100 hover:bg-blue-200 px-2 py-1 rounded">Africa</button>
+                        <button type="button" onclick="addScopeValue('North America')" class="text-xs bg-blue-100 hover:bg-blue-200 px-2 py-1 rounded">North America</button>
+                        <button type="button" onclick="addScopeValue('South America')" class="text-xs bg-blue-100 hover:bg-blue-200 px-2 py-1 rounded">South America</button>
+                        <button type="button" onclick="addScopeValue('Oceania')" class="text-xs bg-blue-100 hover:bg-blue-200 px-2 py-1 rounded">Oceania</button>
+                    </div>
+                </div>
+                {% if form.scope_values.errors %}
+                    <div class="text-red-500 text-sm mt-1">
+                        {% for error in form.scope_values.errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            <div class="md:col-span-2">
+                <label class="block text-gray-700 text-sm font-bold mb-2">
+                    Description
+                </label>
+                {{ form.description(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500", rows="3") }}
+                <p class="text-sm text-gray-600 mt-1">{{ form.description.description }}</p>
+                {% if form.description.errors %}
+                    <div class="text-red-500 text-sm mt-1">
+                        {% for error in form.description.errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="mt-8 flex justify-end space-x-4">
+            <a href="{{ url_for('admin.config_record_types') }}" class="bg-gray-500 text-white px-6 py-2 rounded hover:bg-gray-600">
+                Cancel
+            </a>
+            <button type="submit" class="bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600">
+                <i class="fas fa-save mr-2"></i>{{ 'Update' if record_type else 'Create' }} Record Type
+            </button>
+        </div>
+    </form>
+</div>
+<div class="max-w-2xl mx-auto mt-6">
+    <div class="bg-green-50 border border-green-200 rounded-lg p-4">
+        <h4 class="font-bold text-green-900 mb-2">
+            <i class="fas fa-lightbulb mr-2"></i>Record Type Examples
+        </h4>
+        <div class="text-sm text-green-800 space-y-2">
+            <div><strong>WR:</strong> World Record (scope: world)</div>
+            <div><strong>ER:</strong> European Record (scope: continental, values: "Europe")</div>
+            <div><strong>AmR:</strong> Americas Record (scope: continental, values: "North America,South America")</div>
+            <div><strong>NR:</strong> National Record (scope: national)</div>
+            <div><strong>PB:</strong> Personal Best (scope: personal)</div>
+            <div><strong>CR:</strong> Championship Record (scope: competition)</div>
+        </div>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const scopeTypeSelect = document.getElementById('scope_type');
+    const scopeValuesField = document.getElementById('scope_values_field');
+    const scopeValuesInput = document.getElementById('scope_values');
+    function toggleScopeValuesField() {
+        const scopeType = scopeTypeSelect.value;
+        if (scopeType === 'world' || scopeType === 'national' || scopeType === 'personal' ||
+            scopeType === 'seasonal' || scopeType === 'competition') {
+            scopeValuesField.style.display = 'none';
+            scopeValuesInput.required = false;
+        } else {
+            scopeValuesField.style.display = 'block';
+            scopeValuesInput.required = (scopeType === 'continental' || scopeType === 'regional');
+        }
+        updatePlaceholder();
+    }
+    function updatePlaceholder() {
+        const scopeType = scopeTypeSelect.value;
+        switch(scopeType) {
+            case 'continental':
+                scopeValuesInput.placeholder = 'e.g., Europe,Asia or Africa';
+                break;
+            case 'regional':
+                scopeValuesInput.placeholder = 'e.g., FRA,GBR,GER or Nordic NPCs';
+                break;
+            default:
+                scopeValuesInput.placeholder = 'Comma-separated values';
+        }
+    }
+    scopeTypeSelect.addEventListener('change', toggleScopeValuesField);
+    // Initial setup
+    toggleScopeValuesField();
+    // Auto-uppercase abbreviation
+    const abbreviationInput = document.getElementById('abbreviation');
+    abbreviationInput.addEventListener('input', function() {
+        this.value = this.value.toUpperCase();
+    });
+});
+function addScopeValue(value) {
+    const scopeValuesInput = document.getElementById('scope_values');
+    const currentValue = scopeValuesInput.value.trim();
+    if (currentValue === '') {
+        scopeValuesInput.value = value;
+    } else {
+        const values = currentValue.split(',').map(v => v.trim());
+        if (!values.includes(value)) {
+            values.push(value);
+            scopeValuesInput.value = values.join(',');
+        }
+    }
+}
+</script>
+{% endblock %}

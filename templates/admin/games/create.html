@@ -1,0 +1,133 @@
+{% extends "admin/base_admin.html" %}
+{% block page_title %}Create New Game{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="bg-white rounded-lg shadow p-6">
+        <form method="POST" enctype="multipart/form-data">
+            {{ form.hidden_tag() }}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Event</label>
+                    {{ form.event(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Genders</label>
+                    {{ form.genders(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500", placeholder="e.g., Male or Female or Male,Female") }}
+                    <p class="text-sm text-gray-600 mt-1">Enter multiple genders separated by commas for mixed events</p>
+                    <div class="mt-2 flex gap-2">
+                        <button type="button" onclick="setGender('Male')" class="text-xs bg-blue-100 hover:bg-blue-200 px-2 py-1 rounded">
+                            Male Only
+                        </button>
+                        <button type="button" onclick="setGender('Female')" class="text-xs bg-pink-100 hover:bg-pink-200 px-2 py-1 rounded">
+                            Female Only
+                        </button>
+                        <button type="button" onclick="setGender('Male,Female')" class="text-xs bg-purple-100 hover:bg-purple-200 px-2 py-1 rounded">
+                            Mixed
+                        </button>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Classes</label>
+                    {{ form.classes(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500", placeholder="e.g., T54,T53,T52 or F32,F33,F34") }}
+                    <p class="text-sm text-gray-600 mt-1">Enter multiple classes separated by commas for multi-class events</p>
+                    <div class="mt-2">
+                        <p class="text-xs text-gray-500">Available classes:</p>
+                        <div class="flex flex-wrap gap-1 mt-1">
+                            {% for class in config.CLASSES %}
+                            <button type="button" onclick="addClassToInput('{{ class }}')"
+                                    class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">
+                                {{ class }}
+                            </button>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Phase</label>
+                    {{ form.phase(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500", placeholder="e.g., Final, Heat 1, Heat 2, ...") }}
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Area</label>
+                    {{ form.area(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500", placeholder="e.g., Track, Field") }}
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Day</label>
+                    {{ form.day(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500", min="1", max="8") }}
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Time</label>
+                    {{ form.time(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Number of Athletes</label>
+                    {{ form.nb_athletes(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Status</label>
+                    {{ form.status(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
+                </div>
+            </div>
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2">Start List File</label>
+                {{ form.start_file(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
+                <p class="text-sm text-gray-600 mt-1">Accepted formats: PDF, TXT</p>
+            </div>
+            <div class="mb-4">
+                <label class="block text-gray-700 text-sm font-bold mb-2">Results File</label>
+                {{ form.result_file(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
+                <p class="text-sm text-gray-600 mt-1">Accepted formats: PDF, TXT</p>
+            </div>
+            <div class="mb-4">
+                {{ form.published() }}
+                <label for="published" class="ml-2 text-gray-700 text-sm">Published</label>
+            </div>
+            <div class="flex justify-between">
+                <a href="{{ url_for('admin.games_list') }}" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">
+                    Cancel
+                </a>
+                <button type="submit" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">
+                    Create Game
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+<script>
+function addClassToInput(className) {
+    const classInput = document.getElementById('classes');
+    const currentValue = classInput.value.trim();
+    if (currentValue === '') {
+        classInput.value = className;
+    } else {
+        const classes = currentValue.split(',').map(c => c.trim());
+        if (!classes.includes(className)) {
+            classes.push(className);
+            classInput.value = classes.join(',');
+        }
+    }
+}
+function setGender(gender) {
+    document.getElementById('genders').value = gender;
+}
+// Auto-complete for events based on field/track
+document.getElementById('event').addEventListener('change', function() {
+    const event = this.value;
+    const classInput = document.getElementById('classes');
+    if (event) {
+        const fieldEvents = {{ config.FIELD_EVENTS | tojson }};
+        const trackEvents = {{ config.TRACK_EVENTS | tojson }};
+        if (fieldEvents.includes(event)) {
+            // Suggest field classes
+            if (classInput.value.trim() === '') {
+                classInput.placeholder = "e.g., F32,F33,F34 or F54,F55,F56";
+            }
+        } else if (trackEvents.includes(event)) {
+            // Suggest track classes
+            if (classInput.value.trim() === '') {
+                classInput.placeholder = "e.g., T54,T53,T52 or T11,T12,T13";
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

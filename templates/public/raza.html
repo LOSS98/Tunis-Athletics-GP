@@ -1,0 +1,355 @@
+{% extends "base.html" %}
+{% block title %}WPA Points System - World Para Athletics Grand Prix{% endblock %}
+{% block content %}
+<div class="mb-8">
+    <h1 class="text-3xl font-bold mb-4">WPA Points System</h1>
+    <p class="text-gray-600">Understanding Paralympic Performance Comparison</p>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+    <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-2xl font-bold mb-4">What are WPA Points?</h2>
+        <p class="mb-4">The WPA Points system is the official method used by World Para Athletics to compare performances across different disability classes in athletics competitions.</p>
+        <p class="mb-4">Named after mathematician Purshottam Raza, the system uses a mathematical formula to convert performances into points, allowing fair competition between athletes with different disabilities.</p>
+        <div class="bg-blue-50 p-4 rounded-lg">
+            <h3 class="font-bold mb-2">Official Formula (Gompertz):</h3>
+            <div class="font-mono text-lg mb-2">
+                Points = <strong>FLOOR</strong>(A × e<sup>(-e<sup>B-C×Performance</sup>)</sup>)
+            </div>
+            <h3 class="font-bold mb-2">Inverse formula:</h3>
+            <div class="font-mono text-lg mb-2">
+                Performance = <strong>CEILING</strong>((B - ln(ln(Points/A))) / C)
+            </div>
+            <p class="text-sm mt-2">Where A, B, and C are constants specific to each class and event</p>
+        </div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-2xl font-bold mb-4">How It Works</h2>
+        <ul class="space-y-3">
+            <li class="flex items-start">
+                <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
+                <div>
+                    <strong>Equal Opportunity:</strong> Athletes from different classes can compete fairly against each other
+                </div>
+            </li>
+            <li class="flex items-start">
+                <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
+                <div>
+                    <strong>1000 Points Standard:</strong> World record performances typically score around 1000 points
+                </div>
+            </li>
+            <li class="flex items-start">
+                <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
+                <div>
+                    <strong>Higher is Better:</strong> The athlete with the highest WPA Points wins, regardless of their class
+                </div>
+            </li>
+            <li class="flex items-start">
+                <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
+                <div>
+                    <strong>Updated Regularly:</strong> Constants are updated based on world record progressions
+                </div>
+            </li>
+        </ul>
+    </div>
+</div>
+<div class="bg-white rounded-lg shadow p-6 mb-8">
+    <h2 class="text-2xl font-bold mb-4">WPA Points Calculator</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+            <h3 class="text-lg font-semibold mb-3">Performance to WPA Points</h3>
+            <div class="space-y-3">
+                <select id="gender" class="w-full px-3 py-2 border rounded-lg">
+                    <option value="">Select Gender</option>
+                    <option value="Men">Male</option>
+                    <option value="Women">Female</option>
+                </select>
+                <select id="event" class="w-full px-3 py-2 border rounded-lg">
+                    <option value="">Select Event</option>
+                </select>
+                <select id="class" class="w-full px-3 py-2 border rounded-lg">
+                    <option value="">Select Class</option>
+                </select>
+                <input type="text" id="performance" placeholder="Enter performance" class="w-full px-3 py-2 border rounded-lg">
+                <button onclick="calculateRAZA()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 w-full">
+                    Calculate WPA Points
+                </button>
+            </div>
+        </div>
+        <div>
+            <h3 class="text-lg font-semibold mb-3">WPA Points to Performance</h3>
+            <div class="space-y-3">
+                <select id="gender2" class="w-full px-3 py-2 border rounded-lg">
+                    <option value="">Select Gender</option>
+                    <option value="Men">Male</option>
+                    <option value="Women">Female</option>
+                </select>
+                <select id="event2" class="w-full px-3 py-2 border rounded-lg">
+                    <option value="">Select Event</option>
+                </select>
+                <select id="class2" class="w-full px-3 py-2 border rounded-lg">
+                    <option value="">Select Class</option>
+                </select>
+                <input type="number" id="razaScore" placeholder="Enter WPA points" class="w-full px-3 py-2 border rounded-lg">
+                <button onclick="calculatePerformance()" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 w-full">
+                    Calculate Performance
+                </button>
+            </div>
+        </div>
+    </div>
+    <div id="result" class="mt-6 p-4 bg-gray-100 rounded-lg hidden">
+        <h4 class="font-bold mb-2">Result:</h4>
+        <p id="resultText" class="text-lg"></p>
+    </div>
+</div>
+<div class="bg-white rounded-lg shadow p-6">
+    <h2 class="text-2xl font-bold mb-4">Official Documents</h2>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <a href="https://www.paralympic.org/sites/default/files/2025-02/2025%20-%202026%20World%20Para%20Athletics%20Raza%20Point%20Scores%20Field%20Events.pdf"
+           target="_blank" class="border rounded-lg p-4 hover:bg-gray-50 flex items-center">
+            <i class="fas fa-file-pdf text-red-500 text-3xl mr-4"></i>
+            <div>
+                <h3 class="font-semibold">Field Events WPA Points</h3>
+                <p class="text-sm text-gray-600">2025-2026 Official IPC Document</p>
+            </div>
+        </a>
+        <a href="https://www.paralympic.org/sites/default/files/2025-02/2025%20-%202026%20World%20Para%20Athletics%20Raza%20Point%20Scores%20Track%20Events.pdf"
+           target="_blank" class="border rounded-lg p-4 hover:bg-gray-50 flex items-center">
+            <i class="fas fa-file-pdf text-red-500 text-3xl mr-4"></i>
+            <div>
+                <h3 class="font-semibold">Track Events WPA Points</h3>
+                <p class="text-sm text-gray-600">2025-2026 Official IPC Document</p>
+            </div>
+        </a>
+    </div>
+</div>
+<script>
+let razaData = [];
+async function loadRazaData() {
+    try {
+        const response = await fetch('/api/raza-data');
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        razaData = await response.json();
+        console.log('WPA Points data loaded:', razaData.length, 'entries');
+        if (razaData.length > 0) {
+            console.log('Sample data:', razaData[0]);
+            populateInitialOptions();
+        } else {
+            console.error('No WPA Points data loaded');
+            showError('No WPA Points data available. Please check the data file.');
+        }
+    } catch (error) {
+        console.error('Error loading WPA Points data:', error);
+        showError('Failed to load WPA Points data. Please refresh the page.');
+    }
+}
+function showError(message) {
+    const result = document.getElementById('result');
+    result.classList.remove('hidden');
+    result.className = 'mt-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg';
+    document.getElementById('resultText').textContent = message;
+}
+function showSuccess(message) {
+    const result = document.getElementById('result');
+    result.classList.remove('hidden');
+    result.className = 'mt-6 p-4 bg-green-100 border border-green-400 text-green-700 rounded-lg';
+    document.getElementById('resultText').textContent = message;
+}
+function populateInitialOptions() {
+    const gender1 = document.getElementById('gender');
+    const gender2 = document.getElementById('gender2');
+    if (gender1) {
+        gender1.addEventListener('change', function() {
+            updateEventOptions('gender', 'event', 'class');
+        });
+    }
+    if (gender2) {
+        gender2.addEventListener('change', function() {
+            updateEventOptions('gender2', 'event2', 'class2');
+        });
+    }
+}
+function updateEventOptions(genderId, eventId, classId) {
+    const gender = document.getElementById(genderId).value;
+    const eventSelect = document.getElementById(eventId);
+    const classSelect = document.getElementById(classId);
+    eventSelect.innerHTML = '<option value="">Select Event</option>';
+    classSelect.innerHTML = '<option value="">Select Class</option>';
+    if (!gender || razaData.length === 0) {
+        console.log('No gender selected or no data available');
+        return;
+    }
+    const events = [...new Set(razaData
+        .filter(d => d.Gender === gender)
+        .map(d => d.Event)
+    )].sort();
+    console.log(`Events for ${gender}:`, events);
+    events.forEach(event => {
+        const option = document.createElement('option');
+        option.value = event;
+        option.textContent = event;
+        eventSelect.appendChild(option);
+    });
+    eventSelect.addEventListener('change', function() {
+        updateClassOptions(genderId, eventId, classId);
+    });
+}
+function updateClassOptions(genderId, eventId, classId) {
+    const gender = document.getElementById(genderId).value;
+    const event = document.getElementById(eventId).value;
+    const classSelect = document.getElementById(classId);
+    classSelect.innerHTML = '<option value="">Select Class</option>';
+    if (!gender || !event || razaData.length === 0) {
+        console.log('Missing gender/event or no data');
+        return;
+    }
+    const classes = [...new Set(razaData
+        .filter(d => d.Gender === gender && d.Event === event)
+        .map(d => d.Class)
+    )].sort();
+    console.log(`Classes for ${gender} ${event}:`, classes);
+    classes.forEach(cls => {
+        const option = document.createElement('option');
+        option.value = cls;
+        option.textContent = cls;
+        classSelect.appendChild(option);
+    });
+}
+function parsePerformance(performance, eventType) {
+    if (!performance || performance.trim() === '') {
+        throw new Error('Performance value is required');
+    }
+    performance = performance.trim();
+    if (eventType === 'Field') {
+        const value = parseFloat(performance);
+        if (isNaN(value) || value <= 0) {
+            throw new Error('Invalid field event performance. Please enter a positive number.');
+        }
+        return value;
+    } else {
+        // Handle time formats: MM:SS.ss, SS.ss, or just SS
+        if (performance.includes(':')) {
+            const parts = performance.split(':');
+            if (parts.length !== 2) {
+                throw new Error('Invalid time format. Use MM:SS.ss or SS.ss');
+            }
+            const minutes = parseFloat(parts[0]);
+            const seconds = parseFloat(parts[1]);
+            if (isNaN(minutes) || isNaN(seconds) || minutes < 0 || seconds < 0 || seconds >= 60) {
+                throw new Error('Invalid time values. Minutes and seconds must be positive, seconds < 60');
+            }
+            return minutes * 60 + seconds;
+        } else {
+            const value = parseFloat(performance);
+            if (isNaN(value) || value <= 0) {
+                throw new Error('Invalid time performance. Please enter a positive number.');
+            }
+            return value;
+        }
+    }
+}
+function formatPerformance(value, eventType) {
+    if (eventType === 'Field') {
+        return value.toFixed(2) + ' m';
+    } else {
+        if (value >= 60) {
+            const minutes = Math.floor(value / 60);
+            const seconds = (value % 60).toFixed(2);
+            return `${minutes}:${seconds.padStart(5, '0')}`;
+        } else {
+            return value.toFixed(2) + ' s';
+        }
+    }
+}
+async function calculateRAZA() {
+    const gender = document.getElementById('gender').value;
+    const event = document.getElementById('event').value;
+    const cls = document.getElementById('class').value;
+    const performance = document.getElementById('performance').value;
+    if (!gender || !event || !cls || !performance) {
+        showError('Please fill all fields');
+        return;
+    }
+    try {
+        const data = razaData.find(d => d.Gender === gender && d.Event === event && d.Class === cls);
+        if (!data) {
+            showError('No WPA Points data found for this combination');
+            return;
+        }
+        const perfValue = parsePerformance(performance, data.Type);
+        console.log(`Parsed performance: ${perfValue} for event type: ${data.Type}`);
+        const response = await fetch('/api/calculate-raza', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                gender: gender,
+                event: event,
+                class: cls,
+                performance: perfValue
+            })
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.error || `HTTP error! status: ${response.status}`);
+        }
+        if (result.error) {
+            showError('Error: ' + result.error);
+            return;
+        }
+        showSuccess(`WPA Points: ${result.raza_score}`);
+    } catch (error) {
+        console.error('Calculation error:', error);
+        showError('Error calculating WPA Points: ' + error.message);
+    }
+}
+async function calculatePerformance() {
+    const gender = document.getElementById('gender2').value;
+    const event = document.getElementById('event2').value;
+    const cls = document.getElementById('class2').value;
+    const razaScore = parseFloat(document.getElementById('razaScore').value);
+    if (!gender || !event || !cls || !razaScore) {
+        showError('Please fill all fields');
+        return;
+    }
+    if (isNaN(razaScore) || razaScore <= 0) {
+        showError('Please enter a valid WPA Points value');
+        return;
+    }
+    try {
+        const response = await fetch('/api/calculate-performance', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                gender: gender,
+                event: event,
+                class: cls,
+                raza_score: razaScore
+            })
+        });
+        const result = await response.json();
+        if (!response.ok) {
+            throw new Error(result.error || `HTTP error! status: ${response.status}`);
+        }
+        if (result.error) {
+            showError('Error: ' + result.error);
+            return;
+        }
+        const data = razaData.find(d => d.Gender === gender && d.Event === event && d.Class === cls);
+        const eventType = data ? data.Type : 'Track';
+        showSuccess(`Performance needed: ${formatPerformance(result.performance, eventType)}`);
+    } catch (error) {
+        console.error('Calculation error:', error);
+        showError('Error calculating performance: ' + error.message);
+    }
+}
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Page loaded, loading WPA Points data...');
+    loadRazaData();
+});
+</script>
+{% endblock %}

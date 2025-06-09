@@ -1,0 +1,64 @@
+<script>
+function openGameEditModal(gameId, gameData) {
+    document.getElementById('editGameId').value = gameId;
+    document.getElementById('editEvent').value = gameData.event;
+    document.getElementById('editGender').value = gameData.gender;
+    document.getElementById('editClasses').value = gameData.classes;
+    document.getElementById('editPhase').value = gameData.phase || '';
+    document.getElementById('editArea').value = gameData.area || '';
+    document.getElementById('editDay').value = gameData.day;
+    document.getElementById('editTime').value = gameData.time;
+    document.getElementById('editNbAthletes').value = gameData.nb_athletes;
+    document.getElementById('editStatus').value = gameData.status;
+    document.getElementById('editPublished').checked = gameData.published;
+    document.getElementById('editWpaPoints').checked = gameData.wpa_points;
+    document.getElementById('gameEditModal').classList.remove('hidden');
+}
+function closeGameEditModal() {
+    document.getElementById('gameEditModal').classList.add('hidden');
+}
+document.getElementById('gameEditForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData();
+    const gameId = document.getElementById('editGameId').value;
+    // Add CSRF token
+    const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+    formData.append('csrf_token', csrfToken);
+    // Add form fields
+    formData.append('event', document.getElementById('editEvent').value);
+    formData.append('gender', document.getElementById('editGender').value);
+    formData.append('classes', document.getElementById('editClasses').value);
+    formData.append('phase', document.getElementById('editPhase').value);
+    formData.append('area', document.getElementById('editArea').value);
+    formData.append('day', document.getElementById('editDay').value);
+    formData.append('time', document.getElementById('editTime').value);
+    formData.append('nb_athletes', document.getElementById('editNbAthletes').value);
+    formData.append('status', document.getElementById('editStatus').value);
+    formData.append('published', document.getElementById('editPublished').checked);
+    formData.append('wpa_points', document.getElementById('editWpaPoints').checked);
+    fetch(`/admin/games/${gameId}/edit`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        if (response.ok) {
+            closeGameEditModal();
+            location.reload();
+        } else {
+            return response.text().then(text => {
+                throw new Error('Server error: ' + text);
+            });
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error updating game: ' + error.message);
+    });
+});
+// Close modal when clicking outside
+document.getElementById('gameEditModal').addEventListener('click', function(e) {
+    if (e.target === this) {
+        closeGameEditModal();
+    }
+});
+</script>

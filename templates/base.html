@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}World Para Athletics Grand Prix - Tunisia 2025{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body class="bg-gray-50">
+    <header class="bg-white shadow-md">
+        <div class="container mx-auto px-4">
+            <div class="flex items-center justify-between py-4">
+                <a href="/" class="flex items-center space-x-4">
+                    <img src="/static/images/logo.png" alt="Logo" class="h-16">
+                    <div>
+                        <h1 class="text-2xl font-bold gradient-text">WORLD PARA ATHLETICS</h1>
+                        <p class="text-sm text-gray-600">GRAND PRIX - TUNIS 2025</p>
+                    </div>
+                </a>
+                <nav class="hidden md:flex space-x-6">
+                    <a href="/" class="text-gray-700 hover:text-red-600 font-medium {% if request.endpoint == 'public.index' %}text-red-600{% endif %}">Home</a>
+                    <a href="/results" class="text-gray-700 hover:text-red-600 font-medium {% if request.endpoint == 'public.results' %}text-red-600{% endif %}">Results</a>
+                    <a href="/startlists" class="text-gray-700 hover:text-red-600 font-medium {% if request.endpoint == 'public.startlists' %}text-red-600{% endif %}">Start Lists</a>
+                    <a href="/records" class="text-gray-700 hover:text-red-600 font-medium {% if request.endpoint == 'public.records' %}text-red-600{% endif %}">Records</a>
+                    <a href="/athletes" class="text-gray-700 hover:text-red-600 font-medium {% if request.endpoint == 'public.athletes' %}text-red-600{% endif %}">Athletes</a>
+                    <a href="/raza" class="text-gray-700 hover:text-red-600 font-medium {% if request.endpoint == 'public.raza' %}text-red-600{% endif %}">WPA Points</a>
+                    <a href="/admin" class="text-gray-700 hover:text-red-600 font-medium">Admin</a>
+                </nav>
+                <button class="md:hidden" onclick="toggleMobileMenu()">
+                    <i class="fas fa-bars text-2xl"></i>
+                </button>
+            </div>
+        </div>
+        <nav id="mobileMenu" class="hidden md:hidden bg-gray-100 px-4 py-2">
+            <a href="/" class="block py-2 text-gray-700 hover:text-red-600">Home</a>
+            <a href="/results" class="block py-2 text-gray-700 hover:text-red-600">Results</a>
+            <a href="/startlists" class="block py-2 text-gray-700 hover:text-red-600">Start Lists</a>
+            <a href="/records" class="block py-2 text-gray-700 hover:text-red-600">Records</a>
+            <a href="/athletes" class="block py-2 text-gray-700 hover:text-red-600">Athletes</a>
+            <a href="/raza" class="block py-2 text-gray-700 hover:text-red-600">WPA Points Calculator</a>
+            <a href="/admin" class="block py-2 text-gray-700 hover:text-red-600">Admin</a>
+        </nav>
+    </header>
+    <div class="pattern-bg text-white py-8">
+        <div class="container mx-auto px-4 text-center">
+            <h2 class="text-3xl font-bold">19th EDITION</h2>
+            <p class="text-xl mt-2">FROM 12TH TO 19TH OF JUNE</p>
+        </div>
+    </div>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="container mx-auto px-4 mt-4">
+                {% for category, message in messages %}
+                    <div class="bg-{{ 'green' if category == 'success' else 'red' if category == 'danger' else 'yellow' if category == 'warning' else 'blue' }}-100 border border-{{ 'green' if category == 'success' else 'red' if category == 'danger' else 'yellow' if category == 'warning' else 'blue' }}-400 text-{{ 'green' if category == 'success' else 'red' if category == 'danger' else 'yellow' if category == 'warning' else 'blue' }}-700 px-4 py-3 rounded mb-4">
+                        <div class="flex items-center">
+                            <i class="fas fa-{{ 'check-circle' if category == 'success' else 'exclamation-circle' if category == 'danger' else 'exclamation-triangle' if category == 'warning' else 'info-circle' }} mr-2"></i>
+                            {{ message }}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+    <main class="container mx-auto px-4 py-8">
+        {% block content %}{% endblock %}
+    </main>
+    <footer class="bg-gray-800 text-white mt-16">
+        <div class="container mx-auto px-4 py-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div>
+                    <h3 class="text-xl font-bold mb-4">Contact</h3>
+                    <div class="flex items-start space-x-4">
+                        <div class="flex-shrink-0">
+                            <img src="/static/images/logo.png" alt="Contact" class="h-16 w-16 object-contain">
+                        </div>
+                        <div>
+                            <p><strong>Competition Management and Results</strong></p>
+                            <p>+216 71 781 329</p>
+                            <p>npctunisia.paralympic@gmail.com</p>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold mb-4">Partners</h3>
+                    <div class="grid grid-cols-4 gap-4">
+                        <img src="/static/images/logos/monoprix.png" alt="MONOPRIX" class="h-12 object-contain">
+                        <img src="/static/images/logos/npc.png" alt="NPC" class="h-12 object-contain">
+                        <img src="/static/images/logos/wpa.png" alt="WPA" class="h-12 object-contain">
+                        <img src="/static/images/logos/basar.png" alt="NEDI EL BASAR" class="h-12 object-contain">
+                    </div>
+                </div>
+                <div>
+                    <h3 class="text-xl font-bold mb-4">Follow Us</h3>
+                    <div class="flex space-x-4">
+                        <a href="https://www.facebook.com/TUNISIANNPC" target="_blank" class="text-2xl hover:text-blue-400">
+                            <i class="fab fa-facebook"></i>
+                        </a>
+                        <a href="https://www.instagram.com/npc_tunisia/" target="_blank" class="text-2xl hover:text-pink-400">
+                            <i class="fab fa-instagram"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="border-t border-gray-700 mt-8 pt-4 text-center text-sm text-gray-400">
+                <p>&copy; 2025 NPC Tunisia. All rights reserved. | WPA Points calculations based on official IPC data.</p>
+            </div>
+        </div>
+    </footer>
+    <script>
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobileMenu');
+            menu.classList.toggle('hidden');
+        }
+        // Auto-hide flash messages after 5 seconds
+        setTimeout(() => {
+            document.querySelectorAll('[class*="bg-green-100"], [class*="bg-red-100"], [class*="bg-yellow-100"], [class*="bg-blue-100"]').forEach(el => {
+                if (el.classList.contains('px-4') && el.classList.contains('py-3')) {
+                    el.style.transition = 'opacity 0.5s';
+                    el.style.opacity = '0';
+                    setTimeout(() => el.remove(), 500);
+                }
+            });
+        }, 5000);
+    </script>
+</body>
+</html>

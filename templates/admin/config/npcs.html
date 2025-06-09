@@ -1,0 +1,347 @@
+{% extends "admin/base_admin.html" %}
+{% block page_title %}NPC Management{% endblock %}
+{% block content %}
+<div class="mb-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h2 class="text-2xl font-bold">NPC Management</h2>
+            <p class="text-gray-600 mt-1">Manage participating NPCs, their regions and flags</p>
+        </div>
+        <div class="flex space-x-2">
+            <a href="{{ url_for('admin.config_npc_add') }}" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                <i class="fas fa-plus mr-2"></i>Add NPC
+            </a>
+            <a href="{{ url_for('admin.config_index') }}" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+                <i class="fas fa-arrow-left mr-2"></i>Back
+            </a>
+        </div>
+    </div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div class="bg-white rounded-lg shadow p-4 text-center">
+        <div class="text-2xl font-bold text-blue-600">{{ npcs|length }}</div>
+        <div class="text-sm text-gray-600">Total NPCs</div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4 text-center">
+        <div class="text-2xl font-bold text-green-600">{{ npcs|selectattr('flag_exists')|list|length }}</div>
+        <div class="text-sm text-gray-600">With Flags</div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4 text-center">
+        <div class="text-2xl font-bold text-orange-600">{{ npcs|rejectattr('flag_exists')|list|length }}</div>
+        <div class="text-sm text-gray-600">Missing Flags</div>
+    </div>
+</div>
+<!-- Filters -->
+<div class="bg-white rounded-lg shadow p-4 mb-6">
+    <div class="flex flex-wrap gap-4 items-center">
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Flag Status:</label>
+            <select id="flagFilter" class="px-3 py-2 border rounded-lg text-sm">
+                <option value="">All NPCs</option>
+                <option value="true">With Flags</option>
+                <option value="false">Missing Flags</option>
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Filter by Region:</label>
+            <select id="regionFilter" class="px-3 py-2 border rounded-lg text-sm">
+                <option value="">All Regions</option>
+                {% set regions = npcs|map(attribute='region_code')|select|unique|list|sort %}
+                {% for region in regions %}
+                <option value="{{ region }}">{{ region }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="block text-sm font-medium text-gray-700 mb-1">Search:</label>
+            <input type="text" id="searchFilter" placeholder="Search NPCs..." class="px-3 py-2 border rounded-lg text-sm">
+        </div>
+        <div class="flex items-end">
+            <button onclick="clearFilters()" class="bg-gray-400 text-white px-3 py-2 rounded-lg text-sm hover:bg-gray-500">
+                <i class="fas fa-times mr-1"></i>Clear
+            </button>
+        </div>
+        <div class="flex items-end">
+            <button onclick="refreshFlags()" class="bg-blue-500 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-600">
+                <i class="fas fa-sync mr-1"></i>Refresh Flags
+            </button>
+        </div>
+    </div>
+</div>
+<div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="p-6 border-b">
+        <div class="flex justify-between items-center">
+            <h3 class="text-lg font-bold">NPC List</h3>
+            <div class="text-sm text-gray-600">
+                <span id="visibleCount">{{ npcs|length }}</span> of {{ npcs|length }} NPCs
+            </div>
+        </div>
+    </div>
+    {% if npcs %}
+    <div class="overflow-x-auto">
+        <table class="w-full" id="npcsTable">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Flag</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Region</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Flag Status</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for npc in npcs %}
+                <tr class="hover:bg-gray-50 npc-row"
+                    data-region="{{ npc.region_code or '' }}"
+                    data-flag="{{ npc.flag_exists|lower }}"
+                    data-name="{{ npc.name.lower() }}"
+                    data-code="{{ npc.code.lower() }}">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="flag-container">
+                            {% if npc.flag_exists and npc.flag_url %}
+                                <img src="{{ npc.flag_url }}"
+                                     alt="{{ npc.name }}"
+                                     class="w-8 h-5 border border-gray-200 rounded shadow-sm"
+                                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                                     onload="this.nextElementSibling.style.display='none';">
+                                <div class="w-8 h-5 bg-red-100 border border-red-300 rounded flex items-center justify-center text-xs text-red-600" style="display: none;">
+                                    <i class="fas fa-exclamation-triangle" title="Flag file error"></i>
+                                </div>
+                            {% else %}
+                                <div class="w-8 h-5 bg-gray-200 border border-gray-300 rounded flex items-center justify-center text-xs text-gray-500">
+                                    <i class="fas fa-ban" title="No flag file found"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {{ npc.code }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium text-gray-900">{{ npc.name }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if npc.region_code %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                {{ npc.region_code }}
+                            </span>
+                        {% else %}
+                            <span class="text-sm text-gray-400 italic">No region</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if npc.flag_exists %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                <i class="fas fa-check mr-1"></i>File exists
+                            </span>
+                        {% else %}
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                <i class="fas fa-times mr-1"></i>File missing
+                            </span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <div class="flex space-x-2">
+                            <a href="{{ url_for('admin.config_npc_edit', npc_code=npc.code) }}"
+                               class="text-indigo-600 hover:text-indigo-900" title="Edit NPC">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            {% if npc.flag_exists and npc.flag_url %}
+                            <a href="{{ npc.flag_url }}" target="_blank"
+                               class="text-green-600 hover:text-green-900" title="View Flag File">
+                                <i class="fas fa-external-link-alt"></i>
+                            </a>
+                            {% endif %}
+                            <form method="POST" action="{{ url_for('admin.config_npc_delete', npc_code=npc.code) }}"
+                                  class="inline" onsubmit="return confirmDelete('{{ npc.name }}', '{{ npc.code }}');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="text-red-600 hover:text-red-900" title="Delete NPC">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="p-8 text-center">
+        <div class="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+            <i class="fas fa-globe text-4xl text-gray-300"></i>
+        </div>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">No NPCs</h3>
+        <p class="text-gray-500 mb-6">Add NPCs to manage participating nations.</p>
+        <a href="{{ url_for('admin.config_npc_add') }}" class="bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600">
+            <i class="fas fa-plus mr-2"></i>Add First NPC
+        </a>
+    </div>
+    {% endif %}
+</div>
+<!-- Regional Statistics -->
+{% if npcs %}
+<div class="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {% set regions = npcs|map(attribute='region_code')|select|unique|list|sort %}
+    {% for region in regions %}
+    {% set region_npcs = npcs|selectattr('region_code', 'equalto', region)|list %}
+    <div class="bg-white rounded-lg shadow p-6">
+        <h4 class="font-bold text-gray-900 mb-3">Region {{ region }}</h4>
+        <div class="space-y-2">
+            <div class="flex justify-between">
+                <span class="text-sm text-gray-600">Total NPCs:</span>
+                <span class="text-sm font-medium">{{ region_npcs|length }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-sm text-gray-600">With Flags:</span>
+                <span class="text-sm font-medium text-green-600">{{ region_npcs|selectattr('flag_exists')|list|length }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-sm text-gray-600">Missing Flags:</span>
+                <span class="text-sm font-medium text-red-600">{{ region_npcs|rejectattr('flag_exists')|list|length }}</span>
+            </div>
+        </div>
+        <div class="mt-3 pt-3 border-t">
+            <div class="text-xs text-gray-500">
+                {% for npc in region_npcs[:5] %}
+                    <span class="inline-block px-2 py-1 rounded mr-1 mb-1
+                        {% if npc.flag_exists %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                        {{ npc.code }}
+                    </span>
+                {% endfor %}
+                {% if region_npcs|length > 5 %}
+                    <span class="text-gray-400">+{{ region_npcs|length - 5 }} more</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    <!-- NPCs without region -->
+    {% set no_region_npcs = npcs|rejectattr('region_code')|list %}
+    {% if no_region_npcs %}
+    <div class="bg-white rounded-lg shadow p-6">
+        <h4 class="font-bold text-gray-900 mb-3">No Region</h4>
+        <div class="space-y-2">
+            <div class="flex justify-between">
+                <span class="text-sm text-gray-600">Total NPCs:</span>
+                <span class="text-sm font-medium">{{ no_region_npcs|length }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-sm text-gray-600">With Flags:</span>
+                <span class="text-sm font-medium text-green-600">{{ no_region_npcs|selectattr('flag_exists')|list|length }}</span>
+            </div>
+            <div class="flex justify-between">
+                <span class="text-sm text-gray-600">Missing Flags:</span>
+                <span class="text-sm font-medium text-red-600">{{ no_region_npcs|rejectattr('flag_exists')|list|length }}</span>
+            </div>
+        </div>
+        <div class="mt-3 pt-3 border-t">
+            <div class="text-xs text-gray-500">
+                {% for npc in no_region_npcs[:5] %}
+                    <span class="inline-block px-2 py-1 rounded mr-1 mb-1
+                        {% if npc.flag_exists %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                        {{ npc.code }}
+                    </span>
+                {% endfor %}
+                {% if no_region_npcs|length > 5 %}
+                    <span class="text-gray-400">+{{ no_region_npcs|length - 5 }} more</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endif %}
+<div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+    <h4 class="font-bold text-blue-900 mb-2">
+        <i class="fas fa-info-circle mr-2"></i>Automatic Flag Detection
+    </h4>
+    <div class="text-sm text-blue-800 space-y-2">
+        <p><strong>Automatic Detection:</strong> Flag status is automatically checked by verifying file existence</p>
+        <p><strong>Standard Path:</strong> <code>/static/images/flags/NPC_CODE.svg</code> (e.g., TUN.svg)</p>
+        <p><strong>Custom Path:</strong> Files uploaded through the form are stored with custom paths</p>
+        <p><strong>Real-time Status:</strong> Flag status updates automatically when files are added/removed</p>
+        <p><strong>File Verification:</strong> Click "Refresh Flags" to re-check all flag files</p>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const regionFilter = document.getElementById('regionFilter');
+    const flagFilter = document.getElementById('flagFilter');
+    const searchFilter = document.getElementById('searchFilter');
+    const npcRows = document.querySelectorAll('.npc-row');
+    const visibleCount = document.getElementById('visibleCount');
+    function applyFilters() {
+        const regionValue = regionFilter.value.toLowerCase();
+        const flagValue = flagFilter.value;
+        const searchValue = searchFilter.value.toLowerCase();
+        let visibleRowsCount = 0;
+        npcRows.forEach(row => {
+            const region = row.dataset.region.toLowerCase();
+            const flagStatus = row.dataset.flag;
+            const name = row.dataset.name;
+            const code = row.dataset.code;
+            let showRow = true;
+            // Region filter
+            if (regionValue && region !== regionValue) {
+                showRow = false;
+            }
+            // Flag filter
+            if (flagValue && flagStatus !== flagValue) {
+                showRow = false;
+            }
+            // Search filter
+            if (searchValue && !name.includes(searchValue) && !code.includes(searchValue)) {
+                showRow = false;
+            }
+            row.style.display = showRow ? '' : 'none';
+            if (showRow) visibleRowsCount++;
+        });
+        visibleCount.textContent = visibleRowsCount;
+    }
+    function clearFilters() {
+        regionFilter.value = '';
+        flagFilter.value = '';
+        searchFilter.value = '';
+        applyFilters();
+    }
+    function refreshFlags() {
+        // Recharger la page pour actualiser le statut des drapeaux
+        window.location.reload();
+    }
+    // Event listeners
+    regionFilter.addEventListener('change', applyFilters);
+    flagFilter.addEventListener('change', applyFilters);
+    searchFilter.addEventListener('input', applyFilters);
+    // Expose functions to global scope
+    window.clearFilters = clearFilters;
+    window.refreshFlags = refreshFlags;
+    // Initial filter application
+    applyFilters();
+});
+function confirmDelete(npcName, npcCode) {
+    return confirm(`Are you sure you want to delete ${npcName} (${npcCode})?\n\nThis will also delete the associated flag file if it exists.\nThis action cannot be undone.`);
+}
+</script>
+<style>
+.npc-row {
+    transition: all 0.2s ease;
+}
+.npc-row:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.flag-container img {
+    transition: transform 0.2s ease;
+}
+.npc-row:hover .flag-container img {
+    transform: scale(1.1);
+}
+.flag-container {
+    position: relative;
+}
+</style>
+{% endblock %}

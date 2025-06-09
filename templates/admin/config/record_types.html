@@ -1,0 +1,166 @@
+{% extends "admin/base_admin.html" %}
+{% block page_title %}Record Types Management{% endblock %}
+{% block content %}
+<div class="mb-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h2 class="text-2xl font-bold">Record Types Management</h2>
+            <p class="text-gray-600 mt-1">Manage record types with their abbreviations and geographical scope</p>
+        </div>
+        <div class="flex space-x-2">
+            <a href="{{ url_for('admin.config_record_type_add') }}" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                <i class="fas fa-plus mr-2"></i>Add Record Type
+            </a>
+            <a href="{{ url_for('admin.config_index') }}" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+                <i class="fas fa-arrow-left mr-2"></i>Back
+            </a>
+        </div>
+    </div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-lg shadow p-4 text-center">
+        <div class="text-2xl font-bold text-blue-600">{{ record_types|length }}</div>
+        <div class="text-sm text-gray-600">Total Record Types</div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4 text-center">
+        <div class="text-2xl font-bold text-green-600">{{ record_types|selectattr('scope_type', 'equalto', 'world')|list|length }}</div>
+        <div class="text-sm text-gray-600">World Records</div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4 text-center">
+        <div class="text-2xl font-bold text-orange-600">{{ record_types|selectattr('scope_type', 'equalto', 'continental')|list|length }}</div>
+        <div class="text-sm text-gray-600">Continental Records</div>
+    </div>
+    <div class="bg-white rounded-lg shadow p-4 text-center">
+        <div class="text-2xl font-bold text-purple-600">{{ record_types|selectattr('scope_type', 'equalto', 'national')|list|length }}</div>
+        <div class="text-sm text-gray-600">National Records</div>
+    </div>
+</div>
+<div class="bg-white rounded-lg shadow overflow-hidden">
+    <div class="p-6 border-b">
+        <h3 class="text-lg font-bold">Record Types List</h3>
+    </div>
+    {% if record_types %}
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Abbreviation</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Full Name</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Scope Type</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Geographic Scope</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for record_type in record_types %}
+                <tr class="hover:bg-gray-50">
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                            {% if record_type.scope_type == 'world' %}bg-yellow-100 text-yellow-800
+                            {% elif record_type.scope_type == 'continental' %}bg-blue-100 text-blue-800
+                            {% elif record_type.scope_type == 'national' %}bg-green-100 text-green-800
+                            {% elif record_type.scope_type == 'personal' %}bg-purple-100 text-purple-800
+                            {% else %}bg-gray-100 text-gray-800{% endif %}">
+                            {{ record_type.abbreviation }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-medium text-gray-900">{{ record_type.full_name }}</div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                            {% if record_type.scope_type == 'world' %}bg-yellow-100 text-yellow-800
+                            {% elif record_type.scope_type == 'continental' %}bg-blue-100 text-blue-800
+                            {% elif record_type.scope_type == 'regional' %}bg-orange-100 text-orange-800
+                            {% elif record_type.scope_type == 'national' %}bg-green-100 text-green-800
+                            {% elif record_type.scope_type == 'personal' %}bg-purple-100 text-purple-800
+                            {% elif record_type.scope_type == 'seasonal' %}bg-indigo-100 text-indigo-800
+                            {% elif record_type.scope_type == 'competition' %}bg-red-100 text-red-800
+                            {% else %}bg-gray-100 text-gray-800{% endif %}">
+                            {{ record_type.scope_type.title() }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {% if record_type.scope_values %}
+                            <div class="text-sm text-gray-900">
+                                {% set scope_items = record_type.scope_values.split(',') %}
+                                {% for item in scope_items[:2] %}
+                                    <span class="inline-block bg-gray-100 text-gray-700 px-2 py-1 rounded text-xs mr-1 mb-1">{{ item.strip() }}</span>
+                                {% endfor %}
+                                {% if scope_items|length > 2 %}
+                                    <span class="text-xs text-gray-500">+{{ scope_items|length - 2 }} more</span>
+                                {% endif %}
+                            </div>
+                        {% elif record_type.scope_type == 'world' %}
+                            <span class="text-sm text-gray-500 italic">Global</span>
+                        {% elif record_type.scope_type == 'national' %}
+                            <span class="text-sm text-gray-500 italic">Athlete's NPC</span>
+                        {% elif record_type.scope_type == 'personal' %}
+                            <span class="text-sm text-gray-500 italic">Individual</span>
+                        {% else %}
+                            <span class="text-sm text-gray-500">-</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm text-gray-900">
+                            {% if record_type.description %}
+                                {{ record_type.description[:50] }}{% if record_type.description|length > 50 %}...{% endif %}
+                            {% else %}
+                                <span class="text-gray-400">No description</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <div class="flex space-x-2">
+                            <a href="{{ url_for('admin.config_record_type_edit', record_type_id=record_type.id) }}"
+                               class="text-indigo-600 hover:text-indigo-900" title="Edit">
+                                <i class="fas fa-edit"></i>
+                            </a>
+                            <form method="POST" action="{{ url_for('admin.config_record_type_delete', record_type_id=record_type.id) }}"
+                                  class="inline" onsubmit="return confirm('Are you sure you want to delete {{ record_type.abbreviation }}?');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="text-red-600 hover:text-red-900" title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="p-8 text-center">
+        <div class="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
+            <i class="fas fa-trophy text-4xl text-gray-300"></i>
+        </div>
+        <h3 class="text-lg font-medium text-gray-900 mb-2">No Record Types</h3>
+        <p class="text-gray-500 mb-6">Add record types to manage competition records.</p>
+        <a href="{{ url_for('admin.config_record_type_add') }}" class="bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600">
+            <i class="fas fa-plus mr-2"></i>Add First Record Type
+        </a>
+    </div>
+    {% endif %}
+</div>
+<div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+    <h4 class="font-bold text-blue-900 mb-2">
+        <i class="fas fa-info-circle mr-2"></i>Record Types Information
+    </h4>
+    <div class="text-sm text-blue-800 space-y-2">
+        <p><strong>Abbreviation:</strong> Short code used in results (e.g., WR, AR, CR)</p>
+        <p><strong>Scope Types:</strong></p>
+        <ul class="ml-4 space-y-1">
+            <li><strong>World:</strong> Global records recognized by World Para Athletics</li>
+            <li><strong>Continental:</strong> Records for specific continents (Europe, Asia, etc.)</li>
+            <li><strong>Regional:</strong> Multi-npc regional records</li>
+            <li><strong>National:</strong> Records for individual npcs</li>
+            <li><strong>Personal:</strong> Individual athlete's best performances</li>
+            <li><strong>Seasonal:</strong> Best performance in current season</li>
+            <li><strong>Competition:</strong> Records specific to this competition</li>
+        </ul>
+        <p><strong>Geographic Scope:</strong> Comma-separated list of npcs/continents where applicable</p>
+    </div>
+</div>
+{% endblock %}
