@@ -1,6 +1,8 @@
 from datetime import datetime
 from flask import render_template
 from database.models import Game
+from config import Config
+
 def register_routes(bp):
     @bp.route('/')
     def index():
