@@ -16,38 +16,41 @@ def register_routes(bp):
         else:
             athletes = Athlete.get_all()
         return render_template('admin/athletes/list.html', athletes=athletes, search=search)
+
     @bp.route('/athletes/search')
-    @bp.route('/api/athletes/search')  # Ajouter cette route pour compatibilité
+    @bp.route('/api/athletes/search')
     @admin_required
     def api_search_athletes():
         query = request.args.get('q', '').strip()
-        # Support des deux formats de paramètres pour la compatibilité
         guides_only = (request.args.get('guides_only', 'false').lower() == 'true' or
-                      request.args.get('guides', '0') == '1')
+                       request.args.get('guides', '0') == '1')
+        event_filter = request.args.get('event_filter', '').strip()
+
         if not query:
             return jsonify([])
+
         try:
-            # Utiliser directement la méthode search du modèle Athlete mise à jour
-            athletes = Athlete.search(query, guides_only)
+            athletes = Athlete.search(query, guides_only, event_filter=event_filter)
             results = []
             for athlete in athletes:
-                # Format de retour compatible avec le JavaScript existant
                 result = {
                     'sdms': athlete['sdms'],
                     'firstname': athlete['firstname'],
                     'lastname': athlete['lastname'],
-                    'name': f"{athlete['firstname']} {athlete['lastname']}",  # Champ combiné pour compatibilité
+                    'name': f"{athlete['firstname']} {athlete['lastname']}",
                     'npc': athlete['npc'],
                     'gender': athlete['gender'],
                     'class': athlete['class'],
                     'classes_list': athlete.get('classes_list', []),
-                    'is_guide': athlete.get('is_guide', False)
+                    'is_guide': athlete.get('is_guide', False),
+                    'registered_events': athlete.get('registered_events', '')
                 }
                 results.append(result)
             return jsonify(results)
         except Exception as e:
             print(f"Error in athlete search: {e}")
             return jsonify([]), 500
+
     @bp.route('/athletes/create', methods=['GET', 'POST'])
     @admin_required
     def athlete_create():

@@ -257,7 +257,15 @@ def init_db():
             tag_value VARCHAR(100) NOT NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             UNIQUE (config_key, tag_value)
-        )"""
+        )""",
+        """CREATE TABLE IF NOT EXISTS registrations (
+                    id SERIAL PRIMARY KEY,
+                    sdms INTEGER NOT NULL,
+                    event_name VARCHAR(100) NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (sdms) REFERENCES athletes(sdms) ON DELETE CASCADE,
+                    UNIQUE (sdms, event_name)
+                )"""
     ]
     try:
         with get_db_connection() as conn:

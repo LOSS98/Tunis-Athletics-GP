@@ -24,7 +24,18 @@
         <h3 class="text-lg font-bold mb-4">Add Athlete to Start List</h3>
         <form method="POST" action="{{ url_for('admin.startlist_add', game_id=game.id) }}">
             {{ form.hidden_tag() }}
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                <!-- Event Filter -->
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Filter by Event Registration</label>
+                    <select id="eventFilter" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500">
+                        <option value="">All Athletes</option>
+                        <!-- Populated by JavaScript -->
+                    </select>
+                    <div class="text-xs text-gray-500 mt-1">Filter athletes by their registered events</div>
+                </div>
+
+                <!-- Athlete Selection -->
                 <div>
                     <label class="block text-gray-700 text-sm font-bold mb-2">Athlete</label>
                     <div class="relative">
@@ -38,6 +49,8 @@
                          data-game-classes="{{ game.classes }}"
                          data-game-gender="{{ game.genders }}"></div>
                 </div>
+
+                <!-- Guide -->
                 <div>
                     <label class="block text-gray-700 text-sm font-bold mb-2">Guide (optional)</label>
                     <div class="relative">
@@ -49,10 +62,14 @@
                     <input type="hidden" name="guide_sdms" id="selectedGuideSdms">
                     <div id="selectedGuide" class="mt-2 text-sm text-gray-600"></div>
                 </div>
+
+                <!-- Lane/Order -->
                 <div>
                     <label class="block text-gray-700 text-sm font-bold mb-2">Lane/Order (optional)</label>
                     {{ form.lane_order(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
                 </div>
+
+                <!-- Submit Button -->
                 <div class="flex items-end">
                     <button type="submit" class="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600">
                         <i class="fas fa-plus mr-2"></i>Add to Start List
@@ -62,6 +79,53 @@
         </form>
     </div>
 </div>
+
+<!-- Quick Select from Registrations -->
+<div class="mb-6">
+    <div class="bg-white rounded-lg shadow p-4">
+        <div class="flex justify-between items-center mb-3">
+            <h3 class="text-lg font-bold">Quick Select by Event Registration</h3>
+            <div class="flex gap-2">
+                <select id="quickEventFilter" class="px-3 py-2 border rounded-lg text-sm">
+                    <option value="">Select Event to Show Athletes</option>
+                </select>
+                <button onclick="loadQuickSelectAthletes()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 text-sm">
+                    <i class="fas fa-search mr-1"></i>Load Athletes
+                </button>
+            </div>
+        </div>
+        <div id="quickSelectContainer" class="hidden">
+            <div id="quickSelectAthletes" class="grid grid-cols-2 md:grid-cols-4 gap-2 max-h-40 overflow-y-auto"></div>
+        </div>
+    </div>
+</div>
+
+<!-- Start List Section -->
+{% if startlist %}
+<div class="mb-6">
+    <div class="bg-white rounded-lg shadow p-4">
+        <h3 class="text-lg font-bold mb-3">Quick Select from Current Start List</h3>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+            {% for entry in startlist %}
+            <div class="border rounded p-2 text-sm cursor-pointer hover:bg-gray-50 transition-colors"
+                 onclick="selectFromStartList('{{ entry.athlete_sdms }}', '{{ entry.firstname|e }} {{ entry.lastname|e }}', '{{ entry.gender }}', '{{ entry.class }}', '{{ entry.guide_sdms or '' }}', '{{ entry.registered_events or '' }}')">
+                <span class="font-semibold">{{ entry.athlete_sdms }}</span> -
+                {{ entry.firstname }} {{ entry.lastname }} ({{ entry.npc }})
+                <span class="text-xs bg-blue-100 text-blue-800 px-1 rounded">{{ entry.class }}</span>
+                {% if entry.guide_sdms %}
+                    <div class="text-xs text-gray-500">Guide: {{ entry.guide_sdms }}</div>
+                {% endif %}
+                {% if entry.gender != game.genders %}
+                    <div class="text-xs text-yellow-700 mt-1">
+                        <i class="fas fa-exclamation-triangle"></i> Gender mismatch
+                    </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
 
 <div class="bg-white rounded-lg shadow">
     <div class="p-6 border-b">
@@ -84,6 +148,7 @@
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">NPC</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gender</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Classes</th>
+{#                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Registrations</th>#}
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guide</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
@@ -150,6 +215,23 @@
                             </span>
                         {% endif %}
                     </td>
+{#                    <td class="px-6 py-4 whitespace-nowrap">#}
+{#                        {% if entry.registered_events %}#}
+{#                            {% set events = entry.registered_events.split(', ') %}#}
+{#                            <div class="flex flex-wrap gap-1">#}
+{#                                {% for event in events[:3] %}#}
+{#                                <span class="px-1 py-0.5 text-xs {% if event == game.event %}bg-purple-200 text-purple-800 font-semibold{% else %}bg-blue-100 text-blue-800{% endif %} rounded">#}
+{#                                    {{ event }}#}
+{#                                </span>#}
+{#                                {% endfor %}#}
+{#                                {% if events|length > 3 %}#}
+{#                                <span class="text-xs text-gray-500">+{{ events|length - 3 }}</span>#}
+{#                                {% endif %}#}
+{#                            </div>#}
+{#                        {% else %}#}
+{#                            <span class="text-gray-400">-</span>#}
+{#                        {% endif %}#}
+{#                    </td>#}
                     <td class="px-6 py-4 whitespace-nowrap">
                         {% if entry.guide_sdms %}
                             <span class="bg-indigo-100 text-indigo-800 px-2 py-1 rounded text-sm font-semibold">{{ entry.guide_sdms }}</span>
@@ -170,7 +252,7 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="9" class="px-6 py-8 text-center">
+                    <td colspan="10" class="px-6 py-8 text-center">
                         <div class="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
                             <i class="fas fa-list text-4xl text-gray-300"></i>
                         </div>
@@ -254,9 +336,11 @@
         <i class="fas fa-info-circle mr-2"></i>Start List Information
     </h4>
     <div class="text-sm text-blue-800 space-y-2">
+        <p><strong>Event Filter:</strong> Use the event filter to only show athletes registered for specific events</p>
         <p><strong>Gender Matching:</strong> Athletes must match the event gender ({{ game.genders }})</p>
         <p><strong>Class Matching:</strong> Athletes must have at least one class matching event classes: {{ game.classes }}</p>
-        <p><strong>Multi-Class Athletes:</strong> Athletes can have multiple classes separated by commas (e.g., T54,T53,T52)</p>
+        <p><strong>Registrations:</strong> Shows which events each athlete is registered for</p>
+        <p><strong>Multi-Class Athletes:</strong> Athletes can have multiple classes separated by commas</p>
         <p><strong>Lane/Order:</strong> Optional field for starting position or running order</p>
         <p><strong>Capacity:</strong> Expected {{ game.nb_athletes }} athletes for this event</p>
         {% if game.area %}
@@ -274,13 +358,80 @@ window.specialValues = [];
 window.gameId = {{ game.id }};
 window.finalistsCount = 0;
 
-function selectFromStartList(sdms, name, gender, athleteClasses, guideSdms) {
+// Load quick event filter options
+fetch('/admin/api/events/list')
+    .then(response => response.json())
+    .then(events => {
+        const quickEventFilter = document.getElementById('quickEventFilter');
+        if (quickEventFilter) {
+            events.forEach(event => {
+                const option = document.createElement('option');
+                option.value = event;
+                option.textContent = event;
+                quickEventFilter.appendChild(option);
+            });
+        }
+    })
+    .catch(error => console.error('Error loading events:', error));
+
+function loadQuickSelectAthletes() {
+    const selectedEvent = document.getElementById('quickEventFilter').value;
+    if (!selectedEvent) {
+        showNotification('Please select an event first', 'warning');
+        return;
+    }
+
+    const container = document.getElementById('quickSelectContainer');
+    const athletesDiv = document.getElementById('quickSelectAthletes');
+
+    // Show loading
+    athletesDiv.innerHTML = '<div class="text-center py-4"><i class="fas fa-spinner fa-spin mr-2"></i>Loading athletes...</div>';
+    container.classList.remove('hidden');
+
+    fetch(`/admin/api/athletes/search?q=*&event_filter=${encodeURIComponent(selectedEvent)}`)
+        .then(response => response.json())
+        .then(athletes => {
+            if (athletes.length === 0) {
+                athletesDiv.innerHTML = `<div class="text-center py-4 text-gray-500">No athletes registered for "${selectedEvent}"</div>`;
+                return;
+            }
+
+            athletesDiv.innerHTML = '';
+            athletes.forEach(athlete => {
+                const div = document.createElement('div');
+                div.className = 'border rounded p-2 text-sm cursor-pointer hover:bg-gray-50 transition-colors bg-blue-50 border-blue-200';
+                div.innerHTML = `
+                    <span class="font-semibold">${athlete.sdms}</span> -
+                    ${athlete.firstname} ${athlete.lastname} (${athlete.npc})
+                    <div class="text-xs text-blue-600 mt-1">
+                        <i class="fas fa-clipboard-list mr-1"></i>Registered for ${selectedEvent}
+                    </div>
+                `;
+                div.onclick = () => selectFromStartList(
+                    athlete.sdms,
+                    `${athlete.firstname} ${athlete.lastname}`,
+                    athlete.gender,
+                    athlete.class,
+                    '',
+                    athlete.registered_events
+                );
+                athletesDiv.appendChild(div);
+            });
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            athletesDiv.innerHTML = '<div class="text-center py-4 text-red-500">Error loading athletes</div>';
+        });
+}
+
+function selectFromStartList(sdms, name, gender, athleteClasses, guideSdms, registeredEvents) {
     const athlete = {
         sdms: sdms,
         name: name,
         gender: gender,
         classes: athleteClasses ? athleteClasses.split(',').map(c => c.trim()) : [],
-        class: athleteClasses
+        class: athleteClasses,
+        registered_events: registeredEvents || ''
     };
     selectAthlete(athlete);
 
@@ -290,6 +441,22 @@ function selectFromStartList(sdms, name, gender, athleteClasses, guideSdms) {
         if (selectedGuideSdms) selectedGuideSdms.value = guideSdms;
         if (selectedGuide) selectedGuide.innerHTML = `Guide SDMS: <strong>${guideSdms}</strong>`;
     }
+}
+
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 transition-opacity ${
+        type === 'success' ? 'bg-green-500 text-white' :
+        type === 'error' ? 'bg-red-500 text-white' :
+        type === 'warning' ? 'bg-yellow-500 text-white' :
+        'bg-blue-500 text-white'
+    }`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
 }
 
 document.addEventListener('click', function(e) {
@@ -307,6 +474,7 @@ document.addEventListener('click', function(e) {
 });
 
 window.selectFromStartList = selectFromStartList;
+window.loadQuickSelectAthletes = loadQuickSelectAthletes;
 </script>
 
 <script src="{{ url_for('static', filename='js/manage_results.js') }}"></script>

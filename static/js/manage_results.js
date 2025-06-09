@@ -7,6 +7,9 @@ const hasWpaPoints = window.hasWpaPoints || false;
 const specialValues = window.specialValues || ['DNS', 'DNF', 'DQ', 'NM', 'X', 'O', '-'];
 const gameId = window.gameId;
 
+// Global event filter state
+window.currentEventFilter = '';
+
 function getCSRFToken() {
     const csrfInput = document.querySelector('input[name="csrf_token"]');
     return csrfInput ? csrfInput.value : '';
@@ -39,6 +42,78 @@ function setLoadingState(button, isLoading) {
     }
 }
 
+function initializeEventFilter() {
+    const eventFilterSelect = document.getElementById('eventFilter');
+    if (!eventFilterSelect) return;
+
+    // Load events for filter
+    fetch('/admin/api/events/list')
+        .then(response => response.json())
+        .then(events => {
+            // Clear existing options except the first one
+            while (eventFilterSelect.children.length > 1) {
+                eventFilterSelect.removeChild(eventFilterSelect.lastChild);
+            }
+
+            events.forEach(event => {
+                const option = document.createElement('option');
+                option.value = event;
+                option.textContent = event;
+                eventFilterSelect.appendChild(option);
+            });
+        })
+        .catch(error => console.error('Error loading events:', error));
+
+    eventFilterSelect.addEventListener('change', function() {
+        const selectedEvent = this.value;
+        window.currentEventFilter = selectedEvent;
+
+        // Clear current athlete selection
+        const athleteSearch = document.getElementById('athleteSearch');
+        const selectedSdms = document.getElementById('selectedSdms');
+        const selectedAthlete = document.getElementById('selectedAthlete');
+
+        if (athleteSearch) athleteSearch.value = '';
+        if (selectedSdms) selectedSdms.value = '';
+        if (selectedAthlete) selectedAthlete.innerHTML = '';
+
+        // Show/hide filter status
+        updateEventFilterStatus(selectedEvent);
+    });
+}
+
+function updateEventFilterStatus(selectedEvent) {
+    const existingStatus = document.getElementById('eventFilterStatus');
+    if (existingStatus) existingStatus.remove();
+
+    if (selectedEvent) {
+        const filterStatus = document.createElement('div');
+        filterStatus.id = 'eventFilterStatus';
+        filterStatus.className = 'text-sm bg-blue-50 text-blue-700 p-2 rounded border border-blue-200 mt-2';
+        filterStatus.innerHTML = `
+            <i class="fas fa-filter mr-1"></i>
+            <strong>Event Filter Active:</strong> Only showing athletes registered for "${selectedEvent}"
+            <button onclick="clearEventFilter()" class="ml-2 text-blue-600 hover:text-blue-800">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+
+        const athleteContainer = document.getElementById('selectedAthlete') || document.querySelector('[data-game-classes]');
+        if (athleteContainer && athleteContainer.parentNode) {
+            athleteContainer.parentNode.insertBefore(filterStatus, athleteContainer);
+        }
+    }
+}
+
+function clearEventFilter() {
+    const eventFilterSelect = document.getElementById('eventFilter');
+    if (eventFilterSelect) {
+        eventFilterSelect.value = '';
+        window.currentEventFilter = '';
+        updateEventFilterStatus('');
+    }
+}
+
 function initializeAthleteSearch() {
     const athleteSearch = document.getElementById('athleteSearch');
     const athleteResults = document.getElementById('athleteResults');
@@ -53,7 +128,14 @@ function initializeAthleteSearch() {
         }
 
         searchTimeout = setTimeout(() => {
-            fetch(`/admin/api/athletes/search?q=${encodeURIComponent(query)}`)
+            let searchUrl = `/admin/api/athletes/search?q=${encodeURIComponent(query)}`;
+
+            // Add event filter if present
+            if (window.currentEventFilter) {
+                searchUrl += `&event_filter=${encodeURIComponent(window.currentEventFilter)}`;
+            }
+
+            fetch(searchUrl)
                 .then(response => response.json())
                 .then(athletes => {
                     displayAthleteSearchResults(athletes, query);
@@ -70,20 +152,45 @@ function initializeAthleteSearch() {
 function displayAthleteSearchResults(athletes, query) {
     const athleteResults = document.getElementById('athleteResults');
     const selectedAthlete = document.getElementById('selectedAthlete');
-    const gameClasses = selectedAthlete.dataset.gameClasses.split(',').map(c => c.trim());
-    const gameGender = selectedAthlete.dataset.gameGender;
+    const gameClasses = selectedAthlete ? selectedAthlete.dataset.gameClasses.split(',').map(c => c.trim()) : [];
+    const gameGender = selectedAthlete ? selectedAthlete.dataset.gameGender : '';
 
     athleteResults.innerHTML = '';
 
     if (athletes.length === 0) {
+        const noResultsMessage = window.currentEventFilter
+            ? `No athletes found for "${query}" registered for "${window.currentEventFilter}"`
+            : `No athletes found for "${query}"`;
+
         athleteResults.innerHTML = `
             <div class="p-3 text-gray-500">
-                <div>No athletes found for "${query}"</div>
-                <div class="text-xs mt-1">Try searching by SDMS, name, NPC, or class (e.g., T47, F11)</div>
+                <div>${noResultsMessage}</div>
+                <div class="text-xs mt-1">
+                    ${window.currentEventFilter 
+                        ? 'Try clearing the event filter or searching for different terms'
+                        : 'Try searching by SDMS, name, NPC, or class (e.g., T47, F11)'
+                    }
+                </div>
+                ${window.currentEventFilter ? `
+                    <button onclick="clearEventFilter()" class="mt-2 text-blue-600 hover:text-blue-800 text-xs">
+                        <i class="fas fa-times mr-1"></i>Clear event filter
+                    </button>
+                ` : ''}
             </div>
         `;
         athleteResults.classList.remove('hidden');
         return;
+    }
+
+    // Add header if event filter is active
+    if (window.currentEventFilter) {
+        const header = document.createElement('div');
+        header.className = 'p-2 bg-blue-50 text-sm font-medium text-blue-700 border-b';
+        header.innerHTML = `
+            <i class="fas fa-filter mr-2"></i>
+            Athletes registered for "${window.currentEventFilter}" (${athletes.length} found)
+        `;
+        athleteResults.appendChild(header);
     }
 
     const isClassSearch = athletes.length > 10 && athletes.every(athlete =>
@@ -92,7 +199,7 @@ function displayAthleteSearchResults(athletes, query) {
         )
     );
 
-    if (isClassSearch) {
+    if (isClassSearch && !window.currentEventFilter) {
         const header = document.createElement('div');
         header.className = 'p-2 bg-blue-50 text-sm font-medium text-blue-700 border-b';
         header.innerHTML = `<i class="fas fa-users mr-2"></i>Athletes in class "${query.toUpperCase()}" (${athletes.length} found)`;
@@ -168,13 +275,13 @@ function createAthleteResultElement(athlete, gameClasses, gameGender, isClassMat
 
     let alertClass = '';
     let alertText = '';
-    if (!classMatch && !genderMatch) {
+    if (!classMatch && !genderMatch && gameClasses.length > 0) {
         alertClass = 'border-l-4 border-red-400 bg-red-50';
         alertText = '<div class="text-xs text-red-600 mt-1"><i class="fas fa-exclamation-triangle"></i> Class & Gender mismatch</div>';
-    } else if (!classMatch) {
+    } else if (!classMatch && gameClasses.length > 0) {
         alertClass = 'border-l-4 border-yellow-400 bg-yellow-50';
         alertText = '<div class="text-xs text-yellow-600 mt-1"><i class="fas fa-exclamation-triangle"></i> Class mismatch</div>';
-    } else if (!genderMatch) {
+    } else if (!genderMatch && gameGender) {
         alertClass = 'border-l-4 border-yellow-400 bg-yellow-50';
         alertText = '<div class="text-xs text-yellow-600 mt-1"><i class="fas fa-exclamation-triangle"></i> Gender mismatch</div>';
     } else {
@@ -198,6 +305,31 @@ function createAthleteResultElement(athlete, gameClasses, gameGender, isClassMat
         }).join(' ');
     }
 
+    let eventsDisplay = '';
+    if (athlete.registered_events && athlete.registered_events.trim()) {
+        const events = athlete.registered_events.split(', ').filter(e => e.trim());
+        if (events.length > 0) {
+            const displayEvents = events.slice(0, 3);
+            const moreCount = events.length - 3;
+            eventsDisplay = `
+                <div class="text-xs text-purple-600 mt-1">
+                    <i class="fas fa-clipboard-list mr-1"></i>
+                    Events: ${displayEvents.join(', ')}${moreCount > 0 ? ` +${moreCount} more` : ''}
+                </div>
+            `;
+
+            // Highlight current event filter
+            if (window.currentEventFilter && events.includes(window.currentEventFilter)) {
+                eventsDisplay = eventsDisplay.replace(
+                    window.currentEventFilter,
+                    `<strong class="bg-purple-200 px-1 rounded">${window.currentEventFilter}</strong>`
+                );
+            }
+        }
+    } else if (window.currentEventFilter) {
+        eventsDisplay = '<div class="text-xs text-gray-500 mt-1"><i class="fas fa-info-circle mr-1"></i>No registrations recorded</div>';
+    }
+
     const athleteName = athlete.name || `${athlete.firstname} ${athlete.lastname}`;
     div.innerHTML = `
         <div class="flex justify-between items-center">
@@ -209,6 +341,7 @@ function createAthleteResultElement(athlete, gameClasses, gameGender, isClassMat
                 <div class="text-xs text-gray-500 mt-1">${athlete.gender}</div>
             </div>
         </div>
+        ${eventsDisplay}
         ${alertText}
     `;
 
@@ -219,7 +352,8 @@ function createAthleteResultElement(athlete, gameClasses, gameGender, isClassMat
             npc: athlete.npc,
             gender: athlete.gender,
             classes: athleteClasses,
-            class: athlete.class || athleteClasses.join(',')
+            class: athlete.class || athleteClasses.join(','),
+            registered_events: athlete.registered_events
         };
         selectAthlete(athleteData);
     };
@@ -246,12 +380,12 @@ function initializeGuideSearch() {
                 .then(athletes => {
                     guideResults.innerHTML = '';
                     if (athletes.length === 0) {
-                        guideResults.innerHTML = '<div class="p-2 text-gray-500">No athletes found</div>';
+                        guideResults.innerHTML = '<div class="p-2 text-gray-500">No guides found</div>';
                     } else {
                         athletes.forEach(athlete => {
                             const div = document.createElement('div');
                             div.className = 'p-2 hover:bg-gray-100 cursor-pointer border-b';
-                            div.innerHTML = `<strong>${athlete.sdms}</strong> - ${athlete.name} (${athlete.npc})`;
+                            div.innerHTML = `<strong>${athlete.sdms}</strong> - ${athlete.name || athlete.firstname + ' ' + athlete.lastname} (${athlete.npc})`;
                             div.onclick = () => selectGuide(athlete);
                             guideResults.appendChild(div);
                         });
@@ -277,28 +411,39 @@ function selectAthlete(athlete) {
     if (selectedGuide) selectedGuide.innerHTML = '';
 
     if (selectedAthlete) {
-        const gameClasses = selectedAthlete.dataset.gameClasses.split(',').map(c => c.trim());
+        const gameClasses = selectedAthlete.dataset.gameClasses ? selectedAthlete.dataset.gameClasses.split(',').map(c => c.trim()) : [];
         const gameGender = selectedAthlete.dataset.gameGender;
 
         const athleteClasses = athlete.classes || (athlete.class ? athlete.class.split(',').map(c => c.trim()) : []);
         const compatibleClasses = athleteClasses.filter(cls => gameClasses.includes(cls));
-        const classMatch = compatibleClasses.length > 0;
-        const genderMatch = gameGender.includes(athlete.gender);
+        const classMatch = compatibleClasses.length > 0 || gameClasses.length === 0;
+        const genderMatch = !gameGender || gameGender.includes(athlete.gender);
 
         let statusHtml = `Selected: <strong>${athlete.sdms}</strong> - ${athlete.name}`;
 
         if (athleteClasses.length > 0) {
             const classesHtml = athleteClasses.map(cls => {
-                const isCompatible = gameClasses.includes(cls);
+                const isCompatible = gameClasses.includes(cls) || gameClasses.length === 0;
                 return `<span class="px-1 rounded text-xs ${isCompatible ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">${cls}</span>`;
             }).join(' ');
             statusHtml += `<div class="mt-1">Classes: ${classesHtml}</div>`;
         }
 
-        if (!classMatch && athleteClasses.length > 0) {
+        if (athlete.registered_events && athlete.registered_events.trim()) {
+            const events = athlete.registered_events.split(', ').filter(e => e.trim());
+            if (events.length > 0) {
+                const eventsHtml = events.map(event => {
+                    const isCurrentEvent = window.currentEventFilter && event === window.currentEventFilter;
+                    return `<span class="px-1 rounded text-xs ${isCurrentEvent ? 'bg-purple-200 text-purple-800 font-semibold' : 'bg-blue-100 text-blue-800'}">${event}</span>`;
+                }).join(' ');
+                statusHtml += `<div class="mt-1">Registered Events: ${eventsHtml}</div>`;
+            }
+        }
+
+        if (!classMatch && athleteClasses.length > 0 && gameClasses.length > 0) {
             statusHtml += '<div class="text-yellow-600 text-xs mt-1"><i class="fas fa-exclamation-triangle"></i> Warning: No compatible class for this event</div>';
         }
-        if (!genderMatch) {
+        if (!genderMatch && gameGender) {
             statusHtml += '<div class="text-yellow-600 text-xs mt-1"><i class="fas fa-exclamation-triangle"></i> Warning: Athlete gender does not match event gender</div>';
         }
 
@@ -306,13 +451,14 @@ function selectAthlete(athlete) {
     }
 }
 
-function selectFromStartList(sdms, name, gender, athleteClasses, guideSdms) {
+function selectFromStartList(sdms, name, gender, athleteClasses, guideSdms, registeredEvents) {
     const athlete = {
         sdms: sdms,
         name: name,
         gender: gender,
         classes: athleteClasses ? athleteClasses.split(',').map(c => c.trim()) : [],
-        class: athleteClasses
+        class: athleteClasses,
+        registered_events: registeredEvents || ''
     };
     selectAthlete(athlete);
 
@@ -330,10 +476,12 @@ function selectGuide(athlete) {
     const resultsDiv = document.getElementById('guideResults') || document.getElementById('editGuideResults');
     const displayDiv = document.getElementById('selectedGuide') || document.getElementById('editSelectedGuide');
 
+    const athleteName = athlete.name || `${athlete.firstname} ${athlete.lastname}`;
+
     if (sdmsInput) sdmsInput.value = athlete.sdms;
     if (searchInput) searchInput.value = '';
     if (resultsDiv) resultsDiv.classList.add('hidden');
-    if (displayDiv) displayDiv.innerHTML = `Guide: <strong>${athlete.sdms}</strong> - ${athlete.name}`;
+    if (displayDiv) displayDiv.innerHTML = `Guide: <strong>${athlete.sdms}</strong> - ${athleteName}`;
 }
 
 function selectSpecialValue(value) {
@@ -473,7 +621,7 @@ function openGameEditModal(gameIdParam, gameData) {
     const fields = {
         'editGameId': gameIdParam,
         'editEvent': gameData.event,
-        'editGender': gameData.gender,
+        'editGender': gameData.genders,
         'editClasses': gameData.classes,
         'editPhase': gameData.phase || '',
         'editArea': gameData.area || '',
@@ -732,7 +880,7 @@ function addHighJumpAttempt() {
 
 function initializeDragAndDrop() {
     const tbody = document.getElementById('sortableResults');
-    if (!tbody) return;
+    if (!tbody || typeof Sortable === 'undefined') return;
 
     new Sortable(tbody, {
         animation: 150,
@@ -956,13 +1104,31 @@ function initializeFormHandlers() {
     }
 }
 
+// Event listeners for closing dropdowns when clicking outside
+document.addEventListener('click', function(e) {
+    const athleteSearch = document.getElementById('athleteSearch');
+    const athleteResults = document.getElementById('athleteResults');
+    const guideSearch = document.getElementById('guideSearch');
+    const guideResults = document.getElementById('guideResults');
+
+    if (athleteSearch && athleteResults && !athleteSearch.contains(e.target) && !athleteResults.contains(e.target)) {
+        athleteResults.classList.add('hidden');
+    }
+    if (guideSearch && guideResults && !guideSearch.contains(e.target) && !guideResults.contains(e.target)) {
+        guideResults.classList.add('hidden');
+    }
+});
+
+// Main initialization
 document.addEventListener('DOMContentLoaded', function() {
     initializeAthleteSearch();
     initializeGuideSearch();
     initializeFormHandlers();
     initializeDragAndDrop();
+    initializeEventFilter();
 });
 
+// Global function exports
 window.selectAthlete = selectAthlete;
 window.selectFromStartList = selectFromStartList;
 window.selectGuide = selectGuide;
@@ -987,3 +1153,5 @@ window.recalculateHighJump = recalculateHighJump;
 window.toggleGameOfficial = toggleGameOfficial;
 window.displayAthleteSearchResults = displayAthleteSearchResults;
 window.createAthleteResultElement = createAthleteResultElement;
+window.clearEventFilter = clearEventFilter;
+window.initializeEventFilter = initializeEventFilter;

@@ -55,36 +55,49 @@ class Athlete:
         return athlete
 
     @staticmethod
-    def search(query, guides_only=False, allowed_classes=None):
+    def search(query, guides_only=False, allowed_classes=None, event_filter=None):
         from config import Config
         all_classes = Config.get_classes()
         is_class_search = query.upper() in [cls.upper() for cls in all_classes]
 
-        if is_class_search:
-            search_query = """
-                SELECT a.*, n.name as npc_name, n.region_code, r.name as region_name 
-                FROM athletes a
-                LEFT JOIN npcs n ON a.npc = n.code
-                LEFT JOIN regions r ON n.region_code = r.code
-                WHERE UPPER(a.class) LIKE UPPER(%s)
+        base_query = """
+            SELECT a.*, n.name as npc_name, n.region_code, r.name as region_name,
+                   COALESCE(
+                       STRING_AGG(DISTINCT reg.event_name, ', ' ORDER BY reg.event_name), 
+                       ''
+                   ) as registered_events
+            FROM athletes a
+            LEFT JOIN npcs n ON a.npc = n.code
+            LEFT JOIN regions r ON n.region_code = r.code
+            LEFT JOIN registrations reg ON a.sdms = reg.sdms
+        """
+
+        if event_filter:
+            base_query += """
+            WHERE a.sdms IN (
+                SELECT DISTINCT sdms FROM registrations WHERE event_name = %s
+            )
             """
-            params = [f"%{query}%"]
+            event_params = [event_filter]
+        else:
+            base_query += " WHERE 1=1"
+            event_params = []
+
+        if is_class_search:
+            search_query = base_query + " AND UPPER(a.class) LIKE UPPER(%s)"
+            params = event_params + [f"%{query}%"]
             if guides_only:
                 search_query += " AND a.is_guide = TRUE"
-            search_query += " ORDER BY a.sdms LIMIT 50"
+            search_query += " GROUP BY a.sdms, n.name, n.region_code, r.name ORDER BY a.sdms LIMIT 50"
         else:
-            search_query = """
-                SELECT a.*, n.name as npc_name, n.region_code, r.name as region_name 
-                FROM athletes a
-                LEFT JOIN npcs n ON a.npc = n.code
-                LEFT JOIN regions r ON n.region_code = r.code
-                WHERE (LOWER(a.firstname) LIKE LOWER(%s)
-                       OR LOWER(a.lastname) LIKE LOWER(%s)
-                       OR LOWER(a.npc) LIKE LOWER(%s)
-                       OR a.sdms::text LIKE %s
-                       OR LOWER(a.class) LIKE LOWER(%s))
-            """
-            params = [f"%{query}%"] * 5
+            search_query = base_query + """ AND (
+                LOWER(a.firstname) LIKE LOWER(%s)
+                OR LOWER(a.lastname) LIKE LOWER(%s)
+                OR LOWER(a.npc) LIKE LOWER(%s)
+                OR a.sdms::text LIKE %s
+                OR LOWER(a.class) LIKE LOWER(%s)
+            )"""
+            params = event_params + [f"%{query}%"] * 5
             if guides_only:
                 search_query += " AND a.is_guide = TRUE"
             if allowed_classes:
@@ -95,6 +108,7 @@ class Athlete:
                 if class_conditions:
                     search_query += f" AND ({' OR '.join(class_conditions)})"
             search_query += """ 
+                GROUP BY a.sdms, n.name, n.region_code, r.name
                 ORDER BY 
                     CASE WHEN a.sdms::text = %s THEN 1 ELSE 2 END,
                     CASE WHEN LOWER(a.class) LIKE LOWER(%s) THEN 1 ELSE 2 END,

@@ -7,6 +7,7 @@ from .personal_best import PersonalBest
 from .startlist import StartList
 from .result import Result
 from .attempt import Attempt
+from .registration import Registration
 __all__ = [
     'User',
     'Region',
@@ -16,5 +17,6 @@ __all__ = [
     'PersonalBest',
     'StartList',
     'Result',
-    'Attempt'
+    'Attempt',
+    'Registration'
 ]

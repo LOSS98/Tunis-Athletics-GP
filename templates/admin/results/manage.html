@@ -283,7 +283,16 @@
         <h3 class="text-lg font-bold mb-4">Add Result</h3>
         <form method="POST" action="{{ url_for('admin.result_add', game_id=game.id) }}" id="resultForm">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <!-- Event Filter -->
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">Filter by Event Registration</label>
+                    <select id="eventFilter" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500">
+                        <option value="">All Athletes</option>
+                        <!-- Populated by JavaScript -->
+                    </select>
+                    <div class="text-xs text-gray-500 mt-1">Filter athletes by registered events</div>
+                </div>
                 <!-- Athlete Selection -->
                 <div>
                     <label class="block text-gray-700 text-sm font-bold mb-2">Athlete *</label>
