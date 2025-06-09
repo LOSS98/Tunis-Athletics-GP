@@ -61,7 +61,8 @@
     {% for day, day_games in grouped_games %}
     <div class="mb-8">
         <div class="bg-gradient-to-r from-red-600 to-red-700 text-white rounded-t-lg p-4">
-            <h2 class="text-2xl font-bold">Day {{ day }} - {{ day_games | list | first }}<!-- Get date info if available --></h2>
+            <h2 class="text-2xl font-bold">Day {{ day }}
+                <!-- Get date info if available --></h2>
         </div>
 
         <div class="bg-white rounded-b-lg shadow overflow-hidden">
