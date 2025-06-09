@@ -8,7 +8,7 @@ def register_routes(bp):
         if search:
             games = [g for g in games if
                     search.lower() in g['event'].lower() or
-                    search.lower() in g['gender'].lower() or
+                    search.lower() in g['genders'].lower() or
                     search.lower() in g['classes'].lower() or
                     str(g['day']) in search]
         published_games = [g for g in games if g.get('published', False) and g['has_results']]

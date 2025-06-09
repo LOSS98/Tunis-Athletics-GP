@@ -79,7 +79,7 @@ def register_routes(bp):
         game_json = {
             'id': game['id'],
             'event': game['event'],
-            'gender': game['gender'],
+            'genders': game['genders'],
             'classes': game['classes'],
             'phase': game.get('phase'),
             'area': game.get('area'),
