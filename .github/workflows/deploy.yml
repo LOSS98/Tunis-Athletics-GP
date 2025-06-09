@@ -64,6 +64,7 @@ jobs:
           cat > .env << EOF
           SECRET_KEY=${{ secrets.SECRET_KEY }}
           DATABASE_URL=${{ secrets.DATABASE_URL }}
+          DATABASE_PORT=${{ secrets.DATABASE_PORT }}
           FLASK_ENV=${{ secrets.FLASK_ENV }}
           FLASK_DEBUG=${{ secrets.FLASK_DEBUG }}
           ADMIN_USERNAME=${{ secrets.ADMIN_USERNAME }}
