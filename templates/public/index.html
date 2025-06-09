@@ -1,30 +1,34 @@
 {% extends "base.html" %}
 {% block title %}World Para Athletics Grand Prix - Tunisia 2025{% endblock %}
 {% block content %}
-<div class="hero-section bg-gradient-to-r from-red-600 to-red-800 text-white py-16 mb-12 rounded-lg">
-    <div class="text-center">
-        <h1 class="text-5xl font-bold mb-4">Welcome to Tunisia 2025</h1>
-        <p class="text-xl mb-8">19th Edition World Para Athletics Grand Prix</p>
-        <div class="grid grid-cols-2 md:grid-cols-5 gap-8">
-            <div class="text-center">
-                <div class="text-4xl font-bold">{{ config.NPCS_COUNT }}</div>
-                <div class="text-sm opacity-90">NPCs</div>
+<div class="relative mb-8">
+    <img src="/static/images/bg-tunisia.jpg" alt="Background" class="w-full h-64 object-cover rounded-lg">
+    <div class="absolute inset-0 bg-black bg-opacity-50 rounded-lg flex items-center justify-center">
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-8 text-white text-center">
+            <div>
+                <i class="fas fa-globe text-4xl mb-2"></i>
+                <p class="text-3xl font-bold">{{ stats.npcs }}</p>
+                <p class="text-sm">NPCs</p>
             </div>
-            <div class="text-center">
-                <div class="text-4xl font-bold">{{ config.ATHLETES_COUNT }}</div>
-                <div class="text-sm opacity-90">Athletes</div>
+            <div>
+                <i class="fas fa-running text-4xl mb-2"></i>
+                <p class="text-3xl font-bold">{{ stats.athletes }}</p>
+                <p class="text-sm">Athletes</p>
             </div>
-            <div class="text-center">
-                <div class="text-4xl font-bold">{{ config.VOLUNTEERS_COUNT }}</div>
-                <div class="text-sm opacity-90">Volunteers</div>
+            <div>
+                <i class="fas fa-hands-helping text-4xl mb-2"></i>
+                <p class="text-3xl font-bold">{{ stats.volunteers }}</p>
+                <p class="text-sm">Volunteers</p>
             </div>
-            <div class="text-center">
-                <div class="text-4xl font-bold">{{ config.LOC_COUNT }}</div>
-                <div class="text-sm opacity-90">LOC Members</div>
+            <div>
+                <i class="fas fa-users-cog text-4xl mb-2"></i>
+                <p class="text-3xl font-bold">{{ stats.loc }}</p>
+                <p class="text-sm">LOC Members</p>
             </div>
-            <div class="text-center">
-                <div class="text-4xl font-bold">{{ config.OFFICIALS_COUNT }}</div>
-                <div class="text-sm opacity-90">Officials</div>
+            <div>
+                <i class="fas fa-user-tie text-4xl mb-2"></i>
+                <p class="text-3xl font-bold">{{ stats.officials }}</p>
+                <p class="text-sm">Officials</p>
             </div>
         </div>
     </div>
