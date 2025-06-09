@@ -7,6 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link rel="icon" type="image/png" href="/static/images/logo.png" />
     <style>
         .gradient-text {
             background: linear-gradient(135deg, #AE191B 0%, #DA191D 100%);
@@ -147,12 +148,10 @@
             }
         });
         function getCSRFToken() {
-            // Essayer plusieurs méthodes pour obtenir le token CSRF
             const meta = document.querySelector('meta[name="csrf-token"]');
             if (meta) return meta.getAttribute('content');
             const input = document.querySelector('input[name="csrf_token"]');
             if (input) return input.value;
-            // Essayer de trouver le token dans n'importe quel formulaire
             const forms = document.querySelectorAll('form');
             for (let form of forms) {
                 const csrfInput = form.querySelector('input[name="csrf_token"]');
@@ -160,7 +159,6 @@
             }
             return '';
         }
-        // Fonction pour tous les appels AJAX
         function ajaxRequest(url, options = {}) {
             const defaults = {
                 headers: {
