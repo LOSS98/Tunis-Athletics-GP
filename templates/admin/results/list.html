@@ -1,10 +1,10 @@
 {% extends "admin/base_admin.html" %}
-{% block title %}Results - {{ game.event }} {{ game.gender }}{% endblock %}
+{% block title %}Results - {{ game.event }} {{ game.genders }}{% endblock %}
 {% block content %}
 {% include 'admin/components/game_edit_modal.html' %}
 <div class="flex justify-between items-center mb-6">
     <div>
-        <h1 class="text-3xl font-bold">{{ game.event }} - {{ game.gender }}</h1>
+        <h1 class="text-3xl font-bold">{{ game.event }} - {{ game.genders }}</h1>
         <p class="text-gray-600">Day {{ game.day }} - {{ game.time }} - {{ game.classes }}</p>
         {% if game.classes_list|length > 1 %}
         <div class="flex items-center mt-2">

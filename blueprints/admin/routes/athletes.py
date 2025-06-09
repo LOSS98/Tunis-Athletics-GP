@@ -58,8 +58,8 @@ def register_routes(bp):
                 'firstname': form.firstname.data,
                 'lastname': form.lastname.data,
                 'npc': form.npc.data.upper(),
-                'gender': form.gender.data,  # Correction: était form.genders.data
-                'class': form.athlete_classes.data,  # Stocké comme chaîne séparée par des virgules
+                'gender': form.gender.data,
+                'class': form.athlete_classes.data,
                 'date_of_birth': form.date_of_birth.data,
                 'is_guide': form.is_guide.data
             }

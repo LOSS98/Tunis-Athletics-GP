@@ -8,9 +8,9 @@ class Game:
         game = execute_one("SELECT * FROM games WHERE id = %s", (id,))
         if game:
             classes = game.get('classes') or ''
-            gender = game.get('gender') or ''
+            genders = game.get('genders') or ''
             game['classes_list'] = [c.strip() for c in classes.split(',') if c.strip()]
-            game['genders_list'] = [g.strip() for g in gender.split(',') if g.strip()]
+            game['genders_list'] = [g.strip() for g in genders.split(',') if g.strip()]
         return game
     @staticmethod
     def create(**data):
@@ -65,10 +65,10 @@ class Game:
         return count['count'] > 0 if count else False
     @staticmethod
     def has_alerts(id):
-        game = execute_one("SELECT gender, classes FROM games WHERE id = %s", (id,))
+        game = execute_one("SELECT genders, classes FROM games WHERE id = %s", (id,))
         if not game:
             return False
-        game_genders = [g.strip() for g in game['gender'].split(',')]
+        game_genders = [g.strip() for g in game['genders'].split(',')]
         game_classes = [c.strip() for c in game['classes'].split(',')]
         result = execute_one("""
             SELECT COUNT(*) as count FROM results r
@@ -110,7 +110,7 @@ class Game:
             current_day = 1
         for game in games:
             game['classes_list'] = [c.strip() for c in game['classes'].split(',')]
-            game['genders_list'] = [g.strip() for g in game['gender'].split(',')]
+            game['genders_list'] = [g.strip() for g in game['genders'].split(',')]
             game_day = game['day']
             try:
                 game_day = int(game_day)
@@ -151,9 +151,9 @@ class Game:
         if not athlete or not game:
             return False
         # Protection contre les valeurs None
-        gender_str = game.get('gender') or ''
+        genders_str = game.get('genders') or ''
         athlete_gender = athlete.get('gender') or ''
-        if not gender_str or not athlete_gender:
+        if not genders_str or not athlete_gender:
             return False
         game_genders = [g.strip() for g in gender_str.split(',') if g.strip()]
         if athlete_gender not in game_genders:

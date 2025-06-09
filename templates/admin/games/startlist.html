@@ -11,13 +11,14 @@
         </h3>
         <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mt-3 text-sm">
             <div><span class="font-semibold">Event:</span> {{ game.event }}</div>
-            <div><span class="font-semibold">Gender:</span> {{ game.gender }}</div>
+            <div><span class="font-semibold">Gender:</span> {{ game.genders }}</div>
             <div><span class="font-semibold">Classes:</span> {{ game.classes }}</div>
             <div><span class="font-semibold">Phase:</span> {{ game.phase or 'Final' }}</div>
             <div><span class="font-semibold">Day {{ game.day }}</span> - {{ game.time }}</div>
         </div>
     </div>
 </div>
+
 <div class="mb-6">
     <div class="bg-white rounded-lg shadow p-6">
         <h3 class="text-lg font-bold mb-4">Add Athlete to Start List</h3>
@@ -28,17 +29,21 @@
                     <label class="block text-gray-700 text-sm font-bold mb-2">Athlete</label>
                     <div class="relative">
                         <input type="text" id="athleteSearch" placeholder="Search by SDMS, name, npc..."
-                               class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500">
+                               class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500"
+                               autocomplete="off">
                         <div id="athleteResults" class="absolute z-10 w-full bg-white border rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto"></div>
                     </div>
                     <input type="hidden" name="athlete_sdms" id="selectedSdms" required>
-                    <div id="selectedAthlete" class="mt-2 text-sm text-gray-600" data-game-classes="{{ game.classes }}" data-game-gender="{{ game.gender }}"></div>
+                    <div id="selectedAthlete" class="mt-2 text-sm text-gray-600"
+                         data-game-classes="{{ game.classes }}"
+                         data-game-gender="{{ game.genders }}"></div>
                 </div>
                 <div>
                     <label class="block text-gray-700 text-sm font-bold mb-2">Guide (optional)</label>
                     <div class="relative">
                         <input type="text" id="guideSearch" placeholder="Search guide"
-                               class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500">
+                               class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500"
+                               autocomplete="off">
                         <div id="guideResults" class="absolute z-10 w-full bg-white border rounded-lg shadow-lg mt-1 hidden max-h-60 overflow-y-auto"></div>
                     </div>
                     <input type="hidden" name="guide_sdms" id="selectedGuideSdms">
@@ -57,6 +62,7 @@
         </form>
     </div>
 </div>
+
 <div class="bg-white rounded-lg shadow">
     <div class="p-6 border-b">
         <h3 class="text-lg font-bold">Current Start List ({{ startlist|length }} athletes)</h3>
@@ -84,10 +90,10 @@
             </thead>
             <tbody class="divide-y divide-gray-200">
                 {% for entry in startlist %}
-                <tr class="hover:bg-gray-50 {% if entry.gender != game.gender %}bg-yellow-50{% endif %}">
+                <tr class="hover:bg-gray-50 {% if entry.gender != game.genders %}bg-yellow-50{% endif %}">
                     <!-- Alerts -->
                     <td class="px-6 py-4 whitespace-nowrap text-center">
-                        {% if entry.gender != game.gender or entry.class not in game.classes_list %}
+                        {% if entry.gender != game.genders or entry.class not in game.classes_list %}
                             <i class="fas fa-exclamation-triangle text-red-500" title="Gender or class mismatch"></i>
                         {% else %}
                             <i class="fas fa-check-circle text-green-500" title="No alerts"></i>
@@ -108,9 +114,9 @@
                     <!-- Name -->
                     <td class="px-6 py-4 whitespace-nowrap">
                         {{ entry.lastname }} {{ entry.firstname }}
-                        {% if entry.gender != game.gender %}
+                        {% if entry.gender != game.genders %}
                             <div class="text-xs text-red-600 mt-1">
-                                <i class="fas fa-exclamation-triangle"></i> Gender: {{ entry.gender }} (Expected: {{ game.gender }})
+                                <i class="fas fa-exclamation-triangle"></i> Gender: {{ entry.gender }} (Expected: {{ game.genders }})
                             </div>
                         {% endif %}
                     </td>
@@ -124,7 +130,7 @@
                     </td>
                     <!-- Gender -->
                     <td class="px-6 py-4 whitespace-nowrap">
-                        <span class="px-2 py-1 text-xs {% if entry.gender != game.gender %}bg-red-100 text-red-800{% else %}bg-green-100 text-green-800{% endif %} rounded">
+                        <span class="px-2 py-1 text-xs {% if entry.gender != game.genders %}bg-red-100 text-red-800{% else %}bg-green-100 text-green-800{% endif %} rounded">
                             {{ entry.gender }}
                         </span>
                     </td>
@@ -161,7 +167,7 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="8" class="px-6 py-8 text-center">
+                    <td colspan="9" class="px-6 py-8 text-center">
                         <div class="mx-auto w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mb-4">
                             <i class="fas fa-list text-4xl text-gray-300"></i>
                         </div>
@@ -174,6 +180,7 @@
         </table>
     </div>
 </div>
+
 <!-- Summary Section -->
 {% if startlist %}
 <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -190,12 +197,12 @@
     </div>
     <div class="bg-white rounded-lg shadow p-4">
         <div class="flex items-center">
-            <div class="text-2xl font-bold {% set gender_mismatches = startlist|selectattr('gender', '!=', game.gender)|list %}{% if gender_mismatches|length == 0 %}text-green-600{% else %}text-red-600{% endif %}">
+            <div class="text-2xl font-bold {% set gender_mismatches = startlist|selectattr('gender', '!=', game.genders)|list %}{% if gender_mismatches|length == 0 %}text-green-600{% else %}text-red-600{% endif %}">
                 {{ gender_mismatches|length }}
             </div>
             <div class="ml-3">
                 <div class="text-sm font-medium text-gray-900">Gender Mismatches</div>
-                <div class="text-sm text-gray-500">Expected: {{ game.gender }}</div>
+                <div class="text-sm text-gray-500">Expected: {{ game.genders }}</div>
             </div>
         </div>
     </div>
@@ -212,6 +219,7 @@
     </div>
 </div>
 {% endif %}
+
 <!-- Action Buttons -->
 <div class="mt-6 flex justify-between">
     <a href="{{ url_for('admin.games_list') }}" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">
@@ -230,13 +238,14 @@
         {% endif %}
     </div>
 </div>
+
 <!-- Information Panel -->
 <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
     <h4 class="font-bold text-blue-900 mb-2">
         <i class="fas fa-info-circle mr-2"></i>Start List Information
     </h4>
     <div class="text-sm text-blue-800 space-y-2">
-        <p><strong>Gender Matching:</strong> Athletes must match the event gender ({{ game.gender }})</p>
+        <p><strong>Gender Matching:</strong> Athletes must match the event gender ({{ game.genders }})</p>
         <p><strong>Class Matching:</strong> Athletes should be in event classes: {{ game.classes }}</p>
         <p><strong>Lane/Order:</strong> Optional field for starting position or running order</p>
         <p><strong>Capacity:</strong> Expected {{ game.nb_athletes }} athletes for this event</p>
@@ -245,141 +254,52 @@
         {% endif %}
     </div>
 </div>
+
 <script>
-let searchTimeout;
-const athleteSearch = document.getElementById('athleteSearch');
-const athleteResults = document.getElementById('athleteResults');
-const selectedSdms = document.getElementById('selectedSdms');
-const selectedAthlete = document.getElementById('selectedAthlete');
-const guideSearch = document.getElementById('guideSearch');
-const guideResults = document.getElementById('guideResults');
-const selectedGuideSdms = document.getElementById('selectedGuideSdms');
-const selectedGuide = document.getElementById('selectedGuide');
-athleteSearch.addEventListener('input', function() {
-    clearTimeout(searchTimeout);
-    const query = this.value.trim();
-    if (query.length < 2) {
-        athleteResults.classList.add('hidden');
-        return;
-    }
-    searchTimeout = setTimeout(() => {
-        fetch(`/admin/athletes/search?q=${encodeURIComponent(query)}&guides=1`)
-            .then(response => response.json())
-            .then(athletes => {
-                athleteResults.innerHTML = '';
-                if (athletes.length === 0) {
-                    athleteResults.innerHTML = '<div class="p-2 text-gray-500">No athletes found</div>';
-                } else {
-                    athletes.forEach(athlete => {
-                        const div = document.createElement('div');
-                        div.className = 'p-2 hover:bg-gray-100 cursor-pointer border-b';
-                        const gameClasses = '{{ game.classes }}'.split(',').map(c => c.trim());
-                        const gameGender = '{{ game.gender }}';
-                        let alertClass = '';
-                        if (athlete.gender !== gameGender || !gameClasses.includes(athlete.class)) {
-                            alertClass = 'bg-yellow-50 border-yellow-300';
-                        }
-                        div.className += ` ${alertClass}`;
-                        div.innerHTML = `
-                            <div class="flex justify-between items-center">
-                                <div>
-                                    <strong>${athlete.sdms}</strong> - ${athlete.name} (${athlete.npc})
-                                    ${athlete.gender !== gameGender ? '<span class="text-red-600 text-xs block">⚠️ Gender mismatch</span>' : ''}
-                                    ${!gameClasses.includes(athlete.class) ? '<span class="text-red-600 text-xs block">⚠️ Class mismatch</span>' : ''}
-                                </div>
-                                <div class="text-right">
-                                    <span class="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">${athlete.class}</span>
-                                    <div class="text-xs text-gray-500 mt-1">${athlete.gender}</div>
-                                </div>
-                            </div>
-                        `;
-                        div.onclick = () => selectAthlete(athlete);
-                        athleteResults.appendChild(div);
-                    });
-                }
-                athleteResults.classList.remove('hidden');
-            })
-            .catch(error => {
-                console.error('Search error:', error);
-                athleteResults.innerHTML = '<div class="p-2 text-red-500">Search failed</div>';
-                athleteResults.classList.remove('hidden');
-            });
-    }, 300);
-});
-guideSearch.addEventListener('input', function() {
-    clearTimeout(searchTimeout);
-    const query = this.value.trim();
-    if (query.length < 2) {
-        guideResults.classList.add('hidden');
-        return;
-    }
-    searchTimeout = setTimeout(() => {
-        fetch(`/admin/athletes/search?q=${encodeURIComponent(query)}`)
-            .then(response => response.json())
-            .then(athletes => {
-                guideResults.innerHTML = '';
-                if (athletes.length === 0) {
-                    guideResults.innerHTML = '<div class="p-2 text-gray-500">No athletes found</div>';
-                } else {
-                    athletes.forEach(athlete => {
-                        const div = document.createElement('div');
-                        div.className = 'p-2 hover:bg-gray-100 cursor-pointer border-b';
-                        div.innerHTML = `<strong>${athlete.sdms}</strong> - ${athlete.name} (${athlete.npc})`;
-                        div.onclick = () => selectGuide(athlete);
-                        guideResults.appendChild(div);
-                    });
-                }
-                guideResults.classList.remove('hidden');
-            });
-    }, 300);
-});
-function selectGuide(athlete) {
-    selectedGuideSdms.value = athlete.sdms;
-    guideSearch.value = '';
-    guideResults.classList.add('hidden');
-    selectedGuide.innerHTML = `Guide: <strong>${athlete.sdms}</strong> - ${athlete.name}`;
-}
-function selectAthlete(athlete) {
-    checkAthleteCompatibility(athlete);
-    selectedSdms.value = athlete.sdms;
-    athleteSearch.value = '';
-    athleteResults.classList.add('hidden');
-}
-function checkAthleteCompatibility(athlete) {
-    const gameClasses = selectedAthlete.dataset.gameClasses.split(',').map(c => c.trim());
-    const gameGender = selectedAthlete.dataset.gameGender;
-    let warnings = [];
-    selectedAthlete.innerHTML = `Selected: <strong>${athlete.sdms}</strong> - ${athlete.name} (${athlete.npc})`;
-    if (athlete.gender !== gameGender) {
-        warnings.push(`Gender mismatch: ${athlete.gender} (Expected: ${gameGender})`);
-    }
-    if (!gameClasses.includes(athlete.class)) {
-        warnings.push(`Class mismatch: ${athlete.class} (Expected: ${gameClasses.join(', ')})`);
-    }
-    if (warnings.length > 0) {
-        selectedAthlete.innerHTML += `
-            <div class="mt-2 p-2 bg-red-100 border border-red-400 text-red-700 rounded">
-                <i class="fas fa-exclamation-triangle mr-1"></i> Warnings:
-                <ul class="mt-1 ml-4 list-disc">
-                    ${warnings.map(w => `<li>${w}</li>`).join('')}
-                </ul>
-            </div>
-        `;
+// Configuration pour réutiliser les fonctions de manage_results.js
+window.isFieldEvent = false;
+window.isTrackEvent = false;
+window.gameEvent = '{{ game.event|e }}';
+window.hasWpaPoints = false;
+window.specialValues = [];
+window.gameId = {{ game.id }};
+window.finalistsCount = 0;
+
+// Fonction spécifique pour sélectionner depuis la start list (si nécessaire)
+function selectFromStartList(sdms, name, gender, athleteClass, guideSdms) {
+    const athlete = { sdms: sdms, name: name, gender: gender, class: athleteClass };
+    selectAthlete(athlete);
+
+    if (guideSdms) {
+        const selectedGuideSdms = document.getElementById('selectedGuideSdms');
+        const selectedGuide = document.getElementById('selectedGuide');
+        if (selectedGuideSdms) selectedGuideSdms.value = guideSdms;
+        if (selectedGuide) selectedGuide.innerHTML = `Guide SDMS: <strong>${guideSdms}</strong>`;
     }
 }
-function exportStartList() {
-    window.print();
-}
-// Close search when clicking outside
+
+// Fermer les résultats de recherche quand on clique à l'extérieur
 document.addEventListener('click', function(e) {
-    if (!athleteSearch.contains(e.target) && !athleteResults.contains(e.target)) {
+    const athleteSearch = document.getElementById('athleteSearch');
+    const athleteResults = document.getElementById('athleteResults');
+    const guideSearch = document.getElementById('guideSearch');
+    const guideResults = document.getElementById('guideResults');
+
+    if (athleteSearch && athleteResults && !athleteSearch.contains(e.target) && !athleteResults.contains(e.target)) {
         athleteResults.classList.add('hidden');
     }
-    if (!guideSearch.contains(e.target) && !guideResults.contains(e.target)) {
+    if (guideSearch && guideResults && !guideSearch.contains(e.target) && !guideResults.contains(e.target)) {
         guideResults.classList.add('hidden');
     }
 });
+
+// Exposer la fonction pour l'utilisation globale
+window.selectFromStartList = selectFromStartList;
 </script>
+
+<!-- Inclure le fichier JavaScript commun -->
+<script src="{{ url_for('static', filename='js/manage_results.js') }}"></script>
+
 <style>
 @media print {
     .no-print {

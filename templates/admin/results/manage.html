@@ -123,7 +123,7 @@
                 </h3>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3 text-sm">
                     <div><span class="font-semibold">Event:</span> {{ game.event }}</div>
-                    <div><span class="font-semibold">Gender:</span> {{ game.gender }}</div>
+                    <div><span class="font-semibold">Gender:</span> {{ game.genders }}</div>
                     <div><span class="font-semibold">Classes:</span> {{ game.classes }}</div>
                     <div><span class="font-semibold">Day {{ game.day }}</span> - {{ game.time }}</div>
                 </div>
@@ -297,7 +297,7 @@
                     <input type="hidden" name="guide_sdms" id="selectedGuideSdms">
                     <div id="selectedAthlete" class="mt-2 text-sm text-gray-600"
                          data-game-classes="{{ game.classes }}"
-                         data-game-gender="{{ game.gender }}"></div>
+                         data-game-gender="{{ game.genders }}"></div>
                     <div id="selectedGuide" class="text-xs text-gray-500"></div>
                     <div class="mt-2">
                         <label class="block text-gray-700 text-sm font-bold mb-2">Guide (optional)</label>
@@ -422,7 +422,7 @@
                 {% if entry.guide_sdms %}
                     <div class="text-xs text-gray-500">Guide: {{ entry.guide_sdms }}</div>
                 {% endif %}
-                {% if entry.gender != game.gender %}
+                {% if entry.gender != game.genders %}
                     <div class="text-xs text-yellow-700 mt-1">
                         <i class="fas fa-exclamation-triangle"></i> Gender mismatch
                     </div>
@@ -514,7 +514,7 @@
                     </td>
                     <td class="px-4 py-4">
                         {{ result.lastname }} {{ result.firstname }}
-                        {% if result.athlete_gender != game.gender %}
+                        {% if result.athlete_gender != game.genders %}
                             <div class="text-xs text-red-600">
                                 <i class="fas fa-exclamation-triangle"></i> Gender: {{ result.athlete_gender }}
                             </div>

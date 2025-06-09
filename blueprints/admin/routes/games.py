@@ -15,7 +15,7 @@ def register_routes(bp):
         if search:
             games = [g for g in games if
                     search.lower() in g['event'].lower() or
-                    search.lower() in g['gender'].lower() or
+                    search.lower() in g['genders'].lower() or
                     search.lower() in g['classes'].lower() or
                     str(g['day']) in search]
         return render_template('admin/games/list.html', games=games, search=search)
@@ -75,7 +75,7 @@ def register_routes(bp):
         if form.validate_on_submit():
             data = {
                 'event': form.event.data,
-                'gender': form.genders.data,
+                'genders': form.genders.data,
                 'classes': form.classes.data,
                 'phase': form.phase.data,
                 'area': form.area.data,
@@ -119,7 +119,7 @@ def register_routes(bp):
             try:
                 data = {
                     'event': request.form.get('event'),
-                    'gender': request.form.get('gender'),
+                    'genders': request.form.get('genders'),
                     'classes': request.form.get('classes'),
                     'phase': request.form.get('phase') if request.form.get('phase') else None,
                     'area': request.form.get('area') if request.form.get('area') else None,
@@ -147,7 +147,7 @@ def register_routes(bp):
         form = GameForm()
         # Pre-populate form
         form.event.data = game['event']
-        form.gender.data = game['gender']
+        form.genders.data = game['genders']
         form.classes.data = game['classes']
         form.phase.data = game.get('phase')
         form.area.data = game.get('area')
@@ -240,7 +240,7 @@ def register_routes(bp):
             startlist = StartList.get_by_game(game_id)
             generator = PDFGenerator()
             pdf_buffer = generator.generate_startlist_pdf(game, startlist)
-            filename = f"startlist_{game['event']}_{game['gender']}_{game['day']}.pdf"
+            filename = f"startlist_{game['event']}_{game['genders']}_{game['day']}.pdf"
             return send_file(
                 pdf_buffer,
                 as_attachment=False,

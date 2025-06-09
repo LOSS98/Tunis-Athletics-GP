@@ -49,7 +49,7 @@
                     <td class="px-6 py-4 whitespace-nowrap text-sm">{{ game.id }}</td>
                     <td class="px-6 py-4 whitespace-nowrap">{{ game.event }}</td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                        {% set genders = game.gender.split(',') %}
+                        {% set genders = game.genders.split(',') %}
                         <div class="flex flex-wrap gap-1">
                             {% for gender in genders %}
                             <span class="px-2 py-1 text-xs {% if gender.strip() == 'Male' %}bg-blue-100 text-blue-800{% else %}bg-pink-100 text-pink-800{% endif %} rounded">

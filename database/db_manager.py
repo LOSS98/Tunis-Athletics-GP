@@ -127,7 +127,7 @@ def init_db():
         """CREATE TABLE IF NOT EXISTS games (
             id SERIAL PRIMARY KEY,
             event VARCHAR(100) NOT NULL,
-            gender TEXT NOT NULL,
+            genders TEXT NOT NULL,
             classes TEXT NOT NULL,
             phase VARCHAR(50),
             area VARCHAR(50),
