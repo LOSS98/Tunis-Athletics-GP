@@ -12,4 +12,4 @@ def register_routes(bp):
             'loc': Config.get_loc_count(),
             'officials': Config.get_officials_count()
         }
-        return render_template('admin/dashboard.html')
+        return render_template('admin/dashboard.html', stats=stats)
