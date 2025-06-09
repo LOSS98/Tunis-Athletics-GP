@@ -23,21 +23,6 @@ jobs:
           git reset --hard origin/main
           echo "✅ Code pulled successfully"
 
-    - name: Fix static permissions
-      uses: appleboy/ssh-action@v1.0.0
-      with:
-        host: ${{ secrets.HOST }}
-        username: ${{ secrets.USERNAME }}
-        password: ${{ secrets.PASSWORD }}
-        port: 6534
-        timeout: 60s
-        script: |
-          cd /home/khalil/tunis-gp25
-          mkdir -p static
-          chmod -R 755 static/
-          chown -R $USER:$USER static/
-          echo "✅ Static permissions fixed"
-
     - name: Stop containers
       uses: appleboy/ssh-action@v1.0.0
       with:

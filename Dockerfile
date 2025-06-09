@@ -13,7 +13,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-RUN mkdir -p static && chmod -R 755 static/
+RUN chmod -R 755 static/
 
 EXPOSE 5000
 
