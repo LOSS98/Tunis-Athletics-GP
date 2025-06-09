@@ -191,7 +191,6 @@ def init_db():
             FOREIGN KEY (result_id) REFERENCES results(id) ON DELETE CASCADE,
             UNIQUE (result_id, attempt_number)
         )""",
-        # Table world_records SANS region_code
         """CREATE TABLE IF NOT EXISTS world_records (
             id SERIAL PRIMARY KEY,
             sdms INTEGER,
@@ -220,7 +219,6 @@ def init_db():
             athlete_class VARCHAR(10) NOT NULL,
             performance VARCHAR(20) NOT NULL,
             location VARCHAR(100) NOT NULL,
-            npc VARCHAR(3) NOT NULL,
             record_date DATE NOT NULL,
             approved BOOLEAN DEFAULT FALSE,
             approved_by INTEGER,

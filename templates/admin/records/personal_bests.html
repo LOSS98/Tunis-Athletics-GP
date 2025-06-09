@@ -19,6 +19,7 @@
         </div>
     </div>
 </div>
+
 <!-- Statistics Cards -->
 <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
     <div class="bg-white rounded-lg shadow p-4 text-center">
@@ -38,6 +39,7 @@
         <div class="text-sm text-gray-600">Made in Competition</div>
     </div>
 </div>
+
 <!-- Pending Personal Bests -->
 {% if current_user.is_technical_delegate() and pending_pbs %}
 <div class="bg-white rounded-lg shadow mb-6">
@@ -71,9 +73,6 @@
                                 </div>
                                 <div class="text-sm text-gray-500">
                                     SDMS: {{ pb.sdms }}
-                                    {% if pb.npc_name %}
-                                        • {{ pb.npc_name }}
-                                    {% endif %}
                                 </div>
                             </div>
                         </div>
@@ -126,6 +125,7 @@
     </div>
 </div>
 {% endif %}
+
 <!-- Approved Personal Bests -->
 <div class="bg-white rounded-lg shadow">
     <div class="p-6 border-b">
@@ -159,9 +159,6 @@
                                 </div>
                                 <div class="text-sm text-gray-500">
                                     SDMS: {{ pb.sdms }}
-                                    {% if pb.npc_name %}
-                                        • {{ pb.npc_name }}
-                                    {% endif %}
                                 </div>
                             </div>
                         </div>
@@ -237,6 +234,7 @@
     </div>
     {% endif %}
 </div>
+
 <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
     <h4 class="font-bold text-blue-900 mb-2">
         <i class="fas fa-info-circle mr-2"></i>Personal Best Information

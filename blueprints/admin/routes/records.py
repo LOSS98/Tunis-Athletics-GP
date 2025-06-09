@@ -72,6 +72,7 @@ def register_routes(bp):
         return render_template('admin/records/personal_bests.html',
                                personal_bests=personal_bests,
                                pending_pbs=pending_pbs)
+
     @bp.route('/personal-bests/add', methods=['GET', 'POST'])
     @technical_delegate_required
     def personal_best_add():
@@ -81,13 +82,13 @@ def register_routes(bp):
             if not athlete:
                 flash('Athlete not found', 'danger')
                 return render_template('admin/records/add_pb.html', form=form)
+
             data = {
                 'sdms': form.sdms.data,
                 'event': form.event.data,
                 'athlete_class': form.athlete_class.data,
                 'performance': form.performance.data,
                 'location': form.location.data,
-                'npc': athlete['npc'],
                 'record_date': form.record_date.data,
                 'made_in_competition': form.made_in_competition.data,
                 'approved': True,
@@ -99,6 +100,7 @@ def register_routes(bp):
                 return redirect(url_for('admin.personal_bests_list'))
             except Exception as e:
                 flash(f'Error adding personal best: {str(e)}', 'danger')
+
         return render_template('admin/records/add_pb.html', form=form)
     @bp.route('/personal-bests/<int:pb_id>/approve', methods=['POST'])
     @technical_delegate_required
@@ -121,15 +123,19 @@ def register_routes(bp):
 def check_for_records_and_pbs(result, athlete, game):
     if not game.get('official'):
         return
+
     performance_value = result['value']
     if performance_value in Config.get_result_special_values():
         return
+
     try:
         performance_float = float(performance_value)
     except (ValueError, TypeError):
         return
+
     event = game['event']
     athlete_class = athlete['class']
+
     existing_wr = WorldRecord.check_existing_record(event, athlete_class, 'WR')
     if not existing_wr or performance_float > float(existing_wr['performance']):
         WorldRecord.create(
@@ -146,6 +152,7 @@ def check_for_records_and_pbs(result, athlete, game):
             competition_id=game['id'],
             approved=False
         )
+
     if athlete['region_code']:
         existing_ar = WorldRecord.check_existing_record(event, athlete_class, 'AR', athlete['region_code'])
         if not existing_ar or performance_float > float(existing_ar['performance']):
@@ -171,7 +178,6 @@ def check_for_records_and_pbs(result, athlete, game):
             athlete_class=athlete_class,
             performance=performance_value,
             location='Tunis, Tunisia',
-            npc=athlete['npc'],
             record_date='CURRENT_DATE',
             made_in_competition=True,
             competition_id=game['id'],
