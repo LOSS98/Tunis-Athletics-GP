@@ -1,4 +1,6 @@
 from database.db_manager import execute_query, execute_one
+
+
 class StartList:
     @staticmethod
     def get_by_game(game_id):
@@ -11,31 +13,52 @@ class StartList:
             WHERE s.game_id = %s
             ORDER BY s.final_order IS NULL, s.final_order, s.lane_order, a.sdms
         """
-        return execute_query(query, (game_id,), fetch=True)
+        startlist = execute_query(query, (game_id,), fetch=True)
+
+        for entry in startlist:
+            if entry['class']:
+                entry['classes'] = [c.strip() for c in entry['class'].split(',')]
+            else:
+                entry['classes'] = []
+
+        return startlist
+
     @staticmethod
     def create(game_id, athlete_sdms, lane_order=None, guide_sdms=None):
         return execute_query(
             "INSERT INTO startlist (game_id, athlete_sdms, lane_order, guide_sdms) VALUES (%s, %s, %s, %s)",
             (game_id, athlete_sdms, lane_order, guide_sdms)
         )
+
     @staticmethod
     def delete(game_id, athlete_sdms):
         return execute_query(
             "DELETE FROM startlist WHERE game_id = %s AND athlete_sdms = %s",
             (game_id, athlete_sdms)
         )
+
     @staticmethod
     def has_startlist(game_id):
         count = execute_one("SELECT COUNT(*) as count FROM startlist WHERE game_id = %s", (game_id,))
         return count['count'] > 0 if count else False
+
     @staticmethod
     def count_by_game(game_id):
         count = execute_one("SELECT COUNT(*) as count FROM startlist WHERE game_id = %s", (game_id,))
         return count['count'] if count else 0
+
     @staticmethod
     def athlete_in_startlist(game_id, athlete_sdms):
-        result = execute_one("SELECT id FROM startlist WHERE game_id = %s AND athlete_sdms = %s", (game_id, athlete_sdms))
+        result = execute_one("SELECT id FROM startlist WHERE game_id = %s AND athlete_sdms = %s",
+                             (game_id, athlete_sdms))
         return result is not None
+
+    @staticmethod
+    def athlete_has_compatible_class(athlete_classes, game_classes):
+        if not athlete_classes or not game_classes:
+            return False
+        game_class_list = [c.strip() for c in game_classes.split(',') if c.strip()]
+        return any(ac in game_class_list for ac in athlete_classes)
     @staticmethod
     def update_order_for_long_jump(game_id):
         from database.models.game import Game

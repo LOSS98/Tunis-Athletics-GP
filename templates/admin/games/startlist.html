@@ -83,23 +83,24 @@
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">NPC</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gender</th>
-                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Classes</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guide</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-200">
                 {% for entry in startlist %}
-                <tr class="hover:bg-gray-50 {% if entry.gender != game.genders %}bg-yellow-50{% endif %}">
-                    <!-- Alerts -->
+                {% set athlete_classes = entry.get('classes', []) %}
+                {% set compatible_classes = athlete_classes|select('in', game.classes_list)|list %}
+                {% set has_compatible_class = compatible_classes|length > 0 %}
+                <tr class="hover:bg-gray-50 {% if entry.gender != game.genders or not has_compatible_class %}bg-yellow-50{% endif %}">
                     <td class="px-6 py-4 whitespace-nowrap text-center">
-                        {% if entry.gender != game.genders or entry.class not in game.classes_list %}
+                        {% if entry.gender != game.genders or not has_compatible_class %}
                             <i class="fas fa-exclamation-triangle text-red-500" title="Gender or class mismatch"></i>
                         {% else %}
                             <i class="fas fa-check-circle text-green-500" title="No alerts"></i>
                         {% endif %}
                     </td>
-                    <!-- Lane/Order -->
                     <td class="px-6 py-4 whitespace-nowrap">
                         {% if entry.lane_order %}
                             <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-semibold">{{ entry.lane_order }}</span>
@@ -107,11 +108,9 @@
                             <span class="text-gray-400">-</span>
                         {% endif %}
                     </td>
-                    <!-- SDMS -->
                     <td class="px-6 py-4 whitespace-nowrap">
                         <span class="bg-indigo-100 text-indigo-800 px-2 py-1 rounded text-sm font-semibold">{{ entry.athlete_sdms }}</span>
                     </td>
-                    <!-- Name -->
                     <td class="px-6 py-4 whitespace-nowrap">
                         {{ entry.lastname }} {{ entry.firstname }}
                         {% if entry.gender != game.genders %}
@@ -119,8 +118,12 @@
                                 <i class="fas fa-exclamation-triangle"></i> Gender: {{ entry.gender }} (Expected: {{ game.genders }})
                             </div>
                         {% endif %}
+                        {% if not has_compatible_class %}
+                            <div class="text-xs text-red-600 mt-1">
+                                <i class="fas fa-exclamation-triangle"></i> No compatible class for this event
+                            </div>
+                        {% endif %}
                     </td>
-                    <!-- NPC -->
                     <td class="px-6 py-4 whitespace-nowrap">
                         <div class="flex items-center">
                             <img src="/static/images/flags/{{ entry.npc }}.svg" alt="{{ entry.npc }}"
@@ -128,24 +131,25 @@
                             <span>{{ entry.npc }}</span>
                         </div>
                     </td>
-                    <!-- Gender -->
                     <td class="px-6 py-4 whitespace-nowrap">
                         <span class="px-2 py-1 text-xs {% if entry.gender != game.genders %}bg-red-100 text-red-800{% else %}bg-green-100 text-green-800{% endif %} rounded">
                             {{ entry.gender }}
                         </span>
                     </td>
-                    <!-- Class -->
                     <td class="px-6 py-4 whitespace-nowrap">
-                        <span class="px-2 py-1 text-xs {% if entry.class not in game.classes_list %}bg-red-100 text-red-800{% else %}bg-blue-100 text-blue-800{% endif %} rounded">
-                            {{ entry.class }}
-                        </span>
-                        {% if entry.class not in game.classes_list %}
-                            <span class="text-red-500 ml-1" title="Class not in event">
+                        <div class="flex flex-wrap gap-1">
+                            {% for class in athlete_classes %}
+                                <span class="px-2 py-1 text-xs rounded {% if class in game.classes_list %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
+                                    {{ class }}
+                                </span>
+                            {% endfor %}
+                        </div>
+                        {% if not has_compatible_class %}
+                            <span class="text-red-500 ml-1" title="No compatible class for event">
                                 <i class="fas fa-exclamation-triangle"></i>
                             </span>
                         {% endif %}
                     </td>
-                    <!-- Guide -->
                     <td class="px-6 py-4 whitespace-nowrap">
                         {% if entry.guide_sdms %}
                             <span class="bg-indigo-100 text-indigo-800 px-2 py-1 rounded text-sm font-semibold">{{ entry.guide_sdms }}</span>
@@ -154,7 +158,6 @@
                             <span class="text-gray-400">-</span>
                         {% endif %}
                     </td>
-                    <!-- Actions -->
                     <td class="px-6 py-4 whitespace-nowrap">
                         <form method="POST" action="{{ url_for('admin.startlist_delete', game_id=game.id, athlete_sdms=entry.athlete_sdms) }}" class="inline"
                               onsubmit="return confirm('Remove this athlete from start list?');">
@@ -181,7 +184,6 @@
     </div>
 </div>
 
-<!-- Summary Section -->
 {% if startlist %}
 <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
     <div class="bg-white rounded-lg shadow p-4">
@@ -197,7 +199,8 @@
     </div>
     <div class="bg-white rounded-lg shadow p-4">
         <div class="flex items-center">
-            <div class="text-2xl font-bold {% set gender_mismatches = startlist|selectattr('gender', '!=', game.genders)|list %}{% if gender_mismatches|length == 0 %}text-green-600{% else %}text-red-600{% endif %}">
+            {% set gender_mismatches = startlist|selectattr('gender', '!=', game.genders)|list %}
+            <div class="text-2xl font-bold {% if gender_mismatches|length == 0 %}text-green-600{% else %}text-red-600{% endif %}">
                 {{ gender_mismatches|length }}
             </div>
             <div class="ml-3">
@@ -208,7 +211,15 @@
     </div>
     <div class="bg-white rounded-lg shadow p-4">
         <div class="flex items-center">
-            <div class="text-2xl font-bold {% set class_mismatches = startlist|rejectattr('class', 'in', game.classes_list)|list %}{% if class_mismatches|length == 0 %}text-green-600{% else %}text-red-600{% endif %}">
+            {% set class_mismatches = [] %}
+            {% for entry in startlist %}
+                {% set athlete_classes = entry.get('classes', []) %}
+                {% set compatible_classes = athlete_classes|select('in', game.classes_list)|list %}
+                {% if not compatible_classes %}
+                    {% set _ = class_mismatches.append(entry) %}
+                {% endif %}
+            {% endfor %}
+            <div class="text-2xl font-bold {% if class_mismatches|length == 0 %}text-green-600{% else %}text-red-600{% endif %}">
                 {{ class_mismatches|length }}
             </div>
             <div class="ml-3">
@@ -220,7 +231,6 @@
 </div>
 {% endif %}
 
-<!-- Action Buttons -->
 <div class="mt-6 flex justify-between">
     <a href="{{ url_for('admin.games_list') }}" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600">
         <i class="fas fa-arrow-left mr-2"></i>Back to Games
@@ -239,14 +249,14 @@
     </div>
 </div>
 
-<!-- Information Panel -->
 <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
     <h4 class="font-bold text-blue-900 mb-2">
         <i class="fas fa-info-circle mr-2"></i>Start List Information
     </h4>
     <div class="text-sm text-blue-800 space-y-2">
         <p><strong>Gender Matching:</strong> Athletes must match the event gender ({{ game.genders }})</p>
-        <p><strong>Class Matching:</strong> Athletes should be in event classes: {{ game.classes }}</p>
+        <p><strong>Class Matching:</strong> Athletes must have at least one class matching event classes: {{ game.classes }}</p>
+        <p><strong>Multi-Class Athletes:</strong> Athletes can have multiple classes separated by commas (e.g., T54,T53,T52)</p>
         <p><strong>Lane/Order:</strong> Optional field for starting position or running order</p>
         <p><strong>Capacity:</strong> Expected {{ game.nb_athletes }} athletes for this event</p>
         {% if game.area %}
@@ -256,7 +266,6 @@
 </div>
 
 <script>
-// Configuration pour réutiliser les fonctions de manage_results.js
 window.isFieldEvent = false;
 window.isTrackEvent = false;
 window.gameEvent = '{{ game.event|e }}';
@@ -265,9 +274,14 @@ window.specialValues = [];
 window.gameId = {{ game.id }};
 window.finalistsCount = 0;
 
-// Fonction spécifique pour sélectionner depuis la start list (si nécessaire)
-function selectFromStartList(sdms, name, gender, athleteClass, guideSdms) {
-    const athlete = { sdms: sdms, name: name, gender: gender, class: athleteClass };
+function selectFromStartList(sdms, name, gender, athleteClasses, guideSdms) {
+    const athlete = {
+        sdms: sdms,
+        name: name,
+        gender: gender,
+        classes: athleteClasses ? athleteClasses.split(',').map(c => c.trim()) : [],
+        class: athleteClasses
+    };
     selectAthlete(athlete);
 
     if (guideSdms) {
@@ -278,7 +292,6 @@ function selectFromStartList(sdms, name, gender, athleteClass, guideSdms) {
     }
 }
 
-// Fermer les résultats de recherche quand on clique à l'extérieur
 document.addEventListener('click', function(e) {
     const athleteSearch = document.getElementById('athleteSearch');
     const athleteResults = document.getElementById('athleteResults');
@@ -293,28 +306,8 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// Exposer la fonction pour l'utilisation globale
 window.selectFromStartList = selectFromStartList;
 </script>
 
-<!-- Inclure le fichier JavaScript commun -->
 <script src="{{ url_for('static', filename='js/manage_results.js') }}"></script>
-
-<style>
-@media print {
-    .no-print {
-        display: none !important;
-    }
-    .bg-yellow-50 {
-        background-color: #fefce8 !important;
-        -webkit-print-color-adjust: exact;
-        color-adjust: exact;
-    }
-    .text-red-600 {
-        color: #dc2626 !important;
-        -webkit-print-color-adjust: exact;
-        color-adjust: exact;
-    }
-}
-</style>
 {% endblock %}

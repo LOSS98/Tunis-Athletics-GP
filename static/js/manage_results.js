@@ -6,10 +6,12 @@ const gameEvent = window.gameEvent || '';
 const hasWpaPoints = window.hasWpaPoints || false;
 const specialValues = window.specialValues || ['DNS', 'DNF', 'DQ', 'NM', 'X', 'O', '-'];
 const gameId = window.gameId;
+
 function getCSRFToken() {
     const csrfInput = document.querySelector('input[name="csrf_token"]');
     return csrfInput ? csrfInput.value : '';
 }
+
 function showNotification(message, type = 'info') {
     const notification = document.createElement('div');
     notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 transition-opacity ${
@@ -24,6 +26,7 @@ function showNotification(message, type = 'info') {
         setTimeout(() => notification.remove(), 300);
     }, 3000);
 }
+
 function setLoadingState(button, isLoading) {
     if (!button) return;
     if (isLoading) {
@@ -35,10 +38,12 @@ function setLoadingState(button, isLoading) {
         button.disabled = false;
     }
 }
+
 function initializeAthleteSearch() {
     const athleteSearch = document.getElementById('athleteSearch');
     const athleteResults = document.getElementById('athleteResults');
     if (!athleteSearch || !athleteResults) return;
+
     athleteSearch.addEventListener('input', function() {
         clearTimeout(searchTimeout);
         const query = this.value.trim();
@@ -46,6 +51,7 @@ function initializeAthleteSearch() {
             athleteResults.classList.add('hidden');
             return;
         }
+
         searchTimeout = setTimeout(() => {
             fetch(`/admin/api/athletes/search?q=${encodeURIComponent(query)}`)
                 .then(response => response.json())
@@ -60,12 +66,15 @@ function initializeAthleteSearch() {
         }, 300);
     });
 }
+
 function displayAthleteSearchResults(athletes, query) {
     const athleteResults = document.getElementById('athleteResults');
     const selectedAthlete = document.getElementById('selectedAthlete');
     const gameClasses = selectedAthlete.dataset.gameClasses.split(',').map(c => c.trim());
     const gameGender = selectedAthlete.dataset.gameGender;
+
     athleteResults.innerHTML = '';
+
     if (athletes.length === 0) {
         athleteResults.innerHTML = `
             <div class="p-3 text-gray-500">
@@ -76,14 +85,19 @@ function displayAthleteSearchResults(athletes, query) {
         athleteResults.classList.remove('hidden');
         return;
     }
+
     const isClassSearch = athletes.length > 10 && athletes.every(athlete =>
-        athlete.class && athlete.class.toUpperCase().includes(query.toUpperCase())
+        athlete.classes_list && athlete.classes_list.some(c =>
+            c.toUpperCase().includes(query.toUpperCase())
+        )
     );
+
     if (isClassSearch) {
         const header = document.createElement('div');
         header.className = 'p-2 bg-blue-50 text-sm font-medium text-blue-700 border-b';
         header.innerHTML = `<i class="fas fa-users mr-2"></i>Athletes in class "${query.toUpperCase()}" (${athletes.length} found)`;
         athleteResults.appendChild(header);
+
         athletes.forEach(athlete => {
             athleteResults.appendChild(createAthleteResultElement(athlete, gameClasses, gameGender, true));
         });
@@ -91,19 +105,24 @@ function displayAthleteSearchResults(athletes, query) {
         const exactMatches = [];
         const classMatches = [];
         const otherMatches = [];
+
         athletes.forEach(athlete => {
             const queryLower = query.toLowerCase();
             const athleteText = `${athlete.sdms} ${athlete.name || (athlete.firstname + ' ' + athlete.lastname)} ${athlete.npc}`.toLowerCase();
+
             if (athlete.sdms.toString() === query) {
                 exactMatches.push(athlete);
             } else if (athleteText.includes(queryLower)) {
                 exactMatches.push(athlete);
-            } else if (athlete.class && athlete.class.toLowerCase().includes(queryLower)) {
+            } else if (athlete.classes_list && athlete.classes_list.some(c =>
+                c.toLowerCase().includes(queryLower)
+            )) {
                 classMatches.push(athlete);
             } else {
                 otherMatches.push(athlete);
             }
         });
+
         if (exactMatches.length > 0) {
             const header = document.createElement('div');
             header.className = 'p-2 bg-gray-50 text-xs font-medium text-gray-600 border-b';
@@ -113,6 +132,7 @@ function displayAthleteSearchResults(athletes, query) {
                 athleteResults.appendChild(createAthleteResultElement(athlete, gameClasses, gameGender));
             });
         }
+
         if (classMatches.length > 0) {
             const header = document.createElement('div');
             header.className = 'p-2 bg-blue-50 text-xs font-medium text-blue-700 border-b';
@@ -122,6 +142,7 @@ function displayAthleteSearchResults(athletes, query) {
                 athleteResults.appendChild(createAthleteResultElement(athlete, gameClasses, gameGender, true));
             });
         }
+
         if (otherMatches.length > 0 && (exactMatches.length + classMatches.length) < 15) {
             const header = document.createElement('div');
             header.className = 'p-2 bg-gray-50 text-xs font-medium text-gray-600 border-b';
@@ -132,14 +153,19 @@ function displayAthleteSearchResults(athletes, query) {
             });
         }
     }
+
     athleteResults.classList.remove('hidden');
 }
+
 function createAthleteResultElement(athlete, gameClasses, gameGender, isClassMatch = false) {
     const div = document.createElement('div');
     div.className = 'p-2 hover:bg-gray-100 cursor-pointer border-b';
-    const athleteClasses = athlete.class ? athlete.class.split(',').map(c => c.trim()) : [];
-    const classMatch = athleteClasses.some(cls => gameClasses.includes(cls));
+
+    const athleteClasses = athlete.classes_list || (athlete.class ? athlete.class.split(',').map(c => c.trim()) : []);
+    const compatibleClasses = athleteClasses.filter(cls => gameClasses.includes(cls));
+    const classMatch = compatibleClasses.length > 0;
     const genderMatch = gameGender.includes(athlete.gender);
+
     let alertClass = '';
     let alertText = '';
     if (!classMatch && !genderMatch) {
@@ -154,7 +180,9 @@ function createAthleteResultElement(athlete, gameClasses, gameGender, isClassMat
     } else {
         alertClass = 'border-l-4 border-green-400 bg-green-50';
     }
+
     div.className += ' ' + alertClass;
+
     let classDisplay = '';
     if (athleteClasses.length > 0) {
         classDisplay = athleteClasses.map(cls => {
@@ -169,6 +197,7 @@ function createAthleteResultElement(athlete, gameClasses, gameGender, isClassMat
             return `<span class="px-1 rounded text-xs ${highlight}">${cls}</span>`;
         }).join(' ');
     }
+
     const athleteName = athlete.name || `${athlete.firstname} ${athlete.lastname}`;
     div.innerHTML = `
         <div class="flex justify-between items-center">
@@ -182,22 +211,27 @@ function createAthleteResultElement(athlete, gameClasses, gameGender, isClassMat
         </div>
         ${alertText}
     `;
+
     div.onclick = () => {
         const athleteData = {
             sdms: athlete.sdms,
             name: athleteName,
             npc: athlete.npc,
             gender: athlete.gender,
-            class: athlete.class
+            classes: athleteClasses,
+            class: athlete.class || athleteClasses.join(',')
         };
         selectAthlete(athleteData);
     };
+
     return div;
 }
+
 function initializeGuideSearch() {
     const guideSearch = document.getElementById('guideSearch');
     const guideResults = document.getElementById('guideResults');
     if (!guideSearch || !guideResults) return;
+
     guideSearch.addEventListener('input', function() {
         clearTimeout(searchTimeout);
         const query = this.value.trim();
@@ -205,6 +239,7 @@ function initializeGuideSearch() {
             guideResults.classList.add('hidden');
             return;
         }
+
         searchTimeout = setTimeout(() => {
             fetch(`/admin/athletes/search?q=${encodeURIComponent(query)}&guides=1`)
                 .then(response => response.json())
@@ -226,6 +261,7 @@ function initializeGuideSearch() {
         }, 300);
     });
 }
+
 function selectAthlete(athlete) {
     const selectedSdms = document.getElementById('selectedSdms');
     const athleteSearch = document.getElementById('athleteSearch');
@@ -233,30 +269,53 @@ function selectAthlete(athlete) {
     const selectedAthlete = document.getElementById('selectedAthlete');
     const selectedGuideSdms = document.getElementById('selectedGuideSdms');
     const selectedGuide = document.getElementById('selectedGuide');
+
     if (selectedSdms) selectedSdms.value = athlete.sdms;
     if (athleteSearch) athleteSearch.value = '';
     if (athleteResults) athleteResults.classList.add('hidden');
     if (selectedGuideSdms) selectedGuideSdms.value = '';
     if (selectedGuide) selectedGuide.innerHTML = '';
+
     if (selectedAthlete) {
         const gameClasses = selectedAthlete.dataset.gameClasses.split(',').map(c => c.trim());
         const gameGender = selectedAthlete.dataset.gameGender;
-        const athleteClasses = athlete.class ? athlete.class.split(',').map(c => c.trim()) : [];
-        const classMatch = athleteClasses.some(cls => gameClasses.includes(cls));
+
+        const athleteClasses = athlete.classes || (athlete.class ? athlete.class.split(',').map(c => c.trim()) : []);
+        const compatibleClasses = athleteClasses.filter(cls => gameClasses.includes(cls));
+        const classMatch = compatibleClasses.length > 0;
         const genderMatch = gameGender.includes(athlete.gender);
+
         let statusHtml = `Selected: <strong>${athlete.sdms}</strong> - ${athlete.name}`;
-        if (!classMatch) {
-            statusHtml += '<div class="text-yellow-600 text-xs mt-1"><i class="fas fa-exclamation-triangle"></i> Warning: Athlete class not in event classes</div>';
+
+        if (athleteClasses.length > 0) {
+            const classesHtml = athleteClasses.map(cls => {
+                const isCompatible = gameClasses.includes(cls);
+                return `<span class="px-1 rounded text-xs ${isCompatible ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">${cls}</span>`;
+            }).join(' ');
+            statusHtml += `<div class="mt-1">Classes: ${classesHtml}</div>`;
+        }
+
+        if (!classMatch && athleteClasses.length > 0) {
+            statusHtml += '<div class="text-yellow-600 text-xs mt-1"><i class="fas fa-exclamation-triangle"></i> Warning: No compatible class for this event</div>';
         }
         if (!genderMatch) {
             statusHtml += '<div class="text-yellow-600 text-xs mt-1"><i class="fas fa-exclamation-triangle"></i> Warning: Athlete gender does not match event gender</div>';
         }
+
         selectedAthlete.innerHTML = statusHtml;
     }
 }
-function selectFromStartList(sdms, name, gender, athleteClass, guideSdms) {
-    const athlete = { sdms: sdms, name: name, gender: gender, class: athleteClass };
+
+function selectFromStartList(sdms, name, gender, athleteClasses, guideSdms) {
+    const athlete = {
+        sdms: sdms,
+        name: name,
+        gender: gender,
+        classes: athleteClasses ? athleteClasses.split(',').map(c => c.trim()) : [],
+        class: athleteClasses
+    };
     selectAthlete(athlete);
+
     if (guideSdms) {
         const selectedGuideSdms = document.getElementById('selectedGuideSdms');
         const selectedGuide = document.getElementById('selectedGuide');
@@ -264,25 +323,30 @@ function selectFromStartList(sdms, name, gender, athleteClass, guideSdms) {
         if (selectedGuide) selectedGuide.innerHTML = `Guide SDMS: <strong>${guideSdms}</strong>`;
     }
 }
+
 function selectGuide(athlete) {
     const sdmsInput = document.getElementById('selectedGuideSdms') || document.getElementById('editGuideSdms');
     const searchInput = document.getElementById('guideSearch') || document.getElementById('editGuideSearch');
     const resultsDiv = document.getElementById('guideResults') || document.getElementById('editGuideResults');
     const displayDiv = document.getElementById('selectedGuide') || document.getElementById('editSelectedGuide');
+
     if (sdmsInput) sdmsInput.value = athlete.sdms;
     if (searchInput) searchInput.value = '';
     if (resultsDiv) resultsDiv.classList.add('hidden');
     if (displayDiv) displayDiv.innerHTML = `Guide: <strong>${athlete.sdms}</strong> - ${athlete.name}`;
 }
+
 function selectSpecialValue(value) {
     const performanceInput = document.getElementById('performanceValue');
     if (performanceInput && value) {
         performanceInput.value = value;
     }
 }
+
 function togglePublish(gameIdParam, event) {
     const button = event.target.closest('button');
     setLoadingState(button, true);
+
     fetch(`/admin/games/${gameIdParam}/publish`, {
         method: 'POST',
         headers: {
@@ -305,10 +369,12 @@ function togglePublish(gameIdParam, event) {
         setLoadingState(button, false);
     });
 }
+
 function autoRankResults(gameIdParam, event) {
     if (confirm('Auto-rank all results? This will update ranks automatically.')) {
         const button = event.target.closest('button');
         setLoadingState(button, true);
+
         fetch(`/admin/games/${gameIdParam}/auto-rank`, {
             method: 'POST',
             headers: {
@@ -333,6 +399,7 @@ function autoRankResults(gameIdParam, event) {
         });
     }
 }
+
 function selectFinalistsRound1(gameIdParam) {
     if (confirm('Select finalists for final round based on qualifying attempts?')) {
         fetch(`/admin/games/${gameIdParam}/auto-rank-round1`, {
@@ -357,10 +424,12 @@ function selectFinalistsRound1(gameIdParam) {
         });
     }
 }
+
 function recalculateRaza(gameIdParam) {
     if (confirm('Recalculate all WPA Points?')) {
         const button = event.target;
         setLoadingState(button, true);
+
         fetch(`/admin/games/${gameIdParam}/recalculate-raza`, {
             method: 'POST',
             headers: {
@@ -385,6 +454,7 @@ function recalculateRaza(gameIdParam) {
         });
     }
 }
+
 function openGameEditModalFromGlobal(gameId) {
     if (window.gameEditData) {
         openGameEditModal(gameId, window.gameEditData);
@@ -392,12 +462,14 @@ function openGameEditModalFromGlobal(gameId) {
         showNotification('Game data not found', 'error');
     }
 }
+
 function openGameEditModal(gameIdParam, gameData) {
     const modal = document.getElementById('gameEditModal');
     if (!modal) {
         showNotification('Game edit modal not found', 'error');
         return;
     }
+
     const fields = {
         'editGameId': gameIdParam,
         'editEvent': gameData.event,
@@ -410,20 +482,25 @@ function openGameEditModal(gameIdParam, gameData) {
         'editNbAthletes': gameData.nb_athletes,
         'editStatus': gameData.status
     };
+
     Object.entries(fields).forEach(([fieldId, value]) => {
         const field = document.getElementById(fieldId);
         if (field) field.value = value;
     });
+
     const publishedCheckbox = document.getElementById('editPublished');
     const wpaPointsCheckbox = document.getElementById('editWpaPoints');
     if (publishedCheckbox) publishedCheckbox.checked = gameData.published || false;
     if (wpaPointsCheckbox) wpaPointsCheckbox.checked = gameData.wpa_points || false;
+
     modal.classList.remove('hidden');
 }
+
 function closeGameEditModal() {
     const modal = document.getElementById('gameEditModal');
     if (modal) modal.classList.add('hidden');
 }
+
 function editAttemptsFromGlobal(resultId) {
     const resultData = window[`resultEditData_${resultId}`];
     if (resultData) {
@@ -432,14 +509,17 @@ function editAttemptsFromGlobal(resultId) {
         showNotification('Result data not found', 'error');
     }
 }
+
 function editAttempts(resultId, resultData) {
     const modal = document.getElementById('editAttemptsModal');
     if (!modal) {
         showNotification('Edit attempts modal not found', 'error');
         return;
     }
+
     currentResultId = resultId;
     document.getElementById('editResultId').value = resultId;
+
     if (resultData.attempts) {
         if (gameEvent === 'High Jump') {
             createHighJumpEditInterface(resultData.attempts);
@@ -449,6 +529,7 @@ function editAttempts(resultId, resultData) {
                 if (attemptInput && attempt.value) {
                     attemptInput.value = attempt.value;
                 }
+
                 const windInput = document.getElementById(`editWind${index + 1}`);
                 if (windInput && attempt.wind_velocity) {
                     windInput.value = attempt.wind_velocity;
@@ -456,10 +537,12 @@ function editAttempts(resultId, resultData) {
             });
         }
     }
+
     const weightInput = document.getElementById('editWeight');
     if (weightInput && resultData.weight) {
         weightInput.value = resultData.weight;
     }
+
     const guideInput = document.getElementById('editGuideSdms');
     const guideDisplay = document.getElementById('editSelectedGuide');
     if (guideInput) guideInput.value = resultData.guide_sdms || '';
@@ -470,19 +553,24 @@ function editAttempts(resultId, resultData) {
             guideDisplay.innerHTML = '';
         }
     }
+
     const recordSelect = document.getElementById('editRecord');
     if (recordSelect && resultData.record) {
         recordSelect.value = resultData.record;
     }
+
     modal.classList.remove('hidden');
 }
+
 function createHighJumpEditInterface(attempts) {
     const container = document.getElementById('highJumpAttemptsContainer');
     if (!container) {
         console.warn('High Jump attempts container not found');
         return;
     }
+
     container.innerHTML = '';
+
     attempts.forEach((attempt, index) => {
         const attemptDiv = document.createElement('div');
         attemptDiv.className = 'border rounded p-3 bg-white shadow-sm';
@@ -508,6 +596,7 @@ function createHighJumpEditInterface(attempts) {
         `;
         container.appendChild(attemptDiv);
     });
+
     const newAttemptDiv = document.createElement('div');
     newAttemptDiv.className = 'border-2 border-dashed border-purple-300 rounded p-3 bg-purple-50';
     newAttemptDiv.innerHTML = `
@@ -532,6 +621,7 @@ function createHighJumpEditInterface(attempts) {
     `;
     container.appendChild(newAttemptDiv);
 }
+
 function closeEditAttemptsModal() {
     const modal = document.getElementById('editAttemptsModal');
     if (modal) {
@@ -539,6 +629,7 @@ function closeEditAttemptsModal() {
         currentResultId = null;
     }
 }
+
 function toggleAttempts(resultId) {
     const attemptsDiv = document.getElementById(`attempts-${resultId}`);
     const icon = document.getElementById(`attempts-icon-${resultId}`);
@@ -554,10 +645,12 @@ function toggleAttempts(resultId) {
         }
     }
 }
+
 function deleteResult(resultId) {
     if (confirm('Delete this result?')) {
         const formData = new FormData();
         formData.append('csrf_token', getCSRFToken());
+
         fetch(`/admin/results/${resultId}/delete`, {
             method: 'POST',
             body: formData
@@ -577,6 +670,7 @@ function deleteResult(resultId) {
         });
     }
 }
+
 function showAddAttemptModal(resultId) {
     currentResultId = resultId;
     const modal = document.getElementById('addAttemptModal');
@@ -584,6 +678,7 @@ function showAddAttemptModal(resultId) {
         modal.classList.remove('hidden');
     }
 }
+
 function closeAddAttemptModal() {
     const modal = document.getElementById('addAttemptModal');
     if (modal) {
@@ -591,21 +686,26 @@ function closeAddAttemptModal() {
         currentResultId = null;
     }
 }
+
 function addHighJumpAttempt() {
     if (!currentResultId) {
         showNotification('No result selected', 'error');
         return;
     }
+
     const height = document.getElementById('attemptHeight').value;
     const result = document.getElementById('attemptResult').value;
+
     if (!height || !result) {
         showNotification('Height and result are required', 'error');
         return;
     }
+
     const data = {
         height: parseFloat(height),
         result: result
     };
+
     fetch(`/admin/results/${currentResultId}/add-attempt`, {
         method: 'POST',
         headers: {
@@ -629,9 +729,11 @@ function addHighJumpAttempt() {
         showNotification('Error adding attempt', 'error');
     });
 }
+
 function initializeDragAndDrop() {
     const tbody = document.getElementById('sortableResults');
     if (!tbody) return;
+
     new Sortable(tbody, {
         animation: 150,
         ghostClass: 'sortable-ghost',
@@ -640,20 +742,25 @@ function initializeDragAndDrop() {
         }
     });
 }
+
 function updateManualRanking() {
     if (!gameId) {
         showNotification('Game ID not found', 'error');
         return;
     }
+
     const rows = document.querySelectorAll('#sortableResults .draggable-row');
     const rankings = [];
+
     rows.forEach((row, index) => {
         const resultId = row.dataset.resultId;
         const newRank = index + 1;
         rankings.push({ result_id: resultId, rank: newRank });
+
         const rankCell = row.querySelector('td:nth-child(2) span:last-child');
         if (rankCell) rankCell.textContent = newRank;
     });
+
     fetch(`/admin/games/${gameId}/update-manual-ranking`, {
         method: 'POST',
         headers: {
@@ -675,10 +782,12 @@ function updateManualRanking() {
         showNotification('Error updating rankings', 'error');
     });
 }
+
 function recalculateHighJump(gameIdParam) {
     if (confirm('Recalculate High Jump ranking with proper tie-breaking rules?')) {
         const button = event.target;
         setLoadingState(button, true);
+
         fetch(`/admin/games/${gameIdParam}/recalculate-high-jump`, {
             method: 'POST',
             headers: {
@@ -703,13 +812,16 @@ function recalculateHighJump(gameIdParam) {
         });
     }
 }
+
 function toggleGameOfficial(gameId) {
     const confirmMessage = 'Are you sure you want to change the official status of this entire game and ALL its results?';
     if (!confirm(confirmMessage)) {
         return;
     }
+
     const button = event.target.closest('button');
     setLoadingState(button, true);
+
     fetch(`/admin/games/${gameId}/toggle-official`, {
         method: 'POST',
         headers: {
@@ -733,6 +845,7 @@ function toggleGameOfficial(gameId) {
         setLoadingState(button, false);
     });
 }
+
 function initializeFormHandlers() {
     const gameEditForm = document.getElementById('gameEditForm');
     if (gameEditForm) {
@@ -740,6 +853,7 @@ function initializeFormHandlers() {
             e.preventDefault();
             const formData = new FormData(this);
             const gameIdValue = document.getElementById('editGameId').value;
+
             fetch(`/admin/games/${gameIdValue}/edit`, {
                 method: 'POST',
                 headers: { 'X-CSRFToken': getCSRFToken() },
@@ -760,15 +874,19 @@ function initializeFormHandlers() {
             });
         });
     }
+
     const editAttemptsForm = document.getElementById('editAttemptsForm');
     if (editAttemptsForm) {
         editAttemptsForm.addEventListener('submit', function(e) {
             e.preventDefault();
+
             if (!currentResultId) {
                 showNotification('No result selected', 'error');
                 return;
             }
+
             let data = {};
+
             if (gameEvent === 'High Jump') {
                 const attempts = {};
                 const container = document.getElementById('highJumpAttemptsContainer');
@@ -785,6 +903,7 @@ function initializeFormHandlers() {
                         }
                     });
                 }
+
                 data = {
                     high_jump_attempts: attempts,
                     record: document.getElementById('editRecord').value,
@@ -802,6 +921,7 @@ function initializeFormHandlers() {
                         };
                     }
                 }
+
                 data = {
                     attempts: attempts,
                     record: document.getElementById('editRecord').value,
@@ -809,6 +929,7 @@ function initializeFormHandlers() {
                     guide_sdms: document.getElementById('editGuideSdms').value
                 };
             }
+
             fetch(`/admin/results/${currentResultId}/update-attempts`, {
                 method: 'POST',
                 headers: {
@@ -834,12 +955,14 @@ function initializeFormHandlers() {
         });
     }
 }
+
 document.addEventListener('DOMContentLoaded', function() {
     initializeAthleteSearch();
     initializeGuideSearch();
     initializeFormHandlers();
     initializeDragAndDrop();
 });
+
 window.selectAthlete = selectAthlete;
 window.selectFromStartList = selectFromStartList;
 window.selectGuide = selectGuide;

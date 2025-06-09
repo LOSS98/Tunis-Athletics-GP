@@ -9,6 +9,20 @@ from database.models import Athlete, Game, StartList, Result, Attempt
 from database.db_manager import execute_one, execute_query
 from config import Config
 import re
+
+
+def check_athlete_class_compatibility(athlete, game):
+    if not athlete or not athlete.get('class'):
+        return False, []
+
+    athlete_classes = [c.strip() for c in athlete['class'].split(',') if c.strip()]
+    game_classes = [c.strip() for c in game['classes'].split(',') if c.strip()]
+
+    compatible_classes = [ac for ac in athlete_classes if ac in game_classes]
+    has_compatible_class = len(compatible_classes) > 0
+
+    return has_compatible_class, athlete_classes
+
 def parse_time_to_seconds(time_str):
     time_str = time_str.strip()
     if not time_str:
@@ -65,6 +79,7 @@ def calculate_and_store_raza(athlete, game, performance_value):
         except Exception as e:
             print(f"Error calculating RAZA: {e}")
     return raza_score, raza_score_precise
+
 def register_routes(bp):
     @bp.route('/games/<int:id>/results')
     @admin_required
@@ -73,9 +88,13 @@ def register_routes(bp):
         if not game:
             flash('Game not found', 'danger')
             return redirect(url_for('admin.games_list'))
+
+        game['classes_list'] = [c.strip() for c in game['classes'].split(',') if c.strip()]
+
         results = Result.get_all(game_id=id)
         startlist = StartList.get_by_game(id)
         form = ResultForm()
+
         game_json = {
             'id': game['id'],
             'event': game['event'],
@@ -90,8 +109,12 @@ def register_routes(bp):
             'published': game.get('published', False),
             'wpa_points': game.get('wpa_points', False)
         }
+
         selected_r1 = [r for r in results if r['final_order'] is not None]
         total_selected_r1 = len(selected_r1)
+
+        finalists_count = len([r for r in results if r.get('final_order')])
+
         return render_template('admin/results/manage.html',
                                game=game,
                                game_json=game_json,
@@ -100,7 +123,10 @@ def register_routes(bp):
                                form=form,
                                is_field_event=game['event'] in Config.get_field_events(),
                                is_track_event=game['event'] in Config.get_track_events(),
-                               total_selected_r1 = total_selected_r1,)
+                               total_selected_r1=total_selected_r1,
+                               finalists_count=finalists_count,
+                               total_finalists=8)
+
     @bp.route('/games/<int:game_id>/results/add', methods=['POST'])
     @admin_required
     def result_add(game_id):
@@ -109,12 +135,16 @@ def register_routes(bp):
             if not game:
                 flash('Game not found', 'danger')
                 return redirect(url_for('admin.games_list'))
+
+            game['classes_list'] = [c.strip() for c in game['classes'].split(',') if c.strip()]
+
             athlete_sdms = request.form.get('athlete_sdms')
             guide_sdms = request.form.get('guide_sdms')
             value = request.form.get('value', '').strip() if request.form.get('value') else ''
             weight_raw = request.form.get('weight')
             weight = weight_raw.strip() if weight_raw else None
             record = request.form.get('record', '').strip()
+
             attempts = []
             wind_attempts = []
             heights = []
@@ -125,8 +155,11 @@ def register_routes(bp):
                 attempts.append(attempt_raw.strip() if attempt_raw else None)
                 wind_attempts.append(wind_raw.strip() if wind_raw else None)
                 heights.append(height_raw.strip() if height_raw else None)
+
             errors = []
             athlete = None
+            athlete_classes = []
+
             if not athlete_sdms:
                 errors.append('Please select an athlete')
             else:
@@ -135,48 +168,71 @@ def register_routes(bp):
                     athlete = Athlete.get_by_sdms(athlete_sdms)
                     if not athlete:
                         errors.append('Athlete not found')
+                    else:
+                        has_compatible_class, athlete_classes = check_athlete_class_compatibility(athlete, game)
+
+                        if not has_compatible_class:
+                            flash(
+                                f"Warning: Athlete classes {', '.join(athlete_classes)} do not match game classes {game['classes']}",
+                                'warning'
+                            )
+
+                        if athlete['gender'] != game['genders']:
+                            flash(
+                                f"Warning: Athlete gender ({athlete['gender']}) does not match game gender ({game['genders']})",
+                                'warning'
+                            )
                 except (ValueError, TypeError):
                     errors.append('Invalid athlete SDMS')
+
             if guide_sdms:
                 try:
                     guide_sdms = int(guide_sdms)
                 except (ValueError, TypeError):
                     guide_sdms = None
-            # High Jump special handling
+
             if game['event'] == 'High Jump':
                 height = request.form.get('height')
                 attempt_result = request.form.get('attempt_result', 'O')
+
                 if not height:
                     errors.append('Height is required for High Jump')
+
                 if errors:
                     for error in errors:
                         flash(error, 'danger')
                     return redirect(url_for('admin.game_results', id=game_id))
+
                 try:
                     height_float = float(height)
                 except (ValueError, TypeError):
                     flash('Invalid height value', 'danger')
                     return redirect(url_for('admin.game_results', id=game_id))
-                # Vérifier ou créer le résultat
+
                 existing_result = Result.get_by_game_athlete(game_id, athlete_sdms)
                 if not existing_result:
                     result_data = {
                         'game_id': game_id,
                         'athlete_sdms': athlete_sdms,
                         'guide_sdms': guide_sdms,
-                        'value': 'NH',  # No Height initially
+                        'value': 'NH',
                         'raza_score': 0,
                         'raza_score_precise': 0.0
                     }
                     result_id = Result.create(**result_data)
                 else:
                     result_id = existing_result['id']
-                # Calculer RAZA score si nécessaire
+
                 raza_score = 0
                 raza_score_precise = 0.0
                 if attempt_result == 'O' and game.get('wpa_points', False):
-                    raza_score, raza_score_precise = calculate_and_store_raza(athlete, game, height_float)
-                # Obtenir le prochain numéro de tentative
+                    primary_class = athlete_classes[0] if athlete_classes else athlete['class']
+                    athlete_for_raza = {
+                        'gender': athlete['gender'],
+                        'class': primary_class
+                    }
+                    raza_score, raza_score_precise = calculate_and_store_raza(athlete_for_raza, game, height_float)
+
                 existing_attempts = execute_query(
                     "SELECT MAX(attempt_number) as max_num FROM attempts WHERE result_id = %s",
                     (result_id,), fetch=True
@@ -184,71 +240,74 @@ def register_routes(bp):
                 next_attempt = 1
                 if existing_attempts and existing_attempts[0]['max_num']:
                     next_attempt = existing_attempts[0]['max_num'] + 1
-                # Créer la tentative
+
                 Attempt.create(result_id, next_attempt, attempt_result, None, raza_score, raza_score_precise,
                                height_float)
-                # Recalculer la meilleure performance et mettre à jour le résultat
+
                 if attempt_result == 'O':
-                    # Obtenir la hauteur maximale franchie avec succès
                     successful_heights = execute_query(
                         "SELECT MAX(height) as best_height FROM attempts WHERE result_id = %s AND value = 'O'",
                         (result_id,), fetch=True
                     )
                     if successful_heights and successful_heights[0]['best_height']:
                         best_height = successful_heights[0]['best_height']
-                        # Recalculer RAZA pour la meilleure hauteur
                         best_raza_score = 0
                         best_raza_score_precise = 0.0
                         if game.get('wpa_points', False):
-                            best_raza_score, best_raza_score_precise = calculate_and_store_raza(athlete, game,
+                            best_raza_score, best_raza_score_precise = calculate_and_store_raza(athlete_for_raza, game,
                                                                                                 best_height)
-                        # Mettre à jour le résultat avec la meilleure hauteur
+
                         Result.update(result_id,
                                       value=best_height,
                                       best_attempt=f"{best_height:.2f}",
                                       raza_score=best_raza_score,
                                       raza_score_precise=best_raza_score_precise)
                 else:
-                    # Vérifier si l'athlète a des hauteurs franchies
                     successful_attempts = execute_query(
                         "SELECT COUNT(*) as count FROM attempts WHERE result_id = %s AND value = 'O'",
                         (result_id,), fetch=True
                     )
                     if successful_attempts and successful_attempts[0]['count'] == 0:
-                        # Aucune hauteur franchie, garder NH
                         Result.update(result_id, value='NH', best_attempt=None, raza_score=0, raza_score_precise=0.0)
+
                 flash('High Jump attempt added successfully', 'success')
                 return redirect(url_for('admin.game_results', id=game_id))
-            # Field events (excluding High Jump)
+
             elif game['event'] in Config.get_field_events():
                 if not any(attempt for attempt in attempts if attempt):
                     errors.append('At least one valid attempt is required for field events')
-            # Track events
+
             elif game['event'] in Config.get_track_events():
                 if not value:
                     errors.append('Performance value is required for track events')
                 elif value not in Config.get_result_special_values():
                     if not re.match(r'^(\d{1,2}:)?\d{1,2}(\.\d{1,4})?$', value):
                         errors.append('Invalid time format. Use MM:SS.SSSS, MM:SS, SS.SSSS, or SS')
+
             if errors:
                 for error in errors:
                     flash(error, 'danger')
                 return redirect(url_for('admin.game_results', id=game_id))
-            # Check if result already exists - OVERWRITE instead of requiring deletion
+
             existing_result = Result.get_by_game_athlete(game_id, athlete_sdms)
             if existing_result:
                 result_id = existing_result['id']
                 flash_message = 'Result updated successfully (overwritten)'
-                # Field events processing for existing results
+
+                primary_class = athlete_classes[0] if athlete_classes else athlete['class']
+                athlete_for_raza = {
+                    'gender': athlete['gender'],
+                    'class': primary_class
+                }
+
                 if game['event'] in Config.get_field_events():
-                    # RÉCUPÉRER TOUTES LES TENTATIVES EXISTANTES EN BASE
                     existing_attempts_from_db = execute_query("""
                         SELECT attempt_number, value, wind_velocity, height, raza_score, raza_score_precise
                         FROM attempts 
                         WHERE result_id = %s 
                         ORDER BY attempt_number
                     """, (result_id,), fetch=True)
-                    # Créer un dictionnaire des tentatives existantes
+
                     existing_attempts_dict = {}
                     for att in existing_attempts_from_db:
                         existing_attempts_dict[att['attempt_number']] = {
@@ -258,34 +317,37 @@ def register_routes(bp):
                             'raza_score': att['raza_score'] or 0,
                             'raza_score_precise': att['raza_score_precise'] or 0.0
                         }
-                    # Mettre à jour avec les nouvelles tentatives du formulaire
+
                     attempts_data = {}
                     for i, attempt_value in enumerate(attempts):
                         attempt_num = i + 1
-                        if attempt_value:  # Si une nouvelle valeur est fournie
+                        if attempt_value:
                             raza_score = 0
                             raza_score_precise = 0.0
+
                             if attempt_value.upper() not in Config.get_result_special_values():
                                 try:
                                     attempt_float = float(attempt_value)
                                     if game.get('wpa_points', False):
-                                        raza_score, raza_score_precise = calculate_and_store_raza(athlete, game,
-                                                                                                  attempt_float)
+                                        raza_score, raza_score_precise = calculate_and_store_raza(athlete_for_raza,
+                                                                                                  game, attempt_float)
                                 except (ValueError, TypeError) as e:
                                     print(f"Error processing attempt {attempt_num}: {e}")
+
                             wind_velocity = None
                             if i < len(wind_attempts) and wind_attempts[i]:
                                 try:
                                     wind_velocity = float(wind_attempts[i])
                                 except (ValueError, TypeError):
                                     wind_velocity = None
+
                             height_value = None
                             if i < len(heights) and heights[i]:
                                 try:
                                     height_value = float(heights[i])
                                 except (ValueError, TypeError):
                                     height_value = None
-                            # Nouvelle tentative du formulaire
+
                             attempts_data[attempt_num] = {
                                 'value': attempt_value,
                                 'raza_score': raza_score,
@@ -294,9 +356,8 @@ def register_routes(bp):
                                 'height': height_value
                             }
                         elif attempt_num in existing_attempts_dict:
-                            # Garder la tentative existante si aucune nouvelle valeur n'est fournie
                             attempts_data[attempt_num] = existing_attempts_dict[attempt_num]
-                    # CALCULER LA MEILLEURE PERFORMANCE EN TENANT COMPTE DE TOUTES LES TENTATIVES
+
                     all_valid_attempts = []
                     all_raza_scores = []
                     for attempt_num, attempt_data in attempts_data.items():
@@ -309,7 +370,7 @@ def register_routes(bp):
                                     all_raza_scores.append(attempt_data['raza_score'])
                             except (ValueError, TypeError):
                                 continue
-                    # Calculer la meilleure performance
+
                     if not all_valid_attempts:
                         performance_value = "NM"
                         max_raza_score = 0
@@ -321,9 +382,9 @@ def register_routes(bp):
                         max_raza_score = 0
                         max_raza_score_precise = 0.0
                         if game.get('wpa_points', False):
-                            max_raza_score, max_raza_score_precise = calculate_and_store_raza(athlete, game,
+                            max_raza_score, max_raza_score_precise = calculate_and_store_raza(athlete_for_raza, game,
                                                                                               performance_value)
-                    # Mettre à jour le résultat
+
                     result_data = {
                         'value': performance_value,
                         'best_attempt': best_attempt_display,
@@ -337,15 +398,16 @@ def register_routes(bp):
                             pass
                     if record and record != '':
                         result_data['record'] = record
+
                     Result.update(result_id, **result_data)
-                    # Mettre à jour/créer les tentatives
+
                     for attempt_num, attempt_data in attempts_data.items():
                         existing_attempt = execute_one("""
                             SELECT id FROM attempts 
                             WHERE result_id = %s AND attempt_number = %s
                         """, (result_id, attempt_num))
+
                         if existing_attempt:
-                            # Mettre à jour la tentative existante
                             execute_query("""
                                 UPDATE attempts 
                                 SET value = %s, wind_velocity = %s, height = %s, 
@@ -360,7 +422,6 @@ def register_routes(bp):
                                 existing_attempt['id']
                             ))
                         else:
-                            # Créer une nouvelle tentative
                             Attempt.create(
                                 result_id=result_id,
                                 attempt_number=attempt_num,
@@ -370,17 +431,16 @@ def register_routes(bp):
                                 raza_score_precise=attempt_data['raza_score_precise'],
                                 height=attempt_data.get('height')
                             )
-                    # Vérifier la qualification pour la finale
+
                     if game['event'] in ['Long Jump', 'Triple Jump', 'Shot Put', 'Discus Throw', 'Javelin Throw',
                                          'Club Throw']:
-                        # Compter les tentatives valides (1-3 pour la qualification)
                         qualifying_attempts = sum(1 for i in range(1, 4) if i in attempts_data and
                                                   attempts_data[i]['value'] and
                                                   attempts_data[i][
                                                       'value'].upper() not in Config.get_result_special_values())
                         if qualifying_attempts >= 3:
                             update_final_order_after_three_attempts(game_id)
-                # Track events processing for existing results
+
                 elif game['event'] in Config.get_track_events():
                     if value.upper() in Config.get_result_special_values():
                         performance_value = value.upper()
@@ -391,7 +451,8 @@ def register_routes(bp):
                             performance_seconds = parse_time_to_seconds(value)
                             performance_value = format_time_output(performance_seconds)
                             if game.get('wpa_points', False):
-                                max_raza_score, max_raza_score_precise = calculate_and_store_raza(athlete, game,
+                                max_raza_score, max_raza_score_precise = calculate_and_store_raza(athlete_for_raza,
+                                                                                                  game,
                                                                                                   performance_seconds)
                             else:
                                 max_raza_score = 0
@@ -399,6 +460,7 @@ def register_routes(bp):
                         except (ValueError, IndexError) as e:
                             flash('Invalid time format', 'danger')
                             return redirect(url_for('admin.game_results', id=game_id))
+
                     result_data = {
                         'value': performance_value,
                         'raza_score': max_raza_score,
@@ -406,44 +468,58 @@ def register_routes(bp):
                     }
                     if record and record != '':
                         result_data['record'] = record
+
                     Result.update(result_id, **result_data)
+
                 flash(flash_message, 'success')
                 return redirect(url_for('admin.game_results', id=game_id))
-            # Si aucun résultat existant, créer un nouveau (code existant pour les nouveaux résultats)
+
             if not StartList.athlete_in_startlist(game_id, athlete_sdms):
                 flash(f'Warning: Athlete SDMS {athlete_sdms} is not in the start list.', 'warning')
-            # Field events processing for new results
+
+            primary_class = athlete_classes[0] if athlete_classes else athlete['class']
+            athlete_for_raza = {
+                'gender': athlete['gender'],
+                'class': primary_class
+            }
+
             if game['event'] in Config.get_field_events():
                 valid_attempts = []
                 raza_scores = []
                 attempts_data = {}
                 all_attempt_values = []
+
                 for i, attempt_value in enumerate(attempts):
                     raza_score = 0
                     raza_score_precise = 0.0
+
                     if attempt_value and attempt_value.upper() not in Config.get_result_special_values():
                         try:
                             attempt_float = float(attempt_value)
                             valid_attempts.append(attempt_float)
                             all_attempt_values.append(attempt_float)
                             if game.get('wpa_points', False):
-                                raza_score, raza_score_precise = calculate_and_store_raza(athlete, game, attempt_float)
+                                raza_score, raza_score_precise = calculate_and_store_raza(athlete_for_raza, game,
+                                                                                          attempt_float)
                                 if raza_score > 0:
                                     raza_scores.append(raza_score)
                         except (ValueError, TypeError) as e:
                             print(f"Error processing attempt {i + 1}: {e}")
+
                     wind_velocity = None
                     if i < len(wind_attempts) and wind_attempts[i]:
                         try:
                             wind_velocity = float(wind_attempts[i])
                         except (ValueError, TypeError):
                             wind_velocity = None
+
                     height_value = None
                     if i < len(heights) and heights[i]:
                         try:
                             height_value = float(heights[i])
                         except (ValueError, TypeError):
                             height_value = None
+
                     if attempt_value:
                         attempts_data[i + 1] = {
                             'value': attempt_value,
@@ -452,6 +528,7 @@ def register_routes(bp):
                             'wind_velocity': wind_velocity,
                             'height': height_value
                         }
+
                 if not valid_attempts:
                     performance_value = "NM"
                     max_raza_score = 0
@@ -463,9 +540,11 @@ def register_routes(bp):
                     if raza_scores and game.get('wpa_points', False):
                         for i, attempt_value in enumerate(all_attempt_values):
                             if attempt_value == performance_value:
-                                raza_score, raza_score_precise = calculate_and_store_raza(athlete, game, attempt_value)
+                                raza_score, raza_score_precise = calculate_and_store_raza(athlete_for_raza, game,
+                                                                                          attempt_value)
                                 max_raza_score_precise = raza_score_precise
                                 break
+
                 result_data = {
                     'game_id': game_id,
                     'athlete_sdms': athlete_sdms,
@@ -475,24 +554,28 @@ def register_routes(bp):
                     'raza_score': max_raza_score,
                     'raza_score_precise': max_raza_score_precise
                 }
+
                 if weight:
                     try:
                         result_data['weight'] = float(weight)
                     except (ValueError, TypeError):
                         pass
+
                 if record and record != '':
                     result_data['record'] = record
+
                 result_id = Result.create(**result_data)
                 if not result_id:
                     flash('Failed to create result', 'danger')
                     return redirect(url_for('admin.game_results', id=game_id))
+
                 if attempts_data:
                     Attempt.create_multiple(result_id=result_id, attempts=attempts_data)
-                # Check for final round qualification
+
                 if game['event'] in ['Long Jump', 'Triple Jump', 'Shot Put', 'Discus Throw', 'Javelin Throw',
                                      'Club Throw'] and len(attempts_data) >= 3:
                     update_final_order_after_three_attempts(game_id)
-            # Track events processing for new results
+
             elif game['event'] in Config.get_track_events():
                 if value.upper() in Config.get_result_special_values():
                     performance_value = value.upper()
@@ -503,7 +586,7 @@ def register_routes(bp):
                         performance_seconds = parse_time_to_seconds(value)
                         performance_value = format_time_output(performance_seconds)
                         if game.get('wpa_points', False):
-                            max_raza_score, max_raza_score_precise = calculate_and_store_raza(athlete, game,
+                            max_raza_score, max_raza_score_precise = calculate_and_store_raza(athlete_for_raza, game,
                                                                                               performance_seconds)
                         else:
                             max_raza_score = 0
@@ -511,6 +594,7 @@ def register_routes(bp):
                     except (ValueError, IndexError) as e:
                         flash('Invalid time format', 'danger')
                         return redirect(url_for('admin.game_results', id=game_id))
+
                 result_data = {
                     'game_id': game_id,
                     'athlete_sdms': athlete_sdms,
@@ -519,19 +603,24 @@ def register_routes(bp):
                     'raza_score': max_raza_score,
                     'raza_score_precise': max_raza_score_precise
                 }
+
                 if record and record != '':
                     result_data['record'] = record
+
                 result_id = Result.create(**result_data)
                 if not result_id:
                     flash('Failed to create result', 'danger')
                     return redirect(url_for('admin.game_results', id=game_id))
+
             flash('Result added successfully', 'success')
             return redirect(url_for('admin.game_results', id=game_id))
+
         except Exception as e:
             print(f"Unexpected error in result_add: {e}")
             traceback.print_exc()
             flash('An unexpected error occurred', 'danger')
             return redirect(url_for('admin.game_results', id=game_id))
+
     @bp.route('/results/<int:id>/delete', methods=['POST'])
     @admin_required
     def result_delete(id):
