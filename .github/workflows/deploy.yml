@@ -1,14 +1,16 @@
 name: Deploy to Production
+
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
     - name: Pull latest code
-      uses: appleboy/ssh-action@v0.1.7
+      uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.HOST }}
         username: ${{ secrets.USERNAME }}
@@ -17,9 +19,27 @@ jobs:
         timeout: 120s
         script: |
           cd /home/khalil/tunis-gp25
-          git pull origin main --force
+          git fetch origin
+          git reset --hard origin/main
+          echo "✅ Code pulled successfully"
+
+    - name: Fix static permissions
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        password: ${{ secrets.PASSWORD }}
+        port: 6534
+        timeout: 60s
+        script: |
+          cd /home/khalil/tunis-gp25
+          mkdir -p static
+          chmod -R 755 static/
+          chown -R $USER:$USER static/
+          echo "✅ Static permissions fixed"
+
     - name: Stop containers
-      uses: appleboy/ssh-action@v0.1.7
+      uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.HOST }}
         username: ${{ secrets.USERNAME }}
@@ -29,8 +49,10 @@ jobs:
         script: |
           cd /home/khalil/tunis-gp25
           docker-compose down || true
+          echo "✅ Containers stopped"
+
     - name: Create environment file
-      uses: appleboy/ssh-action@v0.1.7
+      uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.HOST }}
         username: ${{ secrets.USERNAME }}
@@ -60,24 +82,39 @@ jobs:
           VOLUNTEERS_COUNT=${{ secrets.VOLUNTEERS_COUNT }}
           LOC_COUNT=${{ secrets.LOC_COUNT }}
           OFFICIALS_COUNT=${{ secrets.OFFICIALS_COUNT }}
-          POSTGRES_DB=tunis_gp25_db
-          POSTGRES_USER=tunis_user
-          POSTGRES_PASSWORD=TunisGP25_SecurePass_2024
           FLASK_SECRET_KEY=${{ secrets.SECRET_KEY }}
           EOF
-    - name: Build containers
-      uses: appleboy/ssh-action@v0.1.7
+          echo "✅ Environment file created"
+
+    - name: Clean Docker resources
+      uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.HOST }}
         username: ${{ secrets.USERNAME }}
         password: ${{ secrets.PASSWORD }}
         port: 6534
-        timeout: 240s
+        timeout: 120s
+        script: |
+          cd /home/khalil/tunis-gp25
+          docker system prune -f
+          docker image prune -f
+          echo "✅ Docker resources cleaned"
+
+    - name: Build containers
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.HOST }}
+        username: ${{ secrets.USERNAME }}
+        password: ${{ secrets.PASSWORD }}
+        port: 6534
+        timeout: 300s
         script: |
           cd /home/khalil/tunis-gp25
           docker-compose build --no-cache
+          echo "✅ Containers built successfully"
+
     - name: Start containers
-      uses: appleboy/ssh-action@v0.1.7
+      uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.HOST }}
         username: ${{ secrets.USERNAME }}
@@ -87,24 +124,39 @@ jobs:
         script: |
           cd /home/khalil/tunis-gp25
           docker-compose up -d
+          echo "✅ Containers started"
+
     - name: Wait for services
-      uses: appleboy/ssh-action@v0.1.7
+      uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.HOST }}
         username: ${{ secrets.USERNAME }}
         password: ${{ secrets.PASSWORD }}
         port: 6534
-        timeout: 30s
+        timeout: 60s
         script: |
-          sleep 15
+          echo "⏳ Waiting for services to initialize..."
+          sleep 30
+          echo "✅ Wait completed"
+
     - name: Check deployment status
-      uses: appleboy/ssh-action@v0.1.7
+      uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.HOST }}
         username: ${{ secrets.USERNAME }}
         password: ${{ secrets.PASSWORD }}
         port: 6534
-        timeout: 30s
+        timeout: 60s
         script: |
           cd /home/khalil/tunis-gp25
+          echo "📊 Container Status:"
           docker-compose ps
+          echo ""
+          echo "📊 Container Logs (last 10 lines):"
+          docker-compose logs --tail=10 flask_app
+          echo ""
+          echo "🏥 Testing health endpoint..."
+          sleep 5
+          curl -f http://localhost:5000/health || echo "⚠️  Health check failed"
+          echo ""
+          echo "🎉 Deployment completed!"
