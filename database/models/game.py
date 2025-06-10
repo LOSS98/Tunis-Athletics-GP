@@ -1,17 +1,47 @@
 from database.db_manager import execute_one, execute_query
+
+
 class Game:
     @staticmethod
     def get_all():
-        return execute_query("SELECT * FROM games ORDER BY day, time", fetch=True)
+        return execute_query("""
+            SELECT g.*, 
+                   g.manual_startlist_pdf,
+                   g.generated_startlist_pdf, 
+                   g.manual_results_pdf,
+                   g.generated_results_pdf
+            FROM games g 
+            ORDER BY g.day, g.time
+        """, fetch=True)
+
     @staticmethod
     def get_by_id(id):
-        game = execute_one("SELECT * FROM games WHERE id = %s", (id,))
+        game = execute_one("""
+            SELECT g.*,
+                   g.manual_startlist_pdf,
+                   g.generated_startlist_pdf, 
+                   g.manual_results_pdf,
+                   g.generated_results_pdf
+            FROM games g 
+            WHERE g.id = %s
+        """, (id,))
+
         if game:
             classes = game.get('classes') or ''
             genders = game.get('genders') or ''
             game['classes_list'] = [c.strip() for c in classes.split(',') if c.strip()]
             game['genders_list'] = [g.strip() for g in genders.split(',') if g.strip()]
+
+            # S'assurer que les champs PDF existent (au cas où les colonnes n'existent pas encore)
+            pdf_fields = ['manual_startlist_pdf', 'generated_startlist_pdf', 'manual_results_pdf',
+                          'generated_results_pdf']
+            for field in pdf_fields:
+                if field not in game:
+                    game[field] = None
+
         return game
+
+    # Garder toutes les autres méthodes existantes telles quelles...
     @staticmethod
     def create(**data):
         keys = ', '.join(data.keys())
@@ -19,21 +49,26 @@ class Game:
         query = f"INSERT INTO games ({keys}) VALUES ({placeholders}) RETURNING id"
         result = execute_query(query, list(data.values()))
         return result['id'] if result else None
+
     @staticmethod
     def update(id, **data):
         set_clause = ', '.join([f"{k} = %s" for k in data.keys()])
         query = f"UPDATE games SET {set_clause} WHERE id = %s"
         params = list(data.values()) + [id]
         return execute_query(query, params)
+
     @staticmethod
     def delete(id):
         return execute_query("DELETE FROM games WHERE id = %s", (id,))
+
     @staticmethod
     def update_status(id, status):
         return execute_query("UPDATE games SET status = %s WHERE id = %s", (status, id))
+
     @staticmethod
     def update_velocity(id, wind_velocity):
         return execute_query("UPDATE games SET wind_velocity = %s WHERE id = %s", (wind_velocity, id))
+
     @staticmethod
     def toggle_publish(id):
         current = execute_one("SELECT published FROM games WHERE id = %s", (id,))
@@ -42,6 +77,7 @@ class Game:
             execute_query("UPDATE games SET published = %s WHERE id = %s", (new_status, id))
             return new_status
         return False
+
     @staticmethod
     def toggle_official_status(id, user_id):
         current = execute_one("SELECT official FROM games WHERE id = %s", (id,))
@@ -59,10 +95,12 @@ class Game:
                 )
             return new_status
         return False
+
     @staticmethod
     def has_results(game_id):
         count = execute_one("SELECT COUNT(*) as count FROM results WHERE game_id = %s", (game_id,))
         return count['count'] > 0 if count else False
+
     @staticmethod
     def has_alerts(id):
         game = execute_one("SELECT genders, classes FROM games WHERE id = %s", (id,))
@@ -95,27 +133,33 @@ class Game:
             )
         """, (id, tuple(game_genders), game_classes))
         return (result and result['count'] > 0) or (startlist_result and startlist_result['count'] > 0)
+
     @staticmethod
     def get_with_status():
+        # Utiliser get_all() qui inclut maintenant les colonnes PDF
         games = Game.get_all()
         from config import Config
         current_day = Config.get_current_day()
         from datetime import datetime
         current_time = datetime.now()
+
         if current_day is None:
             current_day = 1
         try:
             current_day = int(current_day)
         except (ValueError, TypeError):
             current_day = 1
+
         for game in games:
             game['classes_list'] = [c.strip() for c in game['classes'].split(',')]
             game['genders_list'] = [g.strip() for g in game['genders'].split(',')]
             game_day = game['day']
+
             try:
                 game_day = int(game_day)
             except (ValueError, TypeError):
                 game_day = 1
+
             if game['status'] not in ['finished', 'cancelled']:
                 if current_day == game_day:
                     game_time = datetime.strptime(str(game['time']), '%H:%M:%S').replace(
@@ -133,11 +177,13 @@ class Game:
                     game['computed_status'] = 'finished'
             else:
                 game['computed_status'] = game['status']
+
             game['has_results'] = Game.has_results(game['id'])
             from database.models.startlist import StartList
             game['has_startlist'] = bool(game.get('start_file')) or StartList.has_startlist(game['id'])
             game['is_published'] = game.get('published', False)
             game['has_alerts'] = Game.has_alerts(game['id'])
+
             from database.models.result import Result
             result_count = Result.count_by_game(game['id'])
             startlist_count = StartList.count_by_game(game['id'])
@@ -145,7 +191,16 @@ class Game:
             game['startlist_count'] = startlist_count
             game['result_is_complete'] = result_count >= game['nb_athletes']
             game['startlist_is_complete'] = startlist_count >= game['nb_athletes']
+
+            # S'assurer que les champs PDF existent
+            pdf_fields = ['manual_startlist_pdf', 'generated_startlist_pdf', 'manual_results_pdf',
+                          'generated_results_pdf']
+            for field in pdf_fields:
+                if field not in game:
+                    game[field] = None
+
         return games
+
     @staticmethod
     def athlete_matches_game(athlete, game):
         if not athlete or not game:
@@ -155,7 +210,7 @@ class Game:
         athlete_gender = athlete.get('gender') or ''
         if not genders_str or not athlete_gender:
             return False
-        game_genders = [g.strip() for g in gender_str.split(',') if g.strip()]
+        game_genders = [g.strip() for g in genders_str.split(',') if g.strip()]  # Corriger gender_str en genders_str
         if athlete_gender not in game_genders:
             return False
         # Protection pour les classes
@@ -194,3 +249,58 @@ class Game:
             WHERE heat_group_id = %s AND id != %s 
             ORDER BY heat_number
         """, (game['heat_group_id'], game['id']), fetch=True)
+
+    # Tes nouvelles méthodes PDF restent identiques
+    @staticmethod
+    def update_generated_pdfs(game_id, startlist_pdf=None, results_pdf=None):
+        """Update generated PDF paths"""
+        data = {}
+        if startlist_pdf:
+            data['generated_startlist_pdf'] = startlist_pdf
+        if results_pdf:
+            data['generated_results_pdf'] = results_pdf
+
+        if data:
+            set_clause = ', '.join([f"{k} = %s" for k in data.keys()])
+            query = f"UPDATE games SET {set_clause} WHERE id = %s"
+            params = list(data.values()) + [game_id]
+            return execute_query(query, params)
+        return False
+
+    @staticmethod
+    def update_manual_pdfs(game_id, startlist_pdf=None, results_pdf=None):
+        """Update manual PDF paths"""
+        data = {}
+        if startlist_pdf:
+            data['manual_startlist_pdf'] = startlist_pdf
+        if results_pdf:
+            data['manual_results_pdf'] = results_pdf
+
+        if data:
+            set_clause = ', '.join([f"{k} = %s" for k in data.keys()])
+            query = f"UPDATE games SET {set_clause} WHERE id = %s"
+            params = list(data.values()) + [game_id]
+            return execute_query(query, params)
+        return False
+
+    @staticmethod
+    def get_games_for_bulk_generation():
+        """Get games that need PDF generation"""
+        return execute_query("""
+            SELECT * FROM games 
+            WHERE manual_startlist_pdf IS NULL 
+            AND manual_results_pdf IS NULL
+            ORDER BY day, time
+        """, fetch=True)
+
+    @staticmethod
+    def get_games_with_pdfs():
+        """Get games that have generated PDFs"""
+        return execute_query("""
+            SELECT * FROM games 
+            WHERE generated_startlist_pdf IS NOT NULL 
+            OR generated_results_pdf IS NOT NULL
+            OR manual_startlist_pdf IS NOT NULL 
+            OR manual_results_pdf IS NOT NULL
+            ORDER BY day, time
+        """, fetch=True)

@@ -18,7 +18,15 @@ def register_routes(bp):
         game = Game.get_by_id(id)
         if not game:
             return render_template('404.html'), 404
+
         startlist = StartList.get_by_game(id)
+
+        pdf_fields = ['manual_startlist_pdf', 'generated_startlist_pdf', 'manual_results_pdf', 'generated_results_pdf']
+        for field in pdf_fields:
+            if field not in game:
+                game[field] = None
+
         return render_template('public/startlist_detail.html',
-                            game=game,
-                            startlist=startlist)
+                               game=game,
+                               startlist=startlist,
+                               config=Config)

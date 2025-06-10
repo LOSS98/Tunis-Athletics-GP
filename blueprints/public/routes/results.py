@@ -1,7 +1,9 @@
-from flask import render_template, request
+from flask import render_template, request, send_file, abort
+import os
+from config import Config
+from database.models import Game, Result, StartList, HeatGroup
 
-from config import config
-from database.models import Game, Result, StartList
+
 def register_routes(bp):
     @bp.route('/results')
     def results():
@@ -9,11 +11,23 @@ def register_routes(bp):
         games = Game.get_with_status()
         if search:
             games = [g for g in games if
-                    search.lower() in g['event'].lower() or
-                    search.lower() in g['genders'].lower() or
-                    search.lower() in g['classes'].lower() or
-                    str(g['day']) in search]
+                     search.lower() in g['event'].lower() or
+                     search.lower() in g['genders'].lower() or
+                     search.lower() in g['classes'].lower() or
+                     str(g['day']) in search]
         published_games = [g for g in games if g.get('published', False) and g['has_results']]
+
+        # S'assurer que les champs PDF existent
+        for game in published_games:
+            if 'manual_startlist_pdf' not in game:
+                game['manual_startlist_pdf'] = None
+            if 'generated_startlist_pdf' not in game:
+                game['generated_startlist_pdf'] = None
+            if 'manual_results_pdf' not in game:
+                game['manual_results_pdf'] = None
+            if 'generated_results_pdf' not in game:
+                game['generated_results_pdf'] = None
+
         return render_template('public/results.html', games=published_games, search=search)
 
     @bp.route('/game/<int:id>')
@@ -45,6 +59,12 @@ def register_routes(bp):
         game['has_results'] = len(results) > 0
         game['has_startlist'] = bool(game.get('start_file')) or len(startlist) > 0
 
+        # S'assurer que les champs PDF existent
+        pdf_fields = ['manual_startlist_pdf', 'generated_startlist_pdf', 'manual_results_pdf', 'generated_results_pdf']
+        for field in pdf_fields:
+            if field not in game:
+                game[field] = None
+
         return render_template('public/game_detail.html',
                                game=game,
                                results=results,
@@ -53,4 +73,31 @@ def register_routes(bp):
                                heat_games=heat_games,
                                combined_results=combined_results,
                                all_startlists=all_startlists,
-                               config=config)
+                               config=Config)
+
+
+
+    @bp.route('/pdf/<path:pdf_type>/<path:filename>')
+    def serve_pdf(pdf_type, filename):
+        try:
+            if pdf_type == 'manual_startlists':
+                filepath = os.path.join('static', 'manual_pdfs', 'startlists', filename)
+            elif pdf_type == 'manual_results':
+                filepath = os.path.join('static', 'manual_pdfs', 'results', filename)
+            elif pdf_type == 'generated_startlists':
+                filepath = os.path.join('static', 'generated_pdfs', 'startlists', filename)
+            elif pdf_type == 'generated_results':
+                filepath = os.path.join('static', 'generated_pdfs', 'results', filename)
+            else:
+                print(f"Invalid PDF type: {pdf_type}")
+                abort(404)
+
+            if os.path.exists(filepath):
+                return send_file(filepath, as_attachment=False, mimetype='application/pdf')
+            else:
+                print(f"PDF file not found: {filepath}")
+                abort(404)
+
+        except Exception as e:
+            print(f"Error serving PDF {pdf_type}/{filename}: {e}")
+            abort(404)

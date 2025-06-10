@@ -1103,6 +1103,144 @@ function initializeFormHandlers() {
         });
     }
 }
+function publishAutoStartlistPdf(gameId) {
+    if (confirm('Generate and publish start list PDF automatically?')) {
+        fetch(`/admin/games/${gameId}/publish-auto-pdfs`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            },
+            body: JSON.stringify({type: 'startlist'})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification(data.message, 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showNotification(data.error || 'Error publishing PDF', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Error publishing PDF', 'error');
+        });
+    }
+}
+
+function publishAutoResultsPdf(gameId) {
+    if (confirm('Generate and publish results PDF automatically?')) {
+        fetch(`/admin/games/${gameId}/publish-auto-pdfs`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            },
+            body: JSON.stringify({type: 'results'})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification(data.message, 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showNotification(data.error || 'Error publishing PDF', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Error publishing PDF', 'error');
+        });
+    }
+}
+
+function publishAutoPdfs(gameId) {
+    if (confirm('Generate and publish both start list and results PDFs automatically?')) {
+        fetch(`/admin/games/${gameId}/publish-auto-pdfs`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification(data.message, 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showNotification(data.error || 'Error publishing PDFs', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Error publishing PDFs', 'error');
+        });
+    }
+}
+
+function bulkGeneratePdfs(type) {
+    const typeText = type === 'startlists' ? 'start lists' : 'results';
+    if (confirm(`Generate all missing ${typeText} PDFs? This may take a while.`)) {
+        showNotification(`Generating ${typeText} PDFs...`, 'info');
+
+        fetch('/admin/bulk-generate-pdfs', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            },
+            body: JSON.stringify({type: type})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification(data.message, 'success');
+                setTimeout(() => location.reload(), 2000);
+            } else {
+                showNotification(data.error || `Error generating ${typeText}`, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification(`Error generating ${typeText}`, 'error');
+        });
+    }
+}
+
+function addAthleteToStartlist(gameId, athleteSdms, guideSdms = null) {
+    if (confirm('Add this athlete to the start list?')) {
+        fetch(`/admin/games/${gameId}/add-to-startlist`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            },
+            body: JSON.stringify({
+                athlete_sdms: athleteSdms,
+                guide_sdms: guideSdms
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification(data.message, 'success');
+                // Remove the "Add to Start List" button for this athlete
+                const addButton = document.querySelector(`[data-add-startlist="${athleteSdms}"]`);
+                if (addButton) {
+                    addButton.remove();
+                }
+            } else {
+                showNotification(data.error || 'Error adding to start list', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Error adding to start list', 'error');
+        });
+    }
+}
 
 // Event listeners for closing dropdowns when clicking outside
 document.addEventListener('click', function(e) {
@@ -1155,3 +1293,8 @@ window.displayAthleteSearchResults = displayAthleteSearchResults;
 window.createAthleteResultElement = createAthleteResultElement;
 window.clearEventFilter = clearEventFilter;
 window.initializeEventFilter = initializeEventFilter;
+window.publishAutoStartlistPdf = publishAutoStartlistPdf;
+window.publishAutoResultsPdf = publishAutoResultsPdf;
+window.publishAutoPdfs = publishAutoPdfs;
+window.bulkGeneratePdfs = bulkGeneratePdfs;
+window.addAthleteToStartlist = addAthleteToStartlist;

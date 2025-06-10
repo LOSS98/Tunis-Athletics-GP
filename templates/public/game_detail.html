@@ -34,25 +34,114 @@
 {% endif %}
 
 <div class="mb-6 flex flex-wrap gap-4">
-    {% if game.start_file %}
-        <a href="/{{ config.UPLOAD_FOLDER }}/startlists/{{ game.start_file }}" target="_blank"
+    <!-- Start List PDF -->
+    {% set startlist_pdf = game.manual_startlist_pdf or game.generated_startlist_pdf %}
+    {% if startlist_pdf %}
+        <a href="{% if game.manual_startlist_pdf %}{{ url_for('public.serve_pdf', pdf_type='manual_startlists', filename=game.manual_startlist_pdf) }}{% else %}{{ url_for('public.serve_pdf', pdf_type='generated_startlists', filename=game.generated_startlist_pdf) }}{% endif %}"
+           target="_blank"
            class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
             <i class="fas fa-file-download mr-2"></i>Download Start List
+            {% if game.manual_startlist_pdf %}
+                <span class="ml-2 text-xs bg-blue-400 px-2 py-1 rounded">Official</span>
+            {% else %}
+                <span class="ml-2 text-xs bg-blue-400 px-2 py-1 rounded">Generated</span>
+            {% endif %}
         </a>
     {% endif %}
-    {% if game.result_file %}
-        <a href="/{{ config.UPLOAD_FOLDER }}/results/{{ game.result_file }}" target="_blank"
+
+    <!-- Results PDF -->
+    {% set results_pdf = game.manual_results_pdf or game.generated_results_pdf %}
+    {% if results_pdf %}
+        <a href="{% if game.manual_results_pdf %}{{ url_for('public.serve_pdf', pdf_type='manual_results', filename=game.manual_results_pdf) }}{% else %}{{ url_for('public.serve_pdf', pdf_type='generated_results', filename=game.generated_results_pdf) }}{% endif %}"
+           target="_blank"
            class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">
             <i class="fas fa-file-download mr-2"></i>Download Results PDF
+            {% if game.manual_results_pdf %}
+                <span class="ml-2 text-xs bg-green-400 px-2 py-1 rounded">Official</span>
+            {% else %}
+                <span class="ml-2 text-xs bg-green-400 px-2 py-1 rounded">Generated</span>
+            {% endif %}
         </a>
     {% endif %}
+
+    <!-- Start List Detail -->
     {% if startlist %}
         <a href="{{ url_for('public.game_startlist_detail', id=game.id) }}"
            class="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600">
             <i class="fas fa-list mr-2"></i>View Start List
         </a>
     {% endif %}
+
+    <!-- PDF Viewers -->
+    {% if startlist_pdf %}
+        <button onclick="toggleStartlistPdf()" class="bg-indigo-500 text-white px-4 py-2 rounded-lg hover:bg-indigo-600">
+            <i class="fas fa-eye mr-2"></i><span id="startlistToggleText">View Start List PDF</span>
+        </button>
+    {% endif %}
+
+    {% if results_pdf %}
+        <button onclick="toggleResultsPdf()" class="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600">
+            <i class="fas fa-eye mr-2"></i><span id="resultsToggleText">View Results PDF</span>
+        </button>
+    {% endif %}
 </div>
+
+<!-- PDF Viewers -->
+{% if startlist_pdf %}
+<div id="startlistPdfViewer" class="hidden mb-6 bg-white rounded-lg shadow">
+    <div class="p-4 border-b bg-gray-50">
+        <div class="flex justify-between items-center">
+            <h3 class="text-lg font-bold">
+                <i class="fas fa-file-pdf text-blue-500 mr-2"></i>
+                Start List PDF
+                {% if game.manual_startlist_pdf %}
+                    <span class="text-sm bg-orange-100 text-orange-800 px-2 py-1 rounded ml-2">Official Upload</span>
+                {% else %}
+                    <span class="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded ml-2">Auto-Generated</span>
+                {% endif %}
+            </h3>
+            <button onclick="toggleStartlistPdf()" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+    <div class="p-4">
+        <embed src="{% if game.manual_startlist_pdf %}{{ url_for('public.serve_pdf', pdf_type='manual_startlists', filename=game.manual_startlist_pdf) }}{% else %}{{ url_for('public.serve_pdf', pdf_type='generated_startlists', filename=game.generated_startlist_pdf) }}{% endif %}"
+               type="application/pdf"
+               width="100%"
+               height="600px"
+               class="border rounded" />
+    </div>
+</div>
+{% endif %}
+
+{% if results_pdf %}
+<div id="resultsPdfViewer" class="hidden mb-6 bg-white rounded-lg shadow">
+    <div class="p-4 border-b bg-gray-50">
+        <div class="flex justify-between items-center">
+            <h3 class="text-lg font-bold">
+                <i class="fas fa-file-pdf text-green-500 mr-2"></i>
+                Results PDF
+                {% if game.manual_results_pdf %}
+                    <span class="text-sm bg-orange-100 text-orange-800 px-2 py-1 rounded ml-2">Official Upload</span>
+                {% else %}
+                    <span class="text-sm bg-green-100 text-green-800 px-2 py-1 rounded ml-2">Auto-Generated</span>
+                {% endif %}
+            </h3>
+            <button onclick="toggleResultsPdf()" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+    <div class="p-4">
+        <embed src="{% if game.manual_results_pdf %}{{ url_for('public.serve_pdf', pdf_type='manual_results', filename=game.manual_results_pdf) }}{% else %}{{ url_for('public.serve_pdf', pdf_type='generated_results', filename=game.generated_results_pdf) }}{% endif %}"
+               type="application/pdf"
+               width="100%"
+               height="600px"
+               class="border rounded" />
+    </div>
+</div>
+{% endif %}
 
 {% if heat_group and combined_results %}
 <div class="bg-white rounded-lg shadow overflow-hidden mb-6">

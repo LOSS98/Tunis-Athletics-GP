@@ -86,22 +86,33 @@
                         {% endif %}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
-                        {% if game.start_file %}
-                            <span class="inline-flex items-center px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded mr-1">
-                                <i class="fas fa-file-alt mr-1"></i> S
-                            </span>
+                        <!-- Start List PDF -->
+                        {% set startlist_pdf = game.manual_startlist_pdf or game.generated_startlist_pdf %}
+                        {% if startlist_pdf %}
+                            <a href="{% if game.manual_startlist_pdf %}{{ url_for('public.serve_pdf', pdf_type='manual_startlists', filename=game.manual_startlist_pdf) }}{% else %}{{ url_for('public.serve_pdf', pdf_type='generated_startlists', filename=game.generated_startlist_pdf) }}{% endif %}"
+                               target="_blank"
+                               class="inline-flex items-center px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded mr-1 hover:bg-green-200">
+                                <i class="fas fa-file-pdf mr-1"></i>
+                                S {% if game.manual_startlist_pdf %}<i class="fas fa-upload text-xs ml-1" title="Manual upload"></i>{% else %}<i class="fas fa-robot text-xs ml-1" title="Generated"></i>{% endif %}
+                            </a>
                         {% else %}
                             <span class="inline-flex items-center px-2 py-1 text-xs font-medium bg-gray-100 text-gray-500 rounded mr-1">
-                                <i class="fas fa-file-alt mr-1"></i> S
+                                <i class="fas fa-file-pdf mr-1"></i> S
                             </span>
                         {% endif %}
-                        {% if game.result_file %}
-                            <span class="inline-flex items-center px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded">
-                                <i class="fas fa-file-alt mr-1"></i> R
-                            </span>
+
+                        <!-- Results PDF -->
+                        {% set results_pdf = game.manual_results_pdf or game.generated_results_pdf %}
+                        {% if results_pdf %}
+                            <a href="{% if game.manual_results_pdf %}{{ url_for('public.serve_pdf', pdf_type='manual_results', filename=game.manual_results_pdf) }}{% else %}{{ url_for('public.serve_pdf', pdf_type='generated_results', filename=game.generated_results_pdf) }}{% endif %}"
+                               target="_blank"
+                               class="inline-flex items-center px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded hover:bg-green-200">
+                                <i class="fas fa-file-pdf mr-1"></i>
+                                R {% if game.manual_results_pdf %}<i class="fas fa-upload text-xs ml-1" title="Manual upload"></i>{% else %}<i class="fas fa-robot text-xs ml-1" title="Generated"></i>{% endif %}
+                            </a>
                         {% else %}
                             <span class="inline-flex items-center px-2 py-1 text-xs font-medium bg-gray-100 text-gray-500 rounded">
-                                <i class="fas fa-file-alt mr-1"></i> R
+                                <i class="fas fa-file-pdf mr-1"></i> R
                             </span>
                         {% endif %}
                     </td>

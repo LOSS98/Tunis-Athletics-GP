@@ -1,0 +1,51 @@
+{% extends "admin/base_admin.html" %}
+{% block page_title %}Upload PDFs - {{ game.event }}{% endblock %}
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="mb-6">
+        <div class="flex items-center justify-between">
+            <h2 class="text-2xl font-bold">Upload PDFs - Game #{{ game.id }}</h2>
+            <a href="{{ url_for('admin.game_results', id=game.id) }}" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+                <i class="fas fa-arrow-left mr-2"></i>Back to Results
+            </a>
+        </div>
+        <div class="mt-2 text-gray-600">
+            {{ game.event }} - {{ game.genders }} - {{ game.classes }}
+        </div>
+    </div>
+
+    <div class="bg-white rounded-lg shadow p-6">
+        <form method="POST" enctype="multipart/form-data">
+            {{ form.hidden_tag() }}
+
+            <div class="space-y-6">
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">
+                        <i class="fas fa-list mr-2"></i>Start List PDF
+                    </label>
+                    {{ form.startlist_pdf(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500") }}
+                    <p class="text-sm text-gray-600 mt-1">Upload to overwrite generated start list PDF</p>
+                </div>
+
+                <div>
+                    <label class="block text-gray-700 text-sm font-bold mb-2">
+                        <i class="fas fa-medal mr-2"></i>Results PDF
+                    </label>
+                    {{ form.results_pdf(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500") }}
+                    <p class="text-sm text-gray-600 mt-1">Upload to overwrite generated results PDF</p>
+                </div>
+            </div>
+
+            <div class="flex justify-between pt-6 mt-6 border-t">
+                <a href="{{ url_for('admin.game_results', id=game.id) }}"
+                   class="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600">
+                    Cancel
+                </a>
+                <button type="submit" class="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600">
+                    <i class="fas fa-upload mr-2"></i>Upload PDFs
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

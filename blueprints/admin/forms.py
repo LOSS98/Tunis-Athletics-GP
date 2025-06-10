@@ -24,6 +24,8 @@ class UserForm(FlaskForm):
         ('loc', 'LOC'),
         ('technical_delegate', 'Technical Delegate')
     ], validators=[DataRequired()])
+
+
 class GameForm(FlaskForm):
     event = SelectField('Event', validators=[DataRequired()])
     genders = StringField('Genders (comma separated)', validators=[DataRequired(), Length(max=50)])
@@ -33,7 +35,6 @@ class GameForm(FlaskForm):
     day = IntegerField('Day', validators=[DataRequired(), NumberRange(min=1, max=8)])
     time = TimeField('Time', validators=[DataRequired()])
     nb_athletes = IntegerField('Number of Athletes', validators=[DataRequired(), NumberRange(min=1)])
-    photo_finish = FileField('Photo Finish', validators=[FileAllowed(['jpg', 'jpeg', 'png', 'pdf'])])
     status = SelectField('Status', choices=[
         ('scheduled', 'Scheduled'),
         ('started', 'Started'),
@@ -43,8 +44,7 @@ class GameForm(FlaskForm):
     ], validators=[DataRequired()])
     published = BooleanField('Published')
     wpa_points = BooleanField('Use WPA Points (RAZA Scoring)')
-    start_file = FileField('Start List File', validators=[FileAllowed(['pdf', 'txt'])])
-    result_file = FileField('Results File', validators=[FileAllowed(['pdf', 'txt'])])
+
     def __init__(self, *args, **kwargs):
         super(GameForm, self).__init__(*args, **kwargs)
         field_events = get_config_choices('field_events',
@@ -54,22 +54,13 @@ class GameForm(FlaskForm):
                                                            'Universal Relay'])
         all_events = field_events + track_events
         self.event.choices = [(e, e) for e in all_events]
-    def validate_genders(self, field):
-        if not field.data:
-            raise ValidationError('At least one gender is required')
-        genders = [g.strip() for g in field.data.split(',')]
-        valid_genders = ['Male', 'Female']
-        invalid_genders = [g for g in genders if g not in valid_genders]
-        if invalid_genders:
-            raise ValidationError(f'Invalid genders: {", ".join(invalid_genders)}. Valid options: Male, Female')
-    def validate_classes(self, field):
-        if not field.data:
-            raise ValidationError('At least one class is required')
-        classes = [c.strip() for c in field.data.split(',')]
-        valid_classes = get_config_choices('classes', [])
-        invalid_classes = [c for c in classes if c not in valid_classes]
-        if invalid_classes:
-            raise ValidationError(f'Invalid classes: {", ".join(invalid_classes)}')
+
+
+
+class PDFUploadForm(FlaskForm):
+    startlist_pdf = FileField('Start List PDF', validators=[Optional(), FileAllowed(['pdf'], 'PDF files only')])
+    results_pdf = FileField('Results PDF', validators=[Optional(), FileAllowed(['pdf'], 'PDF files only')])
+
 class AthleteForm(FlaskForm):
     sdms = IntegerField('SDMS Number', validators=[DataRequired(), NumberRange(min=1)])
     firstname = StringField('First Name', validators=[DataRequired(), Length(max=100)])
