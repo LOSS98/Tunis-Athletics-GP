@@ -7,6 +7,7 @@ from ..forms import GameForm, PDFUploadForm
 from database.models import Game, Result, Attempt, StartList
 from utils.helpers import save_uploaded_file
 from PyPDF2 import PdfMerger
+from werkzeug.utils import secure_filename
 import os
 
 def register_routes(bp):

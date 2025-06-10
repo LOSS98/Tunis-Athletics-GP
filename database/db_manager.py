@@ -143,6 +143,10 @@ def init_db():
             result_file VARCHAR(255),
             wind_velocity double precision DEFAULT 0.0,
             wpa_points BOOLEAN DEFAULT FALSE,
+            generated_startlist_pdf VARCHAR(255),
+            generated_results_pdf VARCHAR(255),
+            manual_startlist_pdf VARCHAR(255),
+            manual_results_pdf VARCHAR(255),
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )""",
         """CREATE TABLE IF NOT EXISTS results (
