@@ -203,6 +203,7 @@ def register_routes(bp):
             return jsonify({'published': new_status})
         except Exception as e:
             return jsonify({'error': str(e)}), 500
+
     @bp.route('/games/<int:game_id>/generate-pdf')
     @admin_required
     def generate_game_pdf(game_id):
@@ -211,20 +212,40 @@ def register_routes(bp):
             if not game:
                 flash('Game not found', 'danger')
                 return redirect(url_for('admin.games_list'))
+
+            game['classes_list'] = [c.strip() for c in game['classes'].split(',') if c.strip()]
             results = Result.get_all(game_id=game_id)
+
             # Charger les tentatives pour les épreuves de terrain
             if game['event'] in Config.get_field_events():
                 for result in results:
                     result['attempts'] = Attempt.get_by_result(result['id'])
+
+            # Check for heat group data
+            heat_group = None
+            combined_results = None
+
+            if Game.is_heat_game(game):
+                from database.models.heat_group import HeatGroup
+                heat_group = HeatGroup.get_by_id(game['heat_group_id'])
+                combined_results = HeatGroup.get_combined_results(game['heat_group_id'])
+                for i, result in enumerate(combined_results):
+                    result['final_rank'] = i + 1
+
             generator = PDFGenerator()
-            pdf_buffer = generator.generate_results_pdf(game, results)
-            filename = f"results_{game['event']}_{game['gender']}_{game['day']}.pdf"
+            pdf_buffer = generator.generate_results_pdf(game, results, heat_group, combined_results)
+
+            # Generate filename
+            gender_short = 'M' if game['genders'] == 'Male' else 'W'
+            filename = f"Results_{gender_short}_{game['event'].replace(' ', '_')}_{game['classes']}_{game['day']}.pdf"
+
             return send_file(
                 pdf_buffer,
                 as_attachment=False,
                 download_name=filename,
                 mimetype='application/pdf'
             )
+
         except Exception as e:
             print(f"Error generating PDF: {e}")
             flash(f'Error generating PDF: {str(e)}', 'danger')

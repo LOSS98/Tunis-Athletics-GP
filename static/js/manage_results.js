@@ -621,7 +621,7 @@ function openGameEditModal(gameIdParam, gameData) {
     const fields = {
         'editGameId': gameIdParam,
         'editEvent': gameData.event,
-        'editGender': gameData.genders,
+        'editGenders': gameData.genders,
         'editClasses': gameData.classes,
         'editPhase': gameData.phase || '',
         'editArea': gameData.area || '',
