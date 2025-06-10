@@ -1,11 +1,11 @@
 import traceback
-from datetime import datetime
+from datetime import datetime, date
 from flask import render_template, redirect, url_for, flash, request, jsonify
 from flask_login import current_user
 from utils.raza_calculation import calculate_raza, verify_combination
 from ..auth import admin_required, technical_delegate_required
 from ..forms import ResultForm
-from database.models import Athlete, Game, StartList, Result, Attempt
+from database.models import Athlete, Game, StartList, Result, Attempt, WorldRecord, PersonalBest, HeatGroup
 from database.db_manager import execute_one, execute_query
 from config import Config
 import re
@@ -22,6 +22,24 @@ def check_athlete_class_compatibility(athlete, game):
     has_compatible_class = len(compatible_classes) > 0
 
     return has_compatible_class, athlete_classes
+
+
+def get_matching_class(athlete, game):
+    """Get the athlete's class that matches the game classes"""
+    if not athlete or not athlete.get('class'):
+        return None
+
+    athlete_classes = [c.strip() for c in athlete['class'].split(',') if c.strip()]
+    game_classes = [c.strip() for c in game['classes'].split(',') if c.strip()]
+
+    # Return the first matching class
+    for athlete_class in athlete_classes:
+        if athlete_class in game_classes:
+            return athlete_class
+
+    # If no match, return the first athlete class (for backwards compatibility)
+    return athlete_classes[0] if athlete_classes else None
+
 
 def parse_time_to_seconds(time_str):
     time_str = time_str.strip()
@@ -51,6 +69,8 @@ def parse_time_to_seconds(time_str):
             decimal_part = '0000'
         total_seconds = seconds + (int(decimal_part) / 10000)
     return total_seconds
+
+
 def format_time_output(seconds):
     if seconds == 0:
         return "0:00.0000"
@@ -60,15 +80,21 @@ def format_time_output(seconds):
         return f"{minutes}:{remaining_seconds:06.3f}"
     else:
         return f"{remaining_seconds:06.3f}"
-def calculate_and_store_raza(athlete, game, performance_value):
+
+
+def calculate_and_store_raza(athlete, game, performance_value, specific_class=None):
     raza_score = 0
     raza_score_precise = 0.0
-    if verify_combination(athlete['gender'], game['event'], athlete['class']):
+
+    # Utiliser la classe spécifique si fournie, sinon la première classe de l'athlète
+    athlete_class = specific_class or athlete['class']
+
+    if verify_combination(athlete['gender'], game['event'], athlete_class):
         try:
             result = calculate_raza(
                 gender=athlete['gender'],
                 event=game['event'],
-                athlete_class=athlete['class'],
+                athlete_class=athlete_class,
                 performance=float(performance_value)
             )
             response, status = result if isinstance(result, tuple) else (result, 200)
@@ -78,7 +104,158 @@ def calculate_and_store_raza(athlete, game, performance_value):
                 raza_score_precise = float(raza_data.get('raza_score_precise', 0.0))
         except Exception as e:
             print(f"Error calculating RAZA: {e}")
+
     return raza_score, raza_score_precise
+
+
+def check_for_records_and_pbs_improved(result, athlete, game, athlete_class):
+    """Improved function to check for records and personal bests with multi-class support"""
+    if not game.get('official'):
+        return 0, 0
+
+    performance_value = result['value']
+    if performance_value in Config.get_result_special_values():
+        return 0, 0
+
+    try:
+        performance_float = float(performance_value)
+    except (ValueError, TypeError):
+        return 0, 0
+
+    event = game['event']
+    records_created = 0
+    pbs_created = 0
+
+    # Check for World Record
+    if check_and_create_wr(athlete, event, athlete_class, performance_value, performance_float, game):
+        records_created += 1
+
+    # Check for Area Record
+    if athlete.get('region_code') and check_and_create_ar(athlete, event, athlete_class, performance_value,
+                                                          performance_float, game):
+        records_created += 1
+
+    # Check for Personal Best
+    if check_and_create_pb(athlete, event, athlete_class, performance_value, performance_float, game):
+        pbs_created += 1
+
+    return records_created, pbs_created
+
+
+def check_and_create_wr(athlete, event, athlete_class, performance_value, performance_float, game):
+    """Check and create World Record if applicable"""
+    # Check existing approved WR
+    existing_wr = WorldRecord.check_existing_record(event, athlete_class, 'WR')
+
+    # Check pending WR
+    pending_wr = WorldRecord.get_pending_for_event_class(event, athlete_class, 'WR')
+
+    is_new_record = False
+
+    if not existing_wr or performance_float > float(existing_wr['performance']):
+        if not pending_wr or performance_float > float(pending_wr['performance']):
+            is_new_record = True
+        elif pending_wr:
+            # Delete the inferior pending record
+            WorldRecord.delete(pending_wr['id'])
+            is_new_record = True
+
+    if is_new_record:
+        WorldRecord.create(
+            sdms=athlete['sdms'],
+            event=event,
+            athlete_class=athlete_class,
+            performance=performance_value,
+            location='Tunis, Tunisia',
+            npc=athlete['npc'],
+            region_code=athlete.get('region_code'),
+            record_date=date.today(),
+            record_type='WR',
+            made_in_competition=True,
+            competition_id=game['id'],
+            approved=False
+        )
+        return True
+
+    return False
+
+
+def check_and_create_ar(athlete, event, athlete_class, performance_value, performance_float, game):
+    """Check and create Area Record if applicable"""
+    region_code = athlete.get('region_code')
+    if not region_code:
+        return False
+
+    # Check existing approved AR for this region
+    existing_ar = WorldRecord.check_existing_record(event, athlete_class, 'AR', athlete['npc'])
+
+    # Check pending AR for this region
+    pending_ar = WorldRecord.get_pending_for_event_class_region(event, athlete_class, 'AR', region_code)
+
+    is_new_record = False
+
+    if not existing_ar or performance_float > float(existing_ar['performance']):
+        if not pending_ar or performance_float > float(pending_ar['performance']):
+            is_new_record = True
+        elif pending_ar:
+            # Delete the inferior pending record
+            WorldRecord.delete(pending_ar['id'])
+            is_new_record = True
+
+    if is_new_record:
+        WorldRecord.create(
+            sdms=athlete['sdms'],
+            event=event,
+            athlete_class=athlete_class,
+            performance=performance_value,
+            location='Tunis, Tunisia',
+            npc=athlete['npc'],
+            region_code=region_code,
+            record_date=date.today(),
+            record_type='AR',
+            made_in_competition=True,
+            competition_id=game['id'],
+            approved=False
+        )
+        return True
+
+    return False
+
+
+def check_and_create_pb(athlete, event, athlete_class, performance_value, performance_float, game):
+    """Check and create Personal Best if applicable"""
+    # Check existing approved PB
+    existing_pb = PersonalBest.check_existing_pb(athlete['sdms'], event, athlete_class)
+
+    # Check pending PB
+    pending_pb = PersonalBest.get_pending_for_athlete(athlete['sdms'], event, athlete_class)
+
+    is_new_pb = False
+
+    if not existing_pb or performance_float > float(existing_pb['performance']):
+        if not pending_pb or performance_float > float(pending_pb['performance']):
+            is_new_pb = True
+        elif pending_pb:
+            # Delete the inferior pending PB
+            PersonalBest.delete(pending_pb['id'])
+            is_new_pb = True
+
+    if is_new_pb:
+        PersonalBest.create(
+            sdms=athlete['sdms'],
+            event=event,
+            athlete_class=athlete_class,
+            performance=performance_value,
+            location='Tunis, Tunisia',
+            record_date=date.today(),
+            made_in_competition=True,
+            competition_id=game['id'],
+            approved=False
+        )
+        return True
+
+    return False
+
 
 def register_routes(bp):
     @bp.route('/games/<int:id>/results')
@@ -94,6 +271,19 @@ def register_routes(bp):
         results = Result.get_all(game_id=id)
         startlist = StartList.get_by_game(id)
         form = ResultForm()
+
+        # Heat group data
+        heat_group = None
+        heat_siblings = []
+        combined_results = []
+
+        if Game.is_heat_game(game):
+            heat_group = HeatGroup.get_by_id(game['heat_group_id'])
+            heat_siblings = Game.get_heat_siblings(game)
+            combined_results = HeatGroup.get_combined_results(game['heat_group_id'])
+            for i, result in enumerate(combined_results):
+                result['final_rank'] = i + 1
+                result['athlete_classes'] = result['athlete_class'].split(',') if result['athlete_class'] else []
 
         game_json = {
             'id': game['id'],
@@ -112,7 +302,6 @@ def register_routes(bp):
 
         selected_r1 = [r for r in results if r['final_order'] is not None]
         total_selected_r1 = len(selected_r1)
-
         finalists_count = len([r for r in results if r.get('final_order')])
 
         return render_template('admin/results/manage.html',
@@ -121,11 +310,15 @@ def register_routes(bp):
                                results=results,
                                startlist=startlist,
                                form=form,
+                               heat_group=heat_group,
+                               heat_siblings=heat_siblings,
+                               combined_results=combined_results,
                                is_field_event=game['event'] in Config.get_field_events(),
                                is_track_event=game['event'] in Config.get_track_events(),
                                total_selected_r1=total_selected_r1,
                                finalists_count=finalists_count,
                                total_finalists=8)
+
 
     @bp.route('/games/<int:game_id>/results/add', methods=['POST'])
     @admin_required
@@ -226,12 +419,9 @@ def register_routes(bp):
                 raza_score = 0
                 raza_score_precise = 0.0
                 if attempt_result == 'O' and game.get('wpa_points', False):
-                    primary_class = athlete_classes[0] if athlete_classes else athlete['class']
-                    athlete_for_raza = {
-                        'gender': athlete['gender'],
-                        'class': primary_class
-                    }
-                    raza_score, raza_score_precise = calculate_and_store_raza(athlete_for_raza, game, height_float)
+                    matching_class = get_matching_class(athlete, game)
+                    raza_score, raza_score_precise = calculate_and_store_raza(athlete, game, height_float,
+                                                                              matching_class)
 
                 existing_attempts = execute_query(
                     "SELECT MAX(attempt_number) as max_num FROM attempts WHERE result_id = %s",
@@ -254,8 +444,10 @@ def register_routes(bp):
                         best_raza_score = 0
                         best_raza_score_precise = 0.0
                         if game.get('wpa_points', False):
-                            best_raza_score, best_raza_score_precise = calculate_and_store_raza(athlete_for_raza, game,
-                                                                                                best_height)
+                            matching_class = get_matching_class(athlete, game)
+                            best_raza_score, best_raza_score_precise = calculate_and_store_raza(athlete, game,
+                                                                                                best_height,
+                                                                                                matching_class)
 
                         Result.update(result_id,
                                       value=best_height,
@@ -290,15 +482,11 @@ def register_routes(bp):
                 return redirect(url_for('admin.game_results', id=game_id))
 
             existing_result = Result.get_by_game_athlete(game_id, athlete_sdms)
+            matching_class = get_matching_class(athlete, game)
+
             if existing_result:
                 result_id = existing_result['id']
                 flash_message = 'Result updated successfully (overwritten)'
-
-                primary_class = athlete_classes[0] if athlete_classes else athlete['class']
-                athlete_for_raza = {
-                    'gender': athlete['gender'],
-                    'class': primary_class
-                }
 
                 if game['event'] in Config.get_field_events():
                     existing_attempts_from_db = execute_query("""
@@ -329,8 +517,9 @@ def register_routes(bp):
                                 try:
                                     attempt_float = float(attempt_value)
                                     if game.get('wpa_points', False):
-                                        raza_score, raza_score_precise = calculate_and_store_raza(athlete_for_raza,
-                                                                                                  game, attempt_float)
+                                        raza_score, raza_score_precise = calculate_and_store_raza(athlete,
+                                                                                                  game, attempt_float,
+                                                                                                  matching_class)
                                 except (ValueError, TypeError) as e:
                                     print(f"Error processing attempt {attempt_num}: {e}")
 
@@ -382,8 +571,9 @@ def register_routes(bp):
                         max_raza_score = 0
                         max_raza_score_precise = 0.0
                         if game.get('wpa_points', False):
-                            max_raza_score, max_raza_score_precise = calculate_and_store_raza(athlete_for_raza, game,
-                                                                                              performance_value)
+                            max_raza_score, max_raza_score_precise = calculate_and_store_raza(athlete, game,
+                                                                                              performance_value,
+                                                                                              matching_class)
 
                     result_data = {
                         'value': performance_value,
@@ -451,9 +641,10 @@ def register_routes(bp):
                             performance_seconds = parse_time_to_seconds(value)
                             performance_value = format_time_output(performance_seconds)
                             if game.get('wpa_points', False):
-                                max_raza_score, max_raza_score_precise = calculate_and_store_raza(athlete_for_raza,
+                                max_raza_score, max_raza_score_precise = calculate_and_store_raza(athlete,
                                                                                                   game,
-                                                                                                  performance_seconds)
+                                                                                                  performance_seconds,
+                                                                                                  matching_class)
                             else:
                                 max_raza_score = 0
                                 max_raza_score_precise = 0.0
@@ -477,12 +668,6 @@ def register_routes(bp):
             if not StartList.athlete_in_startlist(game_id, athlete_sdms):
                 flash(f'Warning: Athlete SDMS {athlete_sdms} is not in the start list.', 'warning')
 
-            primary_class = athlete_classes[0] if athlete_classes else athlete['class']
-            athlete_for_raza = {
-                'gender': athlete['gender'],
-                'class': primary_class
-            }
-
             if game['event'] in Config.get_field_events():
                 valid_attempts = []
                 raza_scores = []
@@ -499,8 +684,8 @@ def register_routes(bp):
                             valid_attempts.append(attempt_float)
                             all_attempt_values.append(attempt_float)
                             if game.get('wpa_points', False):
-                                raza_score, raza_score_precise = calculate_and_store_raza(athlete_for_raza, game,
-                                                                                          attempt_float)
+                                raza_score, raza_score_precise = calculate_and_store_raza(athlete, game,
+                                                                                          attempt_float, matching_class)
                                 if raza_score > 0:
                                     raza_scores.append(raza_score)
                         except (ValueError, TypeError) as e:
@@ -540,8 +725,8 @@ def register_routes(bp):
                     if raza_scores and game.get('wpa_points', False):
                         for i, attempt_value in enumerate(all_attempt_values):
                             if attempt_value == performance_value:
-                                raza_score, raza_score_precise = calculate_and_store_raza(athlete_for_raza, game,
-                                                                                          attempt_value)
+                                raza_score, raza_score_precise = calculate_and_store_raza(athlete, game,
+                                                                                          attempt_value, matching_class)
                                 max_raza_score_precise = raza_score_precise
                                 break
 
@@ -586,8 +771,9 @@ def register_routes(bp):
                         performance_seconds = parse_time_to_seconds(value)
                         performance_value = format_time_output(performance_seconds)
                         if game.get('wpa_points', False):
-                            max_raza_score, max_raza_score_precise = calculate_and_store_raza(athlete_for_raza, game,
-                                                                                              performance_seconds)
+                            max_raza_score, max_raza_score_precise = calculate_and_store_raza(athlete, game,
+                                                                                              performance_seconds,
+                                                                                              matching_class)
                         else:
                             max_raza_score = 0
                             max_raza_score_precise = 0.0
@@ -639,6 +825,7 @@ def register_routes(bp):
             traceback.print_exc()
             flash(f'Error deleting result: {str(e)}', 'danger')
             return redirect(url_for('admin.games_list'))
+
     @bp.route('/games/<int:game_id>/recalculate-high-jump', methods=['POST'])
     @admin_required
     def recalculate_high_jump_results(game_id):
@@ -656,6 +843,7 @@ def register_routes(bp):
             print(f"Error recalculating High Jump: {e}")
             traceback.print_exc()
             return jsonify({'error': str(e)}), 500
+
     @bp.route('/results/<int:result_id>/add-attempt', methods=['POST'])
     @admin_required
     def add_high_jump_attempt(result_id):
@@ -685,7 +873,8 @@ def register_routes(bp):
             raza_score = 0
             raza_score_precise = 0.0
             if attempt_result == 'O' and athlete:
-                raza_score, raza_score_precise = calculate_and_store_raza(athlete, game, height_float)
+                matching_class = get_matching_class(athlete, game)
+                raza_score, raza_score_precise = calculate_and_store_raza(athlete, game, height_float, matching_class)
             Attempt.create(result_id, next_attempt, attempt_result, None, raza_score, raza_score_precise, height_float)
             if attempt_result == 'O':
                 current_best = execute_one(
@@ -694,7 +883,9 @@ def register_routes(bp):
                 )
                 if current_best and current_best['best_height']:
                     best_height = current_best['best_height']
-                    best_raza_score, best_raza_score_precise = calculate_and_store_raza(athlete, game, best_height)
+                    matching_class = get_matching_class(athlete, game)
+                    best_raza_score, best_raza_score_precise = calculate_and_store_raza(athlete, game, best_height,
+                                                                                        matching_class)
                     Result.update(result_id,
                                   value=best_height,
                                   best_attempt=f"{best_height:.2f}",
@@ -705,6 +896,7 @@ def register_routes(bp):
             print(f"Error adding High Jump attempt: {e}")
             traceback.print_exc()
             return jsonify({'error': 'Server error occurred'}), 500
+
     @bp.route('/games/<int:game_id>/recalculate-raza', methods=['POST'])
     @admin_required
     def recalculate_raza_scores(game_id):
@@ -724,7 +916,9 @@ def register_routes(bp):
                     try:
                         performance = float(result['value'])
                         athlete_data = {'gender': result['gender'], 'class': result['class']}
-                        raza_score, raza_score_precise = calculate_and_store_raza(athlete_data, game, performance)
+                        matching_class = get_matching_class(athlete_data, game)
+                        raza_score, raza_score_precise = calculate_and_store_raza(athlete_data, game, performance,
+                                                                                  matching_class)
                         Result.update(result['id'],
                                       raza_score=raza_score,
                                       raza_score_precise=raza_score_precise)
@@ -735,7 +929,8 @@ def register_routes(bp):
                                 try:
                                     attempt_perf = float(attempt['value'])
                                     attempt_raza, attempt_raza_precise = calculate_and_store_raza(athlete_data, game,
-                                                                                                  attempt_perf)
+                                                                                                  attempt_perf,
+                                                                                                  matching_class)
                                     execute_query("""
                                         UPDATE attempts 
                                         SET raza_score = %s, raza_score_precise = %s 
@@ -750,6 +945,7 @@ def register_routes(bp):
             print(f"Error recalculating RAZA scores: {e}")
             traceback.print_exc()
             return jsonify({'error': 'Server error occurred'}), 500
+
     @bp.route('/startlist/add-from-result', methods=['POST'])
     @admin_required
     def add_to_startlist_from_result():
@@ -762,6 +958,7 @@ def register_routes(bp):
             return jsonify({'success': True})
         except Exception as e:
             return jsonify({'error': str(e)}), 500
+
     @bp.route('/games/<int:game_id>/check-result/<int:athlete_sdms>')
     @admin_required
     def check_result_exists(game_id, athlete_sdms):
@@ -769,6 +966,7 @@ def register_routes(bp):
         if result:
             return jsonify({'exists': True, 'result_id': result['id']})
         return jsonify({'exists': False})
+
     @bp.route('/games/<int:game_id>/auto-rank-round1', methods=['POST'])
     @admin_required
     def auto_rank_round1(game_id):
@@ -827,6 +1025,7 @@ def register_routes(bp):
             print(f"Error in auto_rank_round1: {e}")
             traceback.print_exc()
             return jsonify({'error': str(e)}), 500
+
     @bp.route('/results/<int:result_id>/update-attempts', methods=['POST'])
     @admin_required
     def update_attempts(result_id):
@@ -844,6 +1043,9 @@ def register_routes(bp):
             athlete = Athlete.get_by_sdms(result['athlete_sdms'])
             if not athlete:
                 return jsonify({'error': 'Athlete not found'}), 404
+
+            matching_class = get_matching_class(athlete, game)
+
             # High Jump specific handling
             if game['event'] == 'High Jump':
                 high_jump_attempts = data.get('high_jump_attempts', {})
@@ -858,13 +1060,15 @@ def register_routes(bp):
                         raza_score = 0
                         raza_score_precise = 0.0
                         if value == 'O' and game.get('wpa_points', False):
-                            raza_score, raza_score_precise = calculate_and_store_raza(athlete, game, height)
+                            raza_score, raza_score_precise = calculate_and_store_raza(athlete, game, height,
+                                                                                      matching_class)
                         Attempt.create(result_id, int(attempt_num), value, None, raza_score, raza_score_precise, height)
                         if value == 'O' and height > max_height:
                             max_height = height
                 # Mettre à jour le résultat principal
                 if max_height > 0:
-                    best_raza_score, best_raza_score_precise = calculate_and_store_raza(athlete, game, max_height)
+                    best_raza_score, best_raza_score_precise = calculate_and_store_raza(athlete, game, max_height,
+                                                                                        matching_class)
                     Result.update(result_id,
                                   value=max_height,
                                   best_attempt=f"{max_height:.2f}",
@@ -896,7 +1100,8 @@ def register_routes(bp):
                             attempt_float = float(attempt_value)
                             valid_attempts.append(attempt_float)
                             if game.get('wpa_points', False):
-                                raza_score, raza_score_precise = calculate_and_store_raza(athlete, game, attempt_float)
+                                raza_score, raza_score_precise = calculate_and_store_raza(athlete, game, attempt_float,
+                                                                                          matching_class)
                         except ValueError:
                             pass
                     # Update or create attempt
@@ -920,7 +1125,8 @@ def register_routes(bp):
                     max_raza_score_precise = 0.0
                     if game.get('wpa_points', False):
                         max_raza_score, max_raza_score_precise = calculate_and_store_raza(athlete, game,
-                                                                                          best_performance)
+                                                                                          best_performance,
+                                                                                          matching_class)
                     Result.update(result_id,
                                   value=best_performance,
                                   best_attempt=f"{best_performance:.2f}",
@@ -934,6 +1140,7 @@ def register_routes(bp):
             print(f"Error updating attempts: {e}")
             traceback.print_exc()
             return jsonify({'error': str(e)}), 500
+
     @bp.route('/games/<int:game_id>/high-jump-results', methods=['POST'])
     @admin_required
     def save_high_jump_results(game_id):
@@ -980,8 +1187,9 @@ def register_routes(bp):
                     raza_score = 0
                     raza_score_precise = 0.0
                     if game.get('wpa_points', False):
+                        matching_class = get_matching_class(athlete, game)
                         raza_score, raza_score_precise = calculate_and_store_raza(
-                            athlete, game, best_height
+                            athlete, game, best_height, matching_class
                         )
                     Result.update(
                         result_id,
@@ -995,6 +1203,7 @@ def register_routes(bp):
             print(f"Error saving High Jump results: {e}")
             traceback.print_exc()
             return jsonify({'error': str(e)}), 500
+
     @bp.route('/games/<int:game_id>/select-finalists', methods=['POST'])
     @admin_required
     def select_finalists_for_field_event(game_id):
@@ -1056,6 +1265,7 @@ def register_routes(bp):
             print(f"Error in select_finalists_for_field_event: {e}")
             traceback.print_exc()
             return jsonify({'error': str(e)}), 500
+
     @bp.route('/games/<int:game_id>/update-manual-ranking', methods=['POST'])
     @admin_required
     def update_manual_ranking(game_id):
@@ -1081,6 +1291,7 @@ def register_routes(bp):
             print(f"Error updating manual ranking: {e}")
             traceback.print_exc()
             return jsonify({'error': str(e)}), 500
+
     @bp.route('/games/<int:game_id>/toggle-official', methods=['POST'])
     @technical_delegate_required
     def toggle_game_official(game_id):
@@ -1089,9 +1300,21 @@ def register_routes(bp):
             if new_status:
                 # Check all results for records and PBs
                 results = Result.get_all(game_id=game_id)
+                records_found = 0
+                pbs_found = 0
+
                 for result in results:
-                    process_result_for_records(result['id'])
-                message = 'All game results marked as OFFICIAL and checked for records'
+                    athlete = Athlete.get_by_sdms(result['athlete_sdms'])
+                    if athlete:
+                        game = Game.get_by_id(game_id)
+                        athlete_class = get_matching_class(athlete, game)
+                        if athlete_class:
+                            created_records, created_pbs = check_for_records_and_pbs_improved(result, athlete, game,
+                                                                                              athlete_class)
+                            records_found += created_records
+                            pbs_found += created_pbs
+
+                message = f'Game marked as OFFICIAL. Found {records_found} new records and {pbs_found} personal bests.'
             else:
                 message = 'Game results marked as UNOFFICIAL'
             return jsonify({
@@ -1104,6 +1327,8 @@ def register_routes(bp):
         except Exception as e:
             print(f"Error toggling game official status: {e}")
             return jsonify({'success': False, 'error': str(e)}), 500
+
+
 def update_final_order_after_three_attempts(game_id):
     try:
         results_with_three_attempts = execute_query("""
@@ -1133,6 +1358,8 @@ def update_final_order_after_three_attempts(game_id):
             )
     except Exception as e:
         print(f"Error updating final order: {e}")
+
+
 def check_and_update_long_jump_progression(attempts):
     special_values = {"X", "F", "NM", "DNS", "DNF"}  # valeurs d'échec ou spéciales
     cleaned_attempts = []
@@ -1158,6 +1385,8 @@ def check_and_update_long_jump_progression(attempts):
         return None, cleaned_attempts, False
     # Option : on peut ici vérifier des règles métiers supplémentaires
     return best_valid, cleaned_attempts, True
+
+
 def process_result_for_records(result_id):
     result = Result.get_by_id(result_id)
     if not result:
@@ -1166,5 +1395,7 @@ def process_result_for_records(result_id):
     athlete = Athlete.get_by_sdms(result['athlete_sdms'])
     if not game or not athlete or not game.get('official'):
         return
-    from .records import check_for_records_and_pbs
-    check_for_records_and_pbs(result, athlete, game)
+
+    athlete_class = get_matching_class(athlete, game)
+    if athlete_class:
+        check_for_records_and_pbs_improved(result, athlete, game, athlete_class)

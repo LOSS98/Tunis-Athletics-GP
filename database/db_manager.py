@@ -199,6 +199,7 @@ def init_db():
             performance VARCHAR(20) NOT NULL,
             location VARCHAR(100) NOT NULL,
             npc VARCHAR(3),
+            region_code VARCHAR(10),
             record_date DATE NOT NULL,
             record_type VARCHAR(10) NOT NULL,
             approved BOOLEAN DEFAULT FALSE,
@@ -209,6 +210,7 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (sdms) REFERENCES athletes(sdms) ON DELETE SET NULL,
             FOREIGN KEY (npc) REFERENCES npcs(code) ON DELETE SET NULL,
+            FOREIGN KEY (region_code) REFERENCES regions(code) ON DELETE SET NULL,
             FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL,
             FOREIGN KEY (competition_id) REFERENCES games(id) ON DELETE SET NULL
         )""",
@@ -278,7 +280,16 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (npc) REFERENCES npcs(code) ON DELETE CASCADE
-        )"""
+        )""",
+        """CREATE TABLE IF NOT EXISTS heat_groups (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(200) NOT NULL,
+                    event VARCHAR(100) NOT NULL,
+                    genders TEXT NOT NULL,
+                    classes TEXT NOT NULL,
+                    day INTEGER NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )"""
     ]
     try:
         with get_db_connection() as conn:
@@ -329,6 +340,8 @@ def insert_default_config():
         ('volunteers_count', '50', 'integer', 'Number of volunteers'),
         ('loc_count', '15', 'integer', 'Number of LOC members'),
         ('officials_count', '80', 'integer', 'Number of officials'),
+        ('auto_approve_records', 'false', 'boolean', 'Auto-approve world and area records'),
+        ('auto_approve_personal_bests', 'false', 'boolean', 'Auto-approve personal bests'),
     ]
     for key, value, setting_type, description in default_configs:
         try:

@@ -15,6 +15,74 @@
         </div>
         <p class="text-gray-600 mt-2">Configure events, classes, and competition parameters using tags</p>
     </div>
+
+    <!-- Auto-approval Settings -->
+    <div class="bg-white rounded-lg shadow mb-6">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-medium text-gray-900">
+                <i class="fas fa-cogs mr-2"></i>Auto-Approval Settings
+            </h3>
+            <p class="text-sm text-gray-600">Configure automatic approval for records and personal bests</p>
+        </div>
+        <div class="p-6 space-y-4">
+            <!-- Auto-approve Records -->
+            <div class="flex items-center justify-between">
+                <div>
+                    <label class="text-sm font-medium text-gray-900">Auto-approve Records (WR/AR)</label>
+                    <p class="text-sm text-gray-500">Automatically approve world and area records when detected during competition</p>
+                </div>
+                <div class="flex items-center">
+                    <form method="POST" action="{{ url_for('admin.config_update') }}" class="inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="key" value="auto_approve_records">
+                        <input type="hidden" name="value" value="{{ 'false' if config_values.get('auto_approve_records', 'false') == 'true' else 'true' }}">
+                        <button type="submit" class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 {{ 'bg-blue-600' if config_values.get('auto_approve_records', 'false') == 'true' else 'bg-gray-200' }}">
+                            <span class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out {{ 'translate-x-5' if config_values.get('auto_approve_records', 'false') == 'true' else 'translate-x-0' }}"></span>
+                        </button>
+                    </form>
+                    <span class="ml-3 text-sm {{ 'text-blue-600 font-medium' if config_values.get('auto_approve_records', 'false') == 'true' else 'text-gray-500' }}">
+                        {{ 'ON' if config_values.get('auto_approve_records', 'false') == 'true' else 'OFF' }}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Auto-approve Personal Bests -->
+            <div class="flex items-center justify-between">
+                <div>
+                    <label class="text-sm font-medium text-gray-900">Auto-approve Personal Bests</label>
+                    <p class="text-sm text-gray-500">Automatically approve personal bests when detected during competition</p>
+                </div>
+                <div class="flex items-center">
+                    <form method="POST" action="{{ url_for('admin.config_update') }}" class="inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="key" value="auto_approve_personal_bests">
+                        <input type="hidden" name="value" value="{{ 'false' if config_values.get('auto_approve_personal_bests', 'false') == 'true' else 'true' }}">
+                        <button type="submit" class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 {{ 'bg-green-600' if config_values.get('auto_approve_personal_bests', 'false') == 'true' else 'bg-gray-200' }}">
+                            <span class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out {{ 'translate-x-5' if config_values.get('auto_approve_personal_bests', 'false') == 'true' else 'translate-x-0' }}"></span>
+                        </button>
+                    </form>
+                    <span class="ml-3 text-sm {{ 'text-green-600 font-medium' if config_values.get('auto_approve_personal_bests', 'false') == 'true' else 'text-gray-500' }}">
+                        {{ 'ON' if config_values.get('auto_approve_personal_bests', 'false') == 'true' else 'OFF' }}
+                    </span>
+                </div>
+            </div>
+
+            <div class="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <div class="flex">
+                    <i class="fas fa-exclamation-triangle text-yellow-400 mt-0.5 mr-2"></i>
+                    <div class="text-sm text-yellow-800">
+                        <p class="font-medium">Important Notes:</p>
+                        <ul class="mt-1 list-disc list-inside space-y-1">
+                            <li>Auto-approval only applies to records/PBs created during competition (made_in_competition = true)</li>
+                            <li>Manual records added through the admin interface are always approved immediately</li>
+                            <li>Changes take effect immediately for new record detection</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <!-- Classes -->
         <div class="bg-white rounded-lg shadow p-6">
@@ -47,6 +115,7 @@
                 </div>
             </div>
         </div>
+
         <!-- Classes With Guides -->
         <div class="bg-white rounded-lg shadow p-6">
             <h3 class="text-lg font-bold mb-4">Guide Allowed Classes</h3>
@@ -69,6 +138,7 @@
                 </div>
             </div>
         </div>
+
         <!-- Record Types -->
         <div class="bg-white rounded-lg shadow p-6">
             <h3 class="text-lg font-bold mb-4">Record Types</h3>
@@ -100,6 +170,7 @@
                 </div>
             </div>
         </div>
+
         <!-- Special Result Values -->
         <div class="bg-white rounded-lg shadow p-6">
             <h3 class="text-lg font-bold mb-4">Special Result Values</h3>
@@ -125,12 +196,13 @@
                     <div class="flex flex-wrap gap-1">
                         <button type="button" onclick="addTagDirect('result_special_values', 'DNS')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">DNS</button>
                         <button type="button" onclick="addTagDirect('result_special_values', 'DNF')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">DNF</button>
-                        <button type="button" onclick="addTagDirect('result_special_values', 'DQ')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">DSQ</button>
+                        <button type="button" onclick="addTagDirect('result_special_values', 'DQ')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">DQ</button>
                         <button type="button" onclick="addTagDirect('result_special_values', 'NM')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">NM</button>
                     </div>
                 </div>
             </div>
         </div>
+
         <!-- Field Events -->
         <div class="bg-white rounded-lg shadow p-6">
             <h3 class="text-lg font-bold mb-4">Field Events</h3>
@@ -162,6 +234,7 @@
                 </div>
             </div>
         </div>
+
         <!-- Track Events -->
         <div class="bg-white rounded-lg shadow p-6">
             <h3 class="text-lg font-bold mb-4">Track Events</h3>
@@ -193,6 +266,7 @@
                 </div>
             </div>
         </div>
+
         <!-- Wind Affected Field Events -->
         <div class="bg-white rounded-lg shadow p-6">
             <h3 class="text-lg font-bold mb-4">Wind-Affected Field Events</h3>
@@ -222,6 +296,7 @@
                 </div>
             </div>
         </div>
+
         <!-- Weight Field Events -->
         <div class="bg-white rounded-lg shadow p-6">
             <h3 class="text-lg font-bold mb-4">Weight Field Events</h3>
@@ -255,11 +330,13 @@
             </div>
         </div>
     </div>
+
     <div class="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4">
         <h4 class="font-bold text-blue-900 mb-2">
             <i class="fas fa-info-circle mr-2"></i>Configuration Help
         </h4>
         <div class="text-sm text-blue-800 space-y-2">
+            <p><strong>Auto-Approval:</strong> Controls whether records and personal bests are automatically approved when detected during competition</p>
             <p><strong>Classes:</strong> Use official World Para Athletics classification codes (e.g., T11, T54, F32)</p>
             <p><strong>Events:</strong> Enter exact event names as they appear in your competition program</p>
             <p><strong>Record Types:</strong> WR=World Record, AR=Area Record, CR=Championship Record, etc.</p>
@@ -270,8 +347,9 @@
         </div>
     </div>
 </div>
+
 <script>
-// Fix for templates/admin/config/general.html - Updated JavaScript section
+// Updated JavaScript section
 function getCSRFToken() {
     // Try multiple methods to get CSRF token
     const meta = document.querySelector('meta[name="csrf-token"]');
@@ -286,6 +364,7 @@ function getCSRFToken() {
     }
     return '';
 }
+
 async function addTag(configKey) {
     const input = document.getElementById(`${configKey}-input`);
     const tagValue = input.value.trim();
@@ -323,6 +402,7 @@ async function addTag(configKey) {
         showMessage('Error adding tag: ' + error.message, 'error');
     }
 }
+
 async function addTagDirect(configKey, tagValue) {
     try {
         const csrfToken = getCSRFToken();
@@ -352,6 +432,7 @@ async function addTagDirect(configKey, tagValue) {
         showMessage('Error adding tag: ' + error.message, 'error');
     }
 }
+
 async function removeTag(configKey, tagValue) {
     try {
         const csrfToken = getCSRFToken();
@@ -379,11 +460,12 @@ async function removeTag(configKey, tagValue) {
         showMessage('Error removing tag: ' + error.message, 'error');
     }
 }
-// Rest of the functions remain the same...
+
 function addTagToDOM(configKey, tagValue) {
     const tagsContainer = document.getElementById(`${configKey}-tags`);
     const colors = {
         'classes': 'bg-blue-100 text-blue-800',
+        'guide_classes': 'bg-purple-100 text-purple-800',
         'record_types': 'bg-yellow-100 text-yellow-800',
         'result_special_values': 'bg-red-100 text-red-800',
         'field_events': 'bg-green-100 text-green-800',
@@ -393,6 +475,7 @@ function addTagToDOM(configKey, tagValue) {
     };
     const buttonColors = {
         'classes': 'text-blue-600 hover:text-blue-800',
+        'guide_classes': 'text-purple-600 hover:text-purple-800',
         'record_types': 'text-yellow-600 hover:text-yellow-800',
         'result_special_values': 'text-red-600 hover:text-red-800',
         'field_events': 'text-green-600 hover:text-green-800',
@@ -410,6 +493,7 @@ function addTagToDOM(configKey, tagValue) {
     `;
     tagsContainer.appendChild(tagElement);
 }
+
 function removeTagFromDOM(configKey, tagValue) {
     const tagsContainer = document.getElementById(`${configKey}-tags`);
     const tags = tagsContainer.querySelectorAll('.tag');
@@ -419,6 +503,7 @@ function removeTagFromDOM(configKey, tagValue) {
         }
     });
 }
+
 function showMessage(message, type = 'info') {
     const colors = {
         success: 'bg-green-100 border-green-400 text-green-700',
@@ -444,6 +529,7 @@ function showMessage(message, type = 'info') {
         }, 300);
     }, 3000);
 }
+
 // Enter key support
 document.addEventListener('DOMContentLoaded', function() {
     const inputs = document.querySelectorAll('[id$="-input"]');

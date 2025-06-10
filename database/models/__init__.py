@@ -10,6 +10,7 @@ from .result import Result
 from .attempt import Attempt
 from .registration import Registration
 from .medal import Medal
+from .heat_group import HeatGroup
 
 __all__ = [
     'User',
@@ -23,5 +24,6 @@ __all__ = [
     'Result',
     'Attempt',
     'Registration',
-    'Medal'
+    'Medal',
+    'HeatGroup'
 ]

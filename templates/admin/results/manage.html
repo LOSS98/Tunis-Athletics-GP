@@ -188,11 +188,21 @@
                     {% if game.official %}Mark UNOFFICIAL{% else %}Mark OFFICIAL{% endif %}
                 </button>
                 {% endif %}
+                {% if current_user.is_technical_delegate() %}
+                <button onclick="checkGameRecords({{ game.id }})"
+                        class="bg-purple-600 text-white px-3 py-1 rounded text-sm hover:bg-purple-700"
+                        title="Check all results for new records and personal bests">
+                    <i class="fas fa-search mr-1"></i>Check Records & PBs
+                </button>
+                {% endif %}
+                {% if heat_group %}
+                <!-- Don't show individual auto-rank for heats -->
+                {% else %}
                 <button onclick="autoRankResults({{ game.id }}, event)"
-                        class="bg-purple-500 text-white px-3 py-1 rounded text-sm hover:bg-purple-600"
-                        title="Auto-rank by performance{% if game.wpa_points %} and WPA Points{% endif %}">
+                        class="bg-purple-500 text-white px-3 py-1 rounded text-sm hover:bg-purple-600">
                     <i class="fas fa-sort-numeric-down"></i> Auto Rank
                 </button>
+                {% endif %}
                 {% if game.event in ['Long Jump', 'Triple Jump', 'Shot Put', 'Discus Throw', 'Javelin Throw', 'Club Throw'] %}
                 <button onclick="selectFinalistsRound1({{ game.id }})"
                         class="bg-orange-500 text-white px-3 py-1 rounded text-sm hover:bg-orange-600"
@@ -219,6 +229,103 @@
                    title="Generate PDF Results" target="_blank">
                     <i class="fas fa-file-pdf"></i> PDF
                 </a>
+            </div>
+        </div>
+    </div>
+</div>
+    {% if heat_group %}
+<div class="mb-6">
+    <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
+        <h3 class="text-lg font-bold text-purple-900 mb-3">
+            <i class="fas fa-fire mr-2"></i>Heat Group: {{ heat_group.name }}
+        </h3>
+        <div class="flex flex-wrap gap-2 mb-4">
+            <a href="{{ url_for('admin.game_results', id=game.id) }}"
+               class="bg-purple-600 text-white px-3 py-1 rounded text-sm">
+                Heat {{ game.heat_number }} (Current)
+            </a>
+            {% for sibling in heat_siblings %}
+            <a href="{{ url_for('admin.game_results', id=sibling.id) }}"
+               class="bg-purple-100 text-purple-800 px-3 py-1 rounded text-sm hover:bg-purple-200">
+                Heat {{ sibling.heat_number }}
+            </a>
+            {% endfor %}
+        </div>
+        <div class="flex gap-2">
+            <button onclick="rankHeatGroup({{ heat_group.id }})"
+                    class="bg-purple-500 text-white px-4 py-2 rounded-lg hover:bg-purple-600">
+                <i class="fas fa-sort-numeric-down mr-2"></i>Rank Final Combined Results
+            </button>
+            <form method="POST" action="{{ url_for('admin.remove_game_from_heat', game_id=game.id) }}" class="inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600"
+                        onclick="return confirm('Remove from heat group?')">
+                    <i class="fas fa-unlink mr-2"></i>Remove from Heat Group
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% else %}
+<div class="mb-6">
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div class="flex justify-between items-center">
+            <div>
+                <h3 class="text-lg font-bold text-blue-900">Heat Management</h3>
+                <p class="text-blue-700 text-sm">This game is not part of a heat group</p>
+            </div>
+            <button onclick="showAddHeatModal()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
+                <i class="fas fa-fire mr-2"></i>Add to Heat Group
+            </button>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Add Heat Modal -->
+<div id="addHeatModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+    <div class="flex items-center justify-center min-h-screen p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold">Add to Heat Group</h2>
+                    <button onclick="closeAddHeatModal()" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-2">Action</label>
+                        <select id="heatAction" onchange="toggleNewHeatForm()" class="w-full px-3 py-2 border rounded-lg">
+                            <option value="existing">Add to Existing Heat Group</option>
+                            <option value="new">Create New Heat Group</option>
+                        </select>
+                    </div>
+
+                    <div id="existingHeatForm">
+                        <label class="block text-sm font-medium mb-2">Heat Group</label>
+                        <select id="existingHeatGroup" class="w-full px-3 py-2 border rounded-lg">
+                            <option value="">Select Heat Group</option>
+                        </select>
+                        <label class="block text-sm font-medium mb-2 mt-3">Heat Number</label>
+                        <input type="number" id="existingHeatNumber" min="1" class="w-full px-3 py-2 border rounded-lg">
+                    </div>
+
+                    <div id="newHeatForm" class="hidden">
+                        <label class="block text-sm font-medium mb-2">Heat Group Name</label>
+                        <input type="text" id="newHeatName" class="w-full px-3 py-2 border rounded-lg"
+                               placeholder="e.g., Men 100m Heats">
+                    </div>
+
+                    <div class="flex justify-end space-x-4 mt-6">
+                        <button onclick="closeAddHeatModal()" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
+                            Cancel
+                        </button>
+                        <button onclick="addToHeatGroup()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                            Add to Heat
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -692,6 +799,67 @@
     </div>
     {% endif %}
 </div>
+    {% if heat_group and combined_results %}
+<div class="mt-6 bg-white rounded-lg shadow">
+    <div class="p-6 border-b bg-gradient-to-r from-purple-50 to-blue-50">
+        <h3 class="text-lg font-bold text-purple-900">Final Combined Results - {{ heat_group.name }}</h3>
+        <p class="text-sm text-purple-700">Combined results from all heats in this group</p>
+    </div>
+    <div class="overflow-x-auto">
+        <table class="w-full">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-4 py-3 text-left">Final Rank</th>
+                    <th class="px-4 py-3 text-left">Heat</th>
+                    <th class="px-4 py-3 text-left">Heat Rank</th>
+                    <th class="px-4 py-3 text-left">SDMS</th>
+                    <th class="px-4 py-3 text-left">Name</th>
+                    <th class="px-4 py-3 text-left">NPC</th>
+                    <th class="px-4 py-3 text-left">Performance</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200">
+                {% for result in combined_results %}
+                <tr class="{% if result.game_id == game.id %}bg-purple-50{% else %}hover:bg-gray-50{% endif %}">
+                    <td class="px-4 py-4">
+                        {% set rank = result.final_rank %}
+                        {% if rank == 1 %}
+                            <span class="text-2xl mr-2">🥇</span><span class="font-bold text-yellow-600">{{ rank }}</span>
+                        {% elif rank == 2 %}
+                            <span class="text-2xl mr-2">🥈</span><span class="font-bold text-gray-600">{{ rank }}</span>
+                        {% elif rank == 3 %}
+                            <span class="text-2xl mr-2">🥉</span><span class="font-bold text-orange-600">{{ rank }}</span>
+                        {% else %}
+                            <span class="font-bold text-gray-900">{{ rank }}</span>
+                        {% endif %}
+                    </td>
+                    <td class="px-4 py-4">
+                        <span class="bg-purple-100 text-purple-800 px-2 py-1 rounded text-sm">
+                            Heat {{ result.heat_number }}
+                        </span>
+                    </td>
+                    <td class="px-4 py-4">{{ result.rank or '-' }}</td>
+                    <td class="px-4 py-4">
+                        <span class="bg-indigo-100 text-indigo-800 px-2 py-1 rounded text-sm font-semibold">
+                            {{ result.athlete_sdms }}
+                        </span>
+                    </td>
+                    <td class="px-4 py-4">{{ result.lastname }} {{ result.firstname }}</td>
+                    <td class="px-4 py-4">
+                        <div class="flex items-center">
+                            <img src="{{ url_for('static', filename='images/flags/' + result.npc + '.svg') }}"
+                                 alt="{{ result.npc }}" class="inline w-6 h-4 mr-1" onerror="this.style.display='none'">
+                            {{ result.npc }}
+                        </div>
+                    </td>
+                    <td class="px-4 py-4 font-bold text-lg">{{ result.value }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
 <!-- Edit Attempts Modal -->
 <div id="editAttemptsModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
     <div class="flex items-center justify-center min-h-screen p-4">
@@ -790,6 +958,149 @@
     window.gameId = {{ game.id }};
     // Correction: utiliser true/false JavaScript au lieu de True/False Python
     window.finalistsCount = {{ total_selected_r1|default(0) }};
+    function checkGameRecords(gameId) {
+    if (!confirm('Check all results in this game for new records and personal bests?')) {
+        return;
+    }
+
+    fetch(`/admin/games/${gameId}/check-records`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken()
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(data.message, 'success');
+        } else {
+            showNotification(data.error || 'Error checking records', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Error checking records', 'error');
+    });
+}
+</script>
+    <script>
+function showAddHeatModal() {
+    loadHeatGroups();
+    document.getElementById('addHeatModal').classList.remove('hidden');
+}
+
+function closeAddHeatModal() {
+    document.getElementById('addHeatModal').classList.add('hidden');
+}
+
+function toggleNewHeatForm() {
+    const action = document.getElementById('heatAction').value;
+    const existingForm = document.getElementById('existingHeatForm');
+    const newForm = document.getElementById('newHeatForm');
+
+    if (action === 'new') {
+        existingForm.classList.add('hidden');
+        newForm.classList.remove('hidden');
+    } else {
+        existingForm.classList.remove('hidden');
+        newForm.classList.add('hidden');
+    }
+}
+
+function loadHeatGroups() {
+    fetch('/admin/api/heat-groups')
+        .then(response => response.json())
+        .then(groups => {
+            const select = document.getElementById('existingHeatGroup');
+            select.innerHTML = '<option value="">Select Heat Group</option>';
+            groups.forEach(group => {
+                const option = document.createElement('option');
+                option.value = group.id;
+                option.textContent = group.name;
+                select.appendChild(option);
+            });
+        });
+}
+
+function addToHeatGroup() {
+    const action = document.getElementById('heatAction').value;
+    let data = {};
+
+    if (action === 'new') {
+        const name = document.getElementById('newHeatName').value;
+        if (!name) {
+            showNotification('Heat group name is required', 'error');
+            return;
+        }
+        data = {
+            heat_group_id: 'new',
+            name: name,
+            heat_number: 1
+        };
+    } else {
+        const heatGroupId = document.getElementById('existingHeatGroup').value;
+        const heatNumber = document.getElementById('existingHeatNumber').value;
+
+        if (!heatGroupId || !heatNumber) {
+            showNotification('Heat group and heat number are required', 'error');
+            return;
+        }
+
+        data = {
+            heat_group_id: parseInt(heatGroupId),
+            heat_number: parseInt(heatNumber)
+        };
+    }
+
+    fetch(`/admin/games/${gameId}/add-to-heat`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken()
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            closeAddHeatModal();
+            showNotification('Game added to heat group successfully!', 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showNotification('Error adding to heat group', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showNotification('Error adding to heat group', 'error');
+    });
+}
+
+function rankHeatGroup(heatGroupId) {
+    if (confirm('Rank all combined results from all heats?')) {
+        fetch(`/admin/heat-groups/${heatGroupId}/rank`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('Combined results ranked successfully!', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showNotification('Error ranking combined results', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Error ranking combined results', 'error');
+        });
+    }
+}
 </script>
 <script src="{{ url_for('static', filename='js/manage_results.js') }}"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>

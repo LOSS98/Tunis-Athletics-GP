@@ -166,3 +166,31 @@ class Game:
         game_classes = [c.strip() for c in classes_str.split(',') if c.strip()]
         athlete_classes = [c.strip() for c in athlete_class_str.split(',') if c.strip()]
         return any(ac in game_classes for ac in athlete_classes)
+
+    @staticmethod
+    def is_heat_game(game):
+        return game.get('heat_group_id') is not None
+
+    @staticmethod
+    def add_to_heat_group(game_id, heat_group_id, heat_number):
+        return execute_query(
+            "UPDATE games SET heat_group_id = %s, heat_number = %s WHERE id = %s",
+            (heat_group_id, heat_number, game_id)
+        )
+
+    @staticmethod
+    def remove_from_heat_group(game_id):
+        return execute_query(
+            "UPDATE games SET heat_group_id = NULL, heat_number = NULL WHERE id = %s",
+            (game_id,)
+        )
+
+    @staticmethod
+    def get_heat_siblings(game):
+        if not game.get('heat_group_id'):
+            return []
+        return execute_query("""
+            SELECT * FROM games 
+            WHERE heat_group_id = %s AND id != %s 
+            ORDER BY heat_number
+        """, (game['heat_group_id'], game['id']), fetch=True)

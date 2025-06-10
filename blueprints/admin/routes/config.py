@@ -6,6 +6,7 @@ from config import Config
 from datetime import date
 import os
 from flask import current_app
+
 def register_routes(bp):
     @bp.route('/config')
     @loc_required
@@ -19,12 +20,16 @@ def register_routes(bp):
                                days=days,
                                npcs=npcs,
                                current_day=current_day)
+
     @bp.route('/config/general')
     @loc_required
     def config_general():
         configs = ConfigManager.get_all_config()
-        return render_template('admin/config/general.html', configs=configs)
-    # Fix for blueprints/admin/routes/config.py - Updated API routes
+        config_values = ConfigManager.get_all_config()
+        return render_template('admin/config/general.html',
+                               configs=configs,
+                               config_values=config_values)
+
     @bp.route('/config/api/add-tag', methods=['POST'])
     @loc_required
     def config_add_tag():
@@ -321,6 +326,41 @@ def register_routes(bp):
         clear_config_cache()
         flash('Configuration cache cleared successfully', 'success')
         return redirect(url_for('admin.config_index'))
+
+    @bp.route('/config/update', methods=['POST'])
+    @loc_required
+    def config_update():
+        key = request.form.get('key')
+        value = request.form.get('value')
+
+        if not key:
+            flash('Configuration key is required', 'danger')
+            return redirect(url_for('admin.config_general'))
+
+        # Déterminer le type de configuration
+        setting_type = 'string'
+        if key in ['auto_approve_records', 'auto_approve_personal_bests']:
+            setting_type = 'boolean'
+        elif key in ['current_day', 'npcs_count', 'athletes_count', 'volunteers_count', 'loc_count', 'officials_count']:
+            setting_type = 'integer'
+
+        try:
+            ConfigManager.set_config(key, value, setting_type)
+            clear_config_cache()
+
+            if key == 'auto_approve_records':
+                status = 'enabled' if value == 'true' else 'disabled'
+                flash(f'Auto-approval for records has been {status}', 'success')
+            elif key == 'auto_approve_personal_bests':
+                status = 'enabled' if value == 'true' else 'disabled'
+                flash(f'Auto-approval for personal bests has been {status}', 'success')
+            else:
+                flash('Configuration updated successfully', 'success')
+
+        except Exception as e:
+            flash(f'Error updating configuration: {str(e)}', 'danger')
+
+        return redirect(url_for('admin.config_general'))
 @staticmethod
 def get_genders():
     return ['Male', 'Female']
@@ -331,3 +371,4 @@ def get_weight_field_events():
         return ConfigManager.get_config_tags('weight_field_events')
     except (ImportError, Exception):
         return ['Shot Put', 'Discus Throw', 'Javelin Throw', 'Hammer Throw', 'Club Throw', 'Weight Throw']
+

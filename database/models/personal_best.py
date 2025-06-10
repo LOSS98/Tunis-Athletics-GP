@@ -2,7 +2,7 @@ from database.db_manager import execute_one, execute_query
 
 class PersonalBest:
     @staticmethod
-    def get_all(approved_only=True):
+    def get_all(approved_only=True, competition_only=True):
         query = """
             SELECT pb.*, a.firstname, a.lastname,
                    u.username as approved_by_username
@@ -10,26 +10,45 @@ class PersonalBest:
             JOIN athletes a ON pb.sdms = a.sdms
             LEFT JOIN users u ON pb.approved_by = u.id
         """
+        conditions = []
         if approved_only:
-            query += " WHERE pb.approved = TRUE"
+            conditions.append("pb.approved = TRUE")
+        if competition_only:
+            conditions.append("pb.made_in_competition = TRUE")
+
+        if conditions:
+            query += " WHERE " + " AND ".join(conditions)
+
         query += " ORDER BY pb.record_date DESC, pb.created_at DESC"
         return execute_query(query, fetch=True)
 
     @staticmethod
-    def get_pending():
-        return execute_query("""
+    def get_pending(competition_only=True):
+        query = """
             SELECT pb.*, a.firstname, a.lastname
             FROM personal_bests pb
             JOIN athletes a ON pb.sdms = a.sdms
             WHERE pb.approved = FALSE
-            ORDER BY pb.created_at DESC
-        """, fetch=True)
+        """
+        if competition_only:
+            query += " AND pb.made_in_competition = TRUE"
+
+        query += " ORDER BY pb.created_at DESC"
+        return execute_query(query, fetch=True)
+
+    @staticmethod
+    def get_pending_for_athlete(sdms, event, athlete_class):
+        return execute_one("""
+            SELECT * FROM personal_bests 
+            WHERE sdms = %s AND event = %s AND athlete_class = %s AND approved = FALSE
+            ORDER BY performance DESC LIMIT 1
+        """, (sdms, event, athlete_class))
 
     @staticmethod
     def create(**data):
         keys = ', '.join(data.keys())
         placeholders = ', '.join(['%s'] * len(data))
-        query = f"INSERT INTO personal_bests ({keys}) VALUES ({placeholders}) ON CONFLICT (sdms, event, class) DO UPDATE SET performance = EXCLUDED.performance, location = EXCLUDED.location, record_date = EXCLUDED.record_date, approved = FALSE RETURNING id"
+        query = f"INSERT INTO personal_bests ({keys}) VALUES ({placeholders}) ON CONFLICT (sdms, event, athlete_class) DO UPDATE SET performance = EXCLUDED.performance, location = EXCLUDED.location, record_date = EXCLUDED.record_date, approved = FALSE RETURNING id"
         result = execute_query(query, list(data.values()))
         return result['id'] if result else None
 
@@ -42,10 +61,24 @@ class PersonalBest:
         """, (user_id, record_id))
 
     @staticmethod
+    def approve_all(user_id):
+        result = execute_query("""
+            UPDATE personal_bests 
+            SET approved = TRUE, approved_by = %s, approved_date = CURRENT_TIMESTAMP 
+            WHERE approved = FALSE
+        """, (user_id,))
+        return result if result else 0
+
+    @staticmethod
+    def delete_all_pending():
+        result = execute_query("DELETE FROM personal_bests WHERE approved = FALSE")
+        return result if result else 0
+
+    @staticmethod
     def check_existing_pb(sdms, event, class_name):
         return execute_one("""
             SELECT * FROM personal_bests 
-            WHERE sdms = %s AND event = %s AND class = %s AND approved = TRUE
+            WHERE sdms = %s AND event = %s AND athlete_class = %s AND approved = TRUE
         """, (sdms, event, class_name))
 
     @staticmethod

@@ -102,7 +102,7 @@ class Result:
     def get_records():
         query = """
             SELECT r.*, a.firstname, a.lastname, a.npc, a.photo,
-                   g.event, g.gender, g.classes, g.day, g.time, g.id as game_id
+                   g.event, g.genders, g.classes, g.day, g.time, g.id as game_id
             FROM results r
             JOIN athletes a ON r.athlete_sdms = a.sdms
             JOIN games g ON r.game_id = g.id
