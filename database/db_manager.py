@@ -268,7 +268,7 @@ def init_db():
                 )""",
         """CREATE TABLE IF NOT EXISTS medals (
             id SERIAL PRIMARY KEY,
-            npc VARCHAR(3) NOT NULL,
+            npc VARCHAR(3) NOT NULL UNIQUE,
             gold INTEGER DEFAULT 0,
             silver INTEGER DEFAULT 0,
             bronze INTEGER DEFAULT 0,

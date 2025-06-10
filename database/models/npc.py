@@ -1,3 +1,5 @@
+from database.db_manager import execute_query, execute_one
+
 class NPC:
     @staticmethod
     def get_all():
