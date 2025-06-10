@@ -10,6 +10,36 @@
         <h2 class="text-2xl font-bold mb-4">What are WPA Points?</h2>
         <p class="mb-4">The WPA Points system is the official method used by World Para Athletics to compare performances across different disability classes in athletics competitions.</p>
         <p class="mb-4">Named after mathematician Purshottam Raza, the system uses a mathematical formula to convert performances into points, allowing fair competition between athletes with different disabilities.</p>
+        <h2 class="text-2xl font-bold mb-4">How It Works</h2>
+        <ul class="space-y-3">
+            <li class="flex items-start">
+                <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
+                <div>
+                    <strong>Equal Opportunity:</strong> Athletes from different classes can compete fairly against each other
+                </div>
+            </li>
+            <li class="flex items-start">
+                <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
+                <div>
+                    <strong>1000 Points Standard:</strong> World record performances typically score around 1000 points
+                </div>
+            </li>
+            <li class="flex items-start">
+                <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
+                <div>
+                    <strong>Higher is Better:</strong> The athlete with the highest WPA Points wins, regardless of their class
+                </div>
+            </li>
+            <li class="flex items-start">
+                <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
+                <div>
+                    <strong>Updated Regularly:</strong> Constants are updated based on world record progressions
+                </div>
+            </li>
+        </ul>
+    </div>
+    <div class="bg-white rounded-lg shadow p-6">
+        <h2 class="text-2xl font-bold mb-4">How is it calculated?</h2>
         <div class="bg-blue-50 p-4 rounded-lg">
             <h3 class="font-bold mb-2">Official WPA Points Formula (Gompertz Function):</h3>
             <div class="space-y-3">
@@ -56,85 +86,56 @@
             </p>
         </div>
     </div>
-    <div class="bg-white rounded-lg shadow p-6">
-        <h2 class="text-2xl font-bold mb-4">How It Works</h2>
-        <ul class="space-y-3">
-            <li class="flex items-start">
-                <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
-                <div>
-                    <strong>Equal Opportunity:</strong> Athletes from different classes can compete fairly against each other
-                </div>
-            </li>
-            <li class="flex items-start">
-                <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
-                <div>
-                    <strong>1000 Points Standard:</strong> World record performances typically score around 1000 points
-                </div>
-            </li>
-            <li class="flex items-start">
-                <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
-                <div>
-                    <strong>Higher is Better:</strong> The athlete with the highest WPA Points wins, regardless of their class
-                </div>
-            </li>
-            <li class="flex items-start">
-                <i class="fas fa-check-circle text-green-500 mt-1 mr-3"></i>
-                <div>
-                    <strong>Updated Regularly:</strong> Constants are updated based on world record progressions
-                </div>
-            </li>
-        </ul>
-    </div>
 </div>
-<div class="bg-white rounded-lg shadow p-6 mb-8">
-    <h2 class="text-2xl font-bold mb-4">WPA Points Calculator</h2>
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-            <h3 class="text-lg font-semibold mb-3">Performance to WPA Points</h3>
-            <div class="space-y-3">
-                <select id="gender" class="w-full px-3 py-2 border rounded-lg">
-                    <option value="">Select Gender</option>
-                    <option value="Men">Male</option>
-                    <option value="Women">Female</option>
-                </select>
-                <select id="event" class="w-full px-3 py-2 border rounded-lg">
-                    <option value="">Select Event</option>
-                </select>
-                <select id="class" class="w-full px-3 py-2 border rounded-lg">
-                    <option value="">Select Class</option>
-                </select>
-                <input type="text" id="performance" placeholder="Enter performance" class="w-full px-3 py-2 border rounded-lg">
-                <button onclick="calculateRAZA()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 w-full">
-                    Calculate WPA Points
-                </button>
-            </div>
-        </div>
-        <div>
-            <h3 class="text-lg font-semibold mb-3">WPA Points to Performance</h3>
-            <div class="space-y-3">
-                <select id="gender2" class="w-full px-3 py-2 border rounded-lg">
-                    <option value="">Select Gender</option>
-                    <option value="Men">Male</option>
-                    <option value="Women">Female</option>
-                </select>
-                <select id="event2" class="w-full px-3 py-2 border rounded-lg">
-                    <option value="">Select Event</option>
-                </select>
-                <select id="class2" class="w-full px-3 py-2 border rounded-lg">
-                    <option value="">Select Class</option>
-                </select>
-                <input type="number" id="razaScore" placeholder="Enter WPA points" class="w-full px-3 py-2 border rounded-lg">
-                <button onclick="calculatePerformance()" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 w-full">
-                    Calculate Performance
-                </button>
-            </div>
-        </div>
-    </div>
-    <div id="result" class="mt-6 p-4 bg-gray-100 rounded-lg hidden">
-        <h4 class="font-bold mb-2">Result:</h4>
-        <p id="resultText" class="text-lg"></p>
-    </div>
-</div>
+{#<div class="bg-white rounded-lg shadow p-6 mb-8">#}
+{#    <h2 class="text-2xl font-bold mb-4">WPA Points Calculator</h2>#}
+{#    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">#}
+{#        <div>#}
+{#            <h3 class="text-lg font-semibold mb-3">Performance to WPA Points</h3>#}
+{#            <div class="space-y-3">#}
+{#                <select id="gender" class="w-full px-3 py-2 border rounded-lg">#}
+{#                    <option value="">Select Gender</option>#}
+{#                    <option value="Men">Male</option>#}
+{#                    <option value="Women">Female</option>#}
+{#                </select>#}
+{#                <select id="event" class="w-full px-3 py-2 border rounded-lg">#}
+{#                    <option value="">Select Event</option>#}
+{#                </select>#}
+{#                <select id="class" class="w-full px-3 py-2 border rounded-lg">#}
+{#                    <option value="">Select Class</option>#}
+{#                </select>#}
+{#                <input type="text" id="performance" placeholder="Enter performance" class="w-full px-3 py-2 border rounded-lg">#}
+{#                <button onclick="calculateRAZA()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 w-full">#}
+{#                    Calculate WPA Points#}
+{#                </button>#}
+{#            </div>#}
+{#        </div>#}
+{#        <div>#}
+{#            <h3 class="text-lg font-semibold mb-3">WPA Points to Performance</h3>#}
+{#            <div class="space-y-3">#}
+{#                <select id="gender2" class="w-full px-3 py-2 border rounded-lg">#}
+{#                    <option value="">Select Gender</option>#}
+{#                    <option value="Men">Male</option>#}
+{#                    <option value="Women">Female</option>#}
+{#                </select>#}
+{#                <select id="event2" class="w-full px-3 py-2 border rounded-lg">#}
+{#                    <option value="">Select Event</option>#}
+{#                </select>#}
+{#                <select id="class2" class="w-full px-3 py-2 border rounded-lg">#}
+{#                    <option value="">Select Class</option>#}
+{#                </select>#}
+{#                <input type="number" id="razaScore" placeholder="Enter WPA points" class="w-full px-3 py-2 border rounded-lg">#}
+{#                <button onclick="calculatePerformance()" class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 w-full">#}
+{#                    Calculate Performance#}
+{#                </button>#}
+{#            </div>#}
+{#        </div>#}
+{#    </div>#}
+{#    <div id="result" class="mt-6 p-4 bg-gray-100 rounded-lg hidden">#}
+{#        <h4 class="font-bold mb-2">Result:</h4>#}
+{#        <p id="resultText" class="text-lg"></p>#}
+{#    </div>#}
+{#</div>#}
 <div class="bg-white rounded-lg shadow p-6">
     <h2 class="text-2xl font-bold mb-4">Official Documents</h2>
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
