@@ -57,8 +57,8 @@
                             <a href="{{ url_for('public.game_detail', id=game.id) }}" class="text-green-600 hover:text-green-800 font-medium underline">
                                 View Results
                             </a>
-                        {% elif game.has_results %}
-                            <span class="text-orange-500">Results Available</span>
+{#                        {% elif game.has_results %}#}
+{#                            <span class="text-orange-500">Results Available</span>#}
                         {% else %}
                             <span class="text-blue-500">Soon</span>
                         {% endif %}

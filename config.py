@@ -84,7 +84,7 @@ class Config:
             from database.config_manager import ConfigManager
             return ConfigManager.get_config_tags('result_special_values')
         except (ImportError, Exception):
-            return ['DNS', 'DNF', 'DSQ', 'NM', 'NH', 'O', 'X', '-', 'DQ']
+            return ['DNS', 'DNF', 'NM', 'NH', 'O', 'X', '-', 'DQ']
     @staticmethod
     def get_field_events():
         try:

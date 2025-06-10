@@ -391,7 +391,7 @@ def insert_default_config():
     default_tags = [
         ('classes', all_classes),
         ('record_types', ['WR', 'AR', 'ER', 'CR', 'NR', 'PB', 'SB', 'WL', 'AL']),
-        ('result_special_values', ['DNS', 'DNF', 'DSQ', 'NM', 'NH', 'O', 'X', '-', 'DQ']),
+        ('result_special_values', ['DNS', 'DNF', 'NM', 'NH', 'O', 'X', '-', 'DQ']),
         ('field_events', [
             'Shot Put', 'Discus Throw', 'Javelin Throw', 'Hammer Throw',
             'Club Throw', 'Weight Throw'

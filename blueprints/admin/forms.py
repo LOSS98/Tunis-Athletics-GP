@@ -149,7 +149,7 @@ class ResultForm(FlaskForm):
         record_types = get_config_choices('record_types', ['WR', 'AR', 'CR', 'NR', 'PB', 'SB'])
         self.record.choices = [('', 'None')] + [(r, r) for r in record_types]
     def validate_value(self, field):
-        special_values = get_config_choices('result_special_values', ['DNS', 'DNF', 'DSQ', 'NM', 'O', 'X', '-'])
+        special_values = get_config_choices('result_special_values', ['DNS', 'DNF', 'DQ', 'NM', 'O', 'X', '-'])
         if field.data in special_values:
             return True
         if ':' in field.data:

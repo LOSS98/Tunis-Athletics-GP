@@ -97,7 +97,7 @@ function initResultValidation() {
 }
 function validatePerformance(input, isFieldEvent) {
     const value = input.value.trim();
-    const specialValues = ['DNS', 'DNF', 'DSQ', 'NM', 'O', 'X', '-'];
+    const specialValues = ['DNS', 'DNF', 'DQ', 'NM', 'O', 'X', '-'];
     input.classList.remove('border-red-500', 'border-green-500');
     if (specialValues.includes(value.toUpperCase())) {
         input.classList.add('border-green-500');

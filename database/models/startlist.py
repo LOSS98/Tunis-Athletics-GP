@@ -68,7 +68,7 @@ class StartList:
         results = execute_query("""
             SELECT r.athlete_sdms, r.value as best_performance
             FROM results r
-            WHERE r.game_id = %s AND r.value NOT IN ('DNS', 'DNF', 'DSQ', 'NM')
+            WHERE r.game_id = %s AND r.value NOT IN ('DNS', 'DNF', 'DQ', 'NM')
         """, (game_id,), fetch=True)
         if len(results) < 3:
             return False
@@ -90,7 +90,7 @@ class StartList:
                    a.firstname, a.lastname
             FROM results r
             JOIN athletes a ON r.athlete_sdms = a.sdms
-            WHERE r.game_id = %s AND r.value NOT IN ('DNS', 'DNF', 'DSQ', 'NM')
+            WHERE r.game_id = %s AND r.value NOT IN ('DNS', 'DNF', 'DQ', 'NM')
         """, (game_id,), fetch=True)
         if len(results) < 8:
             return False
