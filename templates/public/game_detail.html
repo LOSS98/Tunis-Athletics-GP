@@ -281,9 +281,10 @@
                                                 {% if attempt.value == result.best_attempt %}text-green-700
                                                 {% elif attempt.value in ['X', '-', 'FOUL'] %}text-red-600
                                                 {% elif attempt.value == 'O' %}text-blue-600
+                                                {% elif attempt.value == 'XXX' %}text-RED-600
                                                 {% else %}text-gray-900{% endif %}">
                                                 {% if attempt.value %}
-                                                    {% if attempt.value in ['X', '-', 'O'] %}
+                                                    {% if attempt.value in ['X', '-', 'O', 'XXX', 'XXO', 'XO'] %}
                                                         {{ attempt.value }}
                                                     {% else %}
                                                         {{ attempt.value }} m
@@ -557,9 +558,10 @@
                                             {% if attempt.value == result.best_attempt %}text-green-700
                                             {% elif attempt.value in ['X', '-', 'FOUL'] %}text-red-600
                                             {% elif attempt.value == 'O' %}text-blue-600
+                                            {% elif attempt.value == 'XXX' %}text-RED-600
                                             {% else %}text-gray-900{% endif %}">
                                             {% if attempt.value %}
-                                                {% if attempt.value in ['X', '-', 'O'] %}
+                                                {% if attempt.value in ['X', '-', 'O', 'XXX', 'XXO', 'XO'] %}
                                                     {{ attempt.value }}
                                                 {% else %}
                                                     {{ attempt.value }} m

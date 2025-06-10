@@ -1,4 +1,6 @@
 from flask import render_template, request
+
+from config import config
 from database.models import Game, Result, StartList
 def register_routes(bp):
     @bp.route('/results')
@@ -50,4 +52,5 @@ def register_routes(bp):
                                heat_group=heat_group,
                                heat_games=heat_games,
                                combined_results=combined_results,
-                               all_startlists=all_startlists)
+                               all_startlists=all_startlists,
+                               config=config)
