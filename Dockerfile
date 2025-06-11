@@ -16,7 +16,7 @@ RUN npm install
 
 COPY . .
 
-RUN npm run build-css
+#RUN npm run build-css
 
 RUN chmod -R 755 static/
 
