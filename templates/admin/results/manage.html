@@ -103,7 +103,7 @@
                         <span class="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs font-medium ml-2">
                             Progressive Heights
                         </span>
-                    {% elif game.event in ['Long Jump', 'Triple Jump', 'Shot Put', 'Discus Throw', 'Javelin Throw', 'Club Throw'] %}
+                    {% elif has_r1_qualifying %}
                         <span class="bg-orange-100 text-orange-800 px-2 py-1 rounded-full text-xs font-medium ml-2">
                             Qualification + Final
                         </span>
@@ -140,10 +140,11 @@
                     <i class="fas fa-info-circle mr-1"></i>
                     <strong>High Jump Rules:</strong> Progressive heights system. Add attempts one by one as they happen.
                 </div>
-                {% elif game.event in ['Long Jump', 'Triple Jump', 'Shot Put', 'Discus Throw', 'Javelin Throw', 'Club Throw'] %}
+                {% endif %}
+                {% if has_r1_qualifying %}
                 <div class="mt-2 p-2 bg-orange-50 border border-orange-200 rounded text-sm">
                     <i class="fas fa-info-circle mr-1"></i>
-                    <strong>Field Event Rules:</strong> 3 qualifying attempts, then top 8 advance to 3 final attempts (reverse order).
+                    <strong>Qualifying Field Event Rules:</strong> 3 qualifying attempts, then top 8 advance to 3 final attempts (reverse order).
                 </div>
                 {% endif %}
                 {% if game.official and game.official_date %}
@@ -169,6 +170,7 @@
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <select name="status" class="px-3 py-1 border rounded text-sm" onchange="this.form.submit()">
                         <option value="scheduled" {% if game.status == 'scheduled' %}selected{% endif %}>Scheduled</option>
+                        <option value="delayed" {% if game.status == 'delayed' %}selected{% endif %}>Delayed</option>
                         <option value="started" {% if game.status == 'started' %}selected{% endif %}>Started</option>
                         <option value="in_progress" {% if game.status == 'in_progress' %}selected{% endif %}>In Progress</option>
                         <option value="finished" {% if game.status == 'finished' %}selected{% endif %}>Finished</option>
@@ -205,11 +207,13 @@
                 </button>
                 {% endif %}
                 {% if game.event in ['Long Jump', 'Triple Jump', 'Shot Put', 'Discus Throw', 'Javelin Throw', 'Club Throw'] %}
+                {% if has_r1_qualifying %}
                 <button onclick="selectFinalistsRound1({{ game.id }})"
                         class="bg-orange-500 text-white px-3 py-1 rounded text-sm hover:bg-orange-600"
                         title="Select top 8 finalists from qualifying round">
                     <i class="fas fa-trophy"></i> Select Finalists
                 </button>
+                {% endif %}
                 {% endif %}
                 {% if game.wpa_points %}
                 <button onclick="recalculateRaza({{ game.id }})"
@@ -667,7 +671,7 @@
                         Wind: {% if game.wind_velocity is not none %}{{ "%.2f"|format(game.wind_velocity) }} m/s{% else %}-{% endif %}
                     </span>
                 {% endif %}
-                {% if game.event in ['Long Jump', 'Triple Jump', 'Shot Put', 'Discus Throw', 'Javelin Throw', 'Club Throw'] %}
+                {% if has_r1_qualifying %}
                     <span class="bg-orange-100 text-orange-800 px-2 py-1 rounded">
                         Finalists: {{ finalists_count|default(0) }}/8
                     </span>
@@ -679,6 +683,7 @@
         </div>
     </div>
     {% if results %}
+
     <div class="overflow-x-auto">
         <table class="w-full" id="sortableTable">
             <thead class="bg-gray-50">
@@ -699,7 +704,7 @@
                         Performance
                         {% if game.event in config.FIELD_EVENTS %}📏{% else %}⏱️{% endif %}
                     </th>
-                    {% if game.event in ['Long Jump', 'Triple Jump', 'Shot Put', 'Discus Throw', 'Javelin Throw', 'Club Throw'] %}
+                    {% if has_r1_qualifying %}
                     <th class="px-4 py-3 text-left">R1 Order</th>
                     {% endif %}
                     {% if game.wpa_points %}
@@ -799,11 +804,11 @@
                             {% endif %}
                         </div>
                     </td>
-                    {% if game.event in ['Long Jump', 'Triple Jump', 'Shot Put', 'Discus Throw', 'Javelin Throw', 'Club Throw'] %}
+                    {% if has_r1_qualifying %}
                     <td class="px-4 py-4">
                         {% if result.final_order %}
                             <span class="bg-orange-100 text-orange-800 px-2 py-1 rounded text-sm font-semibold">
-                                {{ result.final_order }}/{{ total_finalists }}
+                                {{ result.final_order }}/{{ finalists_count }}
                             </span>
                         {% else %}
                             <span class="text-gray-400">-</span>

@@ -7,7 +7,7 @@ from ..auth import admin_required, technical_delegate_required
 from ..forms import ResultForm
 from database.models import Athlete, Game, StartList, Result, Attempt, WorldRecord, PersonalBest, HeatGroup
 from database.db_manager import execute_one, execute_query
-from config import Config
+from config import Config, config
 import re
 
 
@@ -304,12 +304,22 @@ def register_routes(bp):
         total_selected_r1 = len(selected_r1)
         finalists_count = len([r for r in results if r.get('final_order')])
 
+        has_r1_qualifying = False
+        if game['event'] in config.FIELD_EVENTS:
+            r1_classes = config.R1_QUALIFYING_CLASSES
+            for cls in game['classes_list']:
+                if cls in r1_classes:
+                    has_r1_qualifying = True
+                    break
+
         return render_template('admin/results/manage.html',
                                game=game,
                                game_json=game_json,
                                results=results,
                                startlist=startlist,
                                form=form,
+                               config=config,
+                                 has_r1_qualifying=has_r1_qualifying,
                                heat_group=heat_group,
                                heat_siblings=heat_siblings,
                                combined_results=combined_results,

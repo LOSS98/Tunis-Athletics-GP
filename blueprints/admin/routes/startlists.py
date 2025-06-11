@@ -1,7 +1,8 @@
-from flask import render_template, redirect, url_for, flash
+from flask import render_template, jsonify, request, redirect, url_for, flash
 from ..auth import admin_required
 from ..forms import StartListForm
 from database.models import Game, StartList, Athlete
+from database.db_manager import execute_query
 
 
 def register_routes(bp):
@@ -63,3 +64,19 @@ def register_routes(bp):
             flash(f'Error removing from start list: {str(e)}', 'danger')
 
         return redirect(url_for('admin.game_startlist', id=game_id))
+    @bp.route('/games/<int:game_id>/startlist/<int:athlete_sdms>/update-order', methods=['POST'])
+    @admin_required
+    def startlist_update_order(game_id, athlete_sdms):
+        try:
+            data = request.get_json()
+            new_order = data.get('lane_order')
+
+            execute_query(
+                "UPDATE startlist SET lane_order = %s WHERE game_id = %s AND athlete_sdms = %s",
+                (new_order, game_id, athlete_sdms)
+            )
+            return jsonify({'success': True})
+
+        except Exception as e:
+            print(f"Error updating startlist order: {e}")
+            return jsonify({'error': str(e)}), 500

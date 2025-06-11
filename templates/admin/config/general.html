@@ -25,7 +25,6 @@
             <p class="text-sm text-gray-600">Configure automatic approval for records and personal bests</p>
         </div>
         <div class="p-6 space-y-4">
-            <!-- Auto-approve Records -->
             <div class="flex items-center justify-between">
                 <div>
                     <label class="text-sm font-medium text-gray-900">Auto-approve Records (WR/AR)</label>
@@ -46,7 +45,6 @@
                 </div>
             </div>
 
-            <!-- Auto-approve Personal Bests -->
             <div class="flex items-center justify-between">
                 <div>
                     <label class="text-sm font-medium text-gray-900">Auto-approve Personal Bests</label>
@@ -111,6 +109,39 @@
                         <button type="button" onclick="addTagDirect('classes', 'T54')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">T54</button>
                         <button type="button" onclick="addTagDirect('classes', 'F32')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">F32</button>
                         <button type="button" onclick="addTagDirect('classes', 'F42')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">F42</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- R1 Qualifying Classes -->
+        <div class="bg-white rounded-lg shadow p-6">
+            <h3 class="text-lg font-bold mb-4">R1 Qualifying Classes</h3>
+            <p class="text-sm text-gray-600 mb-3">Classes that require qualifying round (R1) order for field events</p>
+            <div class="tag-manager" data-config-key="r1_qualifying_classes">
+                <div class="flex flex-wrap gap-2 mb-3 min-h-[40px] p-2 border rounded bg-gray-50" id="r1_qualifying_classes-tags">
+                    {% for cls in configs.get('r1_qualifying_classes', []) %}
+                    <span class="tag inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-orange-100 text-orange-800">
+                        {{ cls }}
+                        <button type="button" class="ml-2 text-orange-600 hover:text-orange-800" onclick="removeTag('r1_qualifying_classes', '{{ cls }}')">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </span>
+                    {% endfor %}
+                </div>
+                <div class="flex">
+                    <input type="text" id="r1_qualifying_classes-input" placeholder="Add class (e.g., F32)" class="flex-1 px-3 py-2 border rounded-l-lg">
+                    <button type="button" onclick="addTag('r1_qualifying_classes')" class="bg-orange-500 text-white px-4 py-2 rounded-r-lg hover:bg-orange-600">
+                        Add
+                    </button>
+                </div>
+                <div class="mt-2">
+                    <p class="text-xs text-gray-500 mb-2">Quick add:</p>
+                    <div class="flex flex-wrap gap-1">
+                        <button type="button" onclick="addTagDirect('r1_qualifying_classes', 'F32')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">F32</button>
+                        <button type="button" onclick="addTagDirect('r1_qualifying_classes', 'F54')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">F54</button>
+                        <button type="button" onclick="addTagDirect('r1_qualifying_classes', 'F42')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">F42</button>
+                        <button type="button" onclick="addTagDirect('r1_qualifying_classes', 'F63')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">F63</button>
                     </div>
                 </div>
             </div>
@@ -338,6 +369,7 @@
         <div class="text-sm text-blue-800 space-y-2">
             <p><strong>Auto-Approval:</strong> Controls whether records and personal bests are automatically approved when detected during competition</p>
             <p><strong>Classes:</strong> Use official World Para Athletics classification codes (e.g., T11, T54, F32)</p>
+            <p><strong>R1 Qualifying Classes:</strong> Field event classes that require a qualifying round with specific jump/throw order</p>
             <p><strong>Events:</strong> Enter exact event names as they appear in your competition program</p>
             <p><strong>Record Types:</strong> WR=World Record, AR=Area Record, CR=Championship Record, etc.</p>
             <p><strong>Special Values:</strong> DNS=Did Not Start, DNF=Did Not Finish, DQ=Disqualified, etc.</p>
@@ -349,14 +381,11 @@
 </div>
 
 <script>
-// Updated JavaScript section
 function getCSRFToken() {
-    // Try multiple methods to get CSRF token
     const meta = document.querySelector('meta[name="csrf-token"]');
     if (meta) return meta.getAttribute('content');
     const input = document.querySelector('input[name="csrf_token"]');
     if (input) return input.value;
-    // Try to find any form's CSRF token
     const forms = document.querySelectorAll('form');
     for (let form of forms) {
         const csrfInput = form.querySelector('input[name="csrf_token"]');
@@ -374,7 +403,6 @@ async function addTag(configKey) {
     }
     try {
         const csrfToken = getCSRFToken();
-        console.log('CSRF Token:', csrfToken); // Debug
         const response = await fetch('/admin/config/api/add-tag', {
             method: 'POST',
             headers: {
@@ -387,9 +415,7 @@ async function addTag(configKey) {
                 csrf_token: csrfToken
             })
         });
-        console.log('Response status:', response.status); // Debug
         const result = await response.json();
-        console.log('Response data:', result); // Debug
         if (response.ok && result.success) {
             addTagToDOM(configKey, tagValue);
             input.value = '';
@@ -465,6 +491,7 @@ function addTagToDOM(configKey, tagValue) {
     const tagsContainer = document.getElementById(`${configKey}-tags`);
     const colors = {
         'classes': 'bg-blue-100 text-blue-800',
+        'r1_qualifying_classes': 'bg-orange-100 text-orange-800',
         'guide_classes': 'bg-purple-100 text-purple-800',
         'record_types': 'bg-yellow-100 text-yellow-800',
         'result_special_values': 'bg-red-100 text-red-800',
@@ -475,6 +502,7 @@ function addTagToDOM(configKey, tagValue) {
     };
     const buttonColors = {
         'classes': 'text-blue-600 hover:text-blue-800',
+        'r1_qualifying_classes': 'text-orange-600 hover:text-orange-800',
         'guide_classes': 'text-purple-600 hover:text-purple-800',
         'record_types': 'text-yellow-600 hover:text-yellow-800',
         'result_special_values': 'text-red-600 hover:text-red-800',
@@ -530,7 +558,6 @@ function showMessage(message, type = 'info') {
     }, 3000);
 }
 
-// Enter key support
 document.addEventListener('DOMContentLoaded', function() {
     const inputs = document.querySelectorAll('[id$="-input"]');
     inputs.forEach(input => {

@@ -536,6 +536,9 @@
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">NPC</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Class</th>
+                    {% if has_r1_qualifying %}
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">R1/P1</th>
+                    {% endif %}
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Performance</th>
                     {% if game.classes_list|length > 1 and game.wpa_points %}
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">WPA Points</th>
@@ -591,6 +594,11 @@
                     <td class="px-6 py-4 whitespace-nowrap">
                         <span class="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">{{ result.athlete_class }}</span>
                     </td>
+                    {% if has_r1_qualifying %}
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">{{ result.final_order }}/{{ finalists_count }}</span>
+                    </td>
+                    {% endif %}
                     <td class="px-6 py-4 whitespace-nowrap font-bold text-lg">
                         {% if result.value in config.RESULT_SPECIAL_VALUES %}
                             <span class="text-red-600">{{ result.value }}</span>

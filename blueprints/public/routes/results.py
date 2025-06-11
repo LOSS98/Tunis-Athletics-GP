@@ -65,6 +65,15 @@ def register_routes(bp):
             if field not in game:
                 game[field] = None
 
+        has_r1_qualifying = False
+        if game['event'] in config.get_field_events():
+            r1_classes = config.get_r1_qualifying_classes()
+            for cls in game['classes_list']:
+                if cls in r1_classes:
+                    has_r1_qualifying = True
+                    break
+        finalists_count = len([r for r in results if r.get('final_order')])
+
         return render_template('public/game_detail.html',
                                game=game,
                                results=results,
@@ -73,6 +82,8 @@ def register_routes(bp):
                                heat_games=heat_games,
                                combined_results=combined_results,
                                all_startlists=all_startlists,
+                               has_r1_qualifying=has_r1_qualifying,
+                               finalists_count=finalists_count,
                                config=config)
 
 

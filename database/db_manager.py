@@ -423,6 +423,11 @@ def insert_default_config():
         ('weight_field_events', [
             'Shot Put', 'Discus Throw', 'Javelin Throw', 'Hammer Throw',
             'Club Throw', 'Weight Throw'
+        ]),
+        ('r1_qualifying_classes', [
+            'F32', 'F33', 'F34', 'F35', 'F36', 'F37', 'F38', 'F40', 'F41',
+            'F42', 'F43', 'F44', 'F45', 'F46', 'F51', 'F52', 'F53', 'F54',
+            'F55', 'F56', 'F57', 'F61', 'F62', 'F63', 'F64'
         ])
     ]
     for key, tags in default_tags:

@@ -1,11 +1,12 @@
-# blueprints/admin/routes/athletes.py
 from flask import render_template, redirect, url_for, flash, request, jsonify
 from ..auth import admin_required
 from ..forms import AthleteForm
 from config import Config
-from database.models import Athlete
+from database.models import Athlete, Registration
+from database.db_manager import execute_query
 from utils.helpers import save_uploaded_file
 import os
+
 def register_routes(bp):
     @bp.route('/athletes')
     @admin_required
@@ -30,9 +31,27 @@ def register_routes(bp):
             return jsonify([])
 
         try:
-            athletes = Athlete.search(query, guides_only, event_filter=event_filter)
+            # Handle wildcard search for event filtering
+            if query == '*' and event_filter:
+                athletes = execute_query("""
+                    SELECT a.*, COALESCE(STRING_AGG(DISTINCT reg.event_name, ', ' ORDER BY reg.event_name), '') as registered_events
+                    FROM athletes a
+                    JOIN registrations reg ON a.sdms = reg.sdms
+                    WHERE reg.event_name = %s
+                    GROUP BY a.sdms, a.firstname, a.lastname, a.npc, a.gender, a.class, a.date_of_birth, a.photo, a.is_guide, a.created_at
+                    ORDER BY a.sdms
+                """, (event_filter,), fetch=True)
+            else:
+                athletes = Athlete.search(query, guides_only, event_filter=event_filter)
+
             results = []
             for athlete in athletes:
+                # Add classes_list processing
+                if athlete.get('class'):
+                    athlete['classes_list'] = [c.strip() for c in athlete['class'].split(',')]
+                else:
+                    athlete['classes_list'] = []
+
                 result = {
                     'sdms': athlete['sdms'],
                     'firstname': athlete['firstname'],
@@ -41,7 +60,7 @@ def register_routes(bp):
                     'npc': athlete['npc'],
                     'gender': athlete['gender'],
                     'class': athlete['class'],
-                    'classes_list': athlete.get('classes_list', []),
+                    'classes_list': athlete['classes_list'],
                     'is_guide': athlete.get('is_guide', False),
                     'registered_events': athlete.get('registered_events', '')
                 }
@@ -77,6 +96,7 @@ def register_routes(bp):
             except Exception as e:
                 flash(f'Error creating athlete: {str(e)}', 'danger')
         return render_template('admin/athletes/create.html', form=form)
+
     @bp.route('/athletes/<int:sdms>/edit', methods=['GET', 'POST'])
     @admin_required
     def athlete_edit(sdms):
@@ -117,6 +137,7 @@ def register_routes(bp):
             form.date_of_birth.data = athlete['date_of_birth']
             form.is_guide.data = athlete['is_guide']
         return render_template('admin/athletes/edit.html', form=form, athlete=athlete)
+
     @bp.route('/athletes/<int:sdms>/delete', methods=['POST'])
     @admin_required
     def athlete_delete(sdms):

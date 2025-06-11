@@ -120,5 +120,9 @@ def register_routes(bp):
     @bp.route('/api/events/list')
     @admin_required
     def api_events_list():
-        events = Registration.get_distinct_events()
-        return jsonify(events)
+        try:
+            events = Registration.get_distinct_events()
+            return jsonify(events)
+        except Exception as e:
+            print(f"Error getting events list: {e}")
+            return jsonify([])

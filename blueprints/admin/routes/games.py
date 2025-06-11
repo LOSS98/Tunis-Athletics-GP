@@ -8,6 +8,7 @@ from database.models import Game, Result, Attempt, StartList
 from utils.helpers import save_uploaded_file
 from PyPDF2 import PdfMerger
 from werkzeug.utils import secure_filename
+from database.db_manager import execute_query
 import os
 
 def register_routes(bp):
@@ -331,52 +332,141 @@ def register_routes(bp):
             flash(f'Error generating PDF: {str(e)}', 'danger')
             return redirect(url_for('admin.game_results', id=game_id))
 
+    @bp.route('/games/<int:game_id>/view-startlist-pdf')
+    @admin_required
+    def view_startlist_pdf(game_id):
+        """View start list PDF"""
+        try:
+            game = Game.get_by_id(game_id)
+            if not game:
+                flash('Game not found', 'danger')
+                return redirect(url_for('admin.games_list'))
+
+            # Check for manual PDF first, then generated
+            pdf_filename = game.get('manual_startlist_pdf') or game.get('generated_startlist_pdf')
+
+            if not pdf_filename:
+                flash('No start list PDF found', 'warning')
+                return redirect(url_for('admin.game_results', id=game_id))
+
+            # Determine file path
+            if game.get('manual_startlist_pdf'):
+                filepath = os.path.join('static', 'manual_pdfs', 'startlists', pdf_filename)
+            else:
+                filepath = os.path.join('static', 'generated_pdfs', 'startlists', pdf_filename)
+
+            if not os.path.exists(filepath):
+                flash('PDF file not found on disk', 'danger')
+                return redirect(url_for('admin.game_results', id=game_id))
+
+            return send_file(filepath, as_attachment=False, mimetype='application/pdf')
+
+        except Exception as e:
+            print(f"Error viewing start list PDF: {e}")
+            flash('Error viewing PDF', 'danger')
+            return redirect(url_for('admin.game_results', id=game_id))
+
+    @bp.route('/games/<int:game_id>/view-results-pdf')
+    @admin_required
+    def view_results_pdf(game_id):
+        """View results PDF"""
+        try:
+            game = Game.get_by_id(game_id)
+            if not game:
+                flash('Game not found', 'danger')
+                return redirect(url_for('admin.games_list'))
+
+            # Check for manual PDF first, then generated
+            pdf_filename = game.get('manual_results_pdf') or game.get('generated_results_pdf')
+
+            if not pdf_filename:
+                flash('No results PDF found', 'warning')
+                return redirect(url_for('admin.game_results', id=game_id))
+
+            # Determine file path
+            if game.get('manual_results_pdf'):
+                filepath = os.path.join('static', 'manual_pdfs', 'results', pdf_filename)
+            else:
+                filepath = os.path.join('static', 'generated_pdfs', 'results', pdf_filename)
+
+            if not os.path.exists(filepath):
+                flash('PDF file not found on disk', 'danger')
+                return redirect(url_for('admin.game_results', id=game_id))
+
+            return send_file(filepath, as_attachment=False, mimetype='application/pdf')
+
+        except Exception as e:
+            print(f"Error viewing results PDF: {e}")
+            flash('Error viewing PDF', 'danger')
+            return redirect(url_for('admin.game_results', id=game_id))
+
     @bp.route('/games/<int:game_id>/publish-auto-pdfs', methods=['POST'])
     @admin_required
     def publish_auto_pdfs(game_id):
-        """Generate both PDFs and mark them as published"""
+        """Generate and publish specific PDF type"""
         try:
             game = Game.get_by_id(game_id)
             if not game:
                 return jsonify({'error': 'Game not found'}), 404
 
-            # Generate start list PDF
-            startlist = StartList.get_by_game(game_id)
-            startlist_filename = None
-            if startlist:
+            data = request.get_json()
+            pdf_type = data.get('type')  # 'startlist' or 'results'
+
+            if pdf_type == 'startlist':
+                # Generate start list PDF
+                startlist = StartList.get_by_game(game_id)
+                if not startlist:
+                    return jsonify({'error': 'No start list found'}), 400
+
                 pdf_generator = PDFGenerator()
                 pdf_buffer = pdf_generator.generate_startlist_pdf(game, startlist)
 
-                startlist_filename = f"startlist_game_{game_id}_{game['event'].replace(' ', '_')}.pdf"
-                filepath = os.path.join('static', 'generated_pdfs', 'startlists', startlist_filename)
+                filename = f"startlist_game_{game_id}_{game['event'].replace(' ', '_')}.pdf"
+                filepath = os.path.join('static', 'generated_pdfs', 'startlists', filename)
                 os.makedirs(os.path.dirname(filepath), exist_ok=True)
 
                 with open(filepath, 'wb') as f:
                     f.write(pdf_buffer.getvalue())
 
-            # Generate results PDF
-            results = Result.get_all(game_id=game_id)
-            results_filename = None
-            if results:
+                Game.update_generated_pdfs(game_id, startlist_pdf=filename)
+                return jsonify({'success': True, 'message': 'Start list PDF generated and published'})
+
+            elif pdf_type == 'results':
+                # Generate results PDF
+                results = Result.get_all(game_id=game_id)
+                if not results:
+                    return jsonify({'error': 'No results found'}), 400
+
+                # Load attempts for field events
+                if game['event'] in Config.get_field_events():
+                    for result in results:
+                        result['attempts'] = Attempt.get_by_result(result['id'])
+
+                # Check for heat group data
+                heat_group = None
+                combined_results = None
+                if Game.is_heat_game(game):
+                    from database.models.heat_group import HeatGroup
+                    heat_group = HeatGroup.get_by_id(game['heat_group_id'])
+                    combined_results = HeatGroup.get_combined_results(game['heat_group_id'])
+                    for i, result in enumerate(combined_results):
+                        result['final_rank'] = i + 1
+
                 pdf_generator = PDFGenerator()
-                pdf_buffer = pdf_generator.generate_results_pdf(game, results)
+                pdf_buffer = pdf_generator.generate_results_pdf(game, results, heat_group, combined_results)
 
-                results_filename = f"results_game_{game_id}_{game['event'].replace(' ', '_')}.pdf"
-                filepath = os.path.join('static', 'generated_pdfs', 'results', results_filename)
+                filename = f"results_game_{game_id}_{game['event'].replace(' ', '_')}.pdf"
+                filepath = os.path.join('static', 'generated_pdfs', 'results', filename)
                 os.makedirs(os.path.dirname(filepath), exist_ok=True)
 
                 with open(filepath, 'wb') as f:
                     f.write(pdf_buffer.getvalue())
 
-            # Update database
-            Game.update_generated_pdfs(game_id, startlist_filename, results_filename)
+                Game.update_generated_pdfs(game_id, results_pdf=filename)
+                return jsonify({'success': True, 'message': 'Results PDF generated and published'})
 
-            return jsonify({
-                'success': True,
-                'message': 'PDFs generated and published successfully',
-                'startlist_pdf': startlist_filename,
-                'results_pdf': results_filename
-            })
+            else:
+                return jsonify({'error': 'Invalid PDF type'}), 400
 
         except Exception as e:
             print(f"Error publishing auto PDFs: {e}")
@@ -589,12 +679,16 @@ def register_routes(bp):
                     os.remove(filepath)
                     deleted_files.append('generated')
 
-            Game.update_manual_pdfs(game_id, startlist_pdf=None)
-            Game.update_generated_pdfs(game_id, startlist_pdf=None)
+            # Clear database references
+            execute_query("""
+                UPDATE games 
+                SET manual_startlist_pdf = NULL, generated_startlist_pdf = NULL 
+                WHERE id = %s
+            """, (game_id,))
 
             return jsonify({
                 'success': True,
-                'message': f'Start list PDF deleted successfully ({", ".join(deleted_files)})'
+                'message': f'Start list PDF deleted successfully ({", ".join(deleted_files) if deleted_files else "no files found"})'
             })
 
         except Exception as e:
@@ -623,14 +717,18 @@ def register_routes(bp):
                     os.remove(filepath)
                     deleted_files.append('generated')
 
-            Game.update_manual_pdfs(game_id, results_pdf=None)
-            Game.update_generated_pdfs(game_id, results_pdf=None)
+            # Clear database references
+            execute_query("""
+                UPDATE games 
+                SET manual_results_pdf = NULL, generated_results_pdf = NULL 
+                WHERE id = %s
+            """, (game_id,))
 
             return jsonify({
                 'success': True,
-                'message': f'Results PDF deleted successfully ({", ".join(deleted_files)})'
+                'message': f'Results PDF deleted successfully ({", ".join(deleted_files) if deleted_files else "no files found"})'
             })
 
         except Exception as e:
             print(f"Error deleting results PDF: {e}")
-            return jsonify({'error': str(e)}, 500)
+            return jsonify({'error': str(e)}), 500
