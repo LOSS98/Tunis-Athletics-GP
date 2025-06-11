@@ -175,7 +175,7 @@ def register_routes(bp):
     @admin_required
     def game_update_status(id):
         status = request.form.get('status')
-        valid_statuses = ['scheduled', 'started', 'in_progress', 'finished', 'cancelled']
+        valid_statuses = ['scheduled', 'delayed', 'started', 'in_progress', 'finished', 'cancelled']
         if status not in valid_statuses:
             return jsonify({'error': 'Invalid status'}), 400
         try:
@@ -566,3 +566,71 @@ def register_routes(bp):
         except Exception as e:
             print(f"Error adding athlete to start list: {e}")
             return jsonify({'error': str(e)}), 500
+
+    @bp.route('/games/<int:game_id>/delete-startlist-pdf', methods=['POST'])
+    @admin_required
+    def delete_startlist_pdf(game_id):
+        try:
+            game = Game.get_by_id(game_id)
+            if not game:
+                return jsonify({'error': 'Game not found'}), 404
+
+            deleted_files = []
+
+            if game.get('manual_startlist_pdf'):
+                filepath = os.path.join('static', 'manual_pdfs', 'startlists', game['manual_startlist_pdf'])
+                if os.path.exists(filepath):
+                    os.remove(filepath)
+                    deleted_files.append('manual')
+
+            if game.get('generated_startlist_pdf'):
+                filepath = os.path.join('static', 'generated_pdfs', 'startlists', game['generated_startlist_pdf'])
+                if os.path.exists(filepath):
+                    os.remove(filepath)
+                    deleted_files.append('generated')
+
+            Game.update_manual_pdfs(game_id, startlist_pdf=None)
+            Game.update_generated_pdfs(game_id, startlist_pdf=None)
+
+            return jsonify({
+                'success': True,
+                'message': f'Start list PDF deleted successfully ({", ".join(deleted_files)})'
+            })
+
+        except Exception as e:
+            print(f"Error deleting start list PDF: {e}")
+            return jsonify({'error': str(e)}), 500
+
+    @bp.route('/games/<int:game_id>/delete-results-pdf', methods=['POST'])
+    @admin_required
+    def delete_results_pdf(game_id):
+        try:
+            game = Game.get_by_id(game_id)
+            if not game:
+                return jsonify({'error': 'Game not found'}), 404
+
+            deleted_files = []
+
+            if game.get('manual_results_pdf'):
+                filepath = os.path.join('static', 'manual_pdfs', 'results', game['manual_results_pdf'])
+                if os.path.exists(filepath):
+                    os.remove(filepath)
+                    deleted_files.append('manual')
+
+            if game.get('generated_results_pdf'):
+                filepath = os.path.join('static', 'generated_pdfs', 'results', game['generated_results_pdf'])
+                if os.path.exists(filepath):
+                    os.remove(filepath)
+                    deleted_files.append('generated')
+
+            Game.update_manual_pdfs(game_id, results_pdf=None)
+            Game.update_generated_pdfs(game_id, results_pdf=None)
+
+            return jsonify({
+                'success': True,
+                'message': f'Results PDF deleted successfully ({", ".join(deleted_files)})'
+            })
+
+        except Exception as e:
+            print(f"Error deleting results PDF: {e}")
+            return jsonify({'error': str(e)}, 500)

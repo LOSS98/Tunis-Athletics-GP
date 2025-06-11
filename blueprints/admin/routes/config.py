@@ -337,7 +337,6 @@ def register_routes(bp):
             flash('Configuration key is required', 'danger')
             return redirect(url_for('admin.config_general'))
 
-        # Déterminer le type de configuration
         setting_type = 'string'
         if key in ['auto_approve_records', 'auto_approve_personal_bests']:
             setting_type = 'boolean'
@@ -361,6 +360,7 @@ def register_routes(bp):
             flash(f'Error updating configuration: {str(e)}', 'danger')
 
         return redirect(url_for('admin.config_general'))
+
 @staticmethod
 def get_genders():
     return ['Male', 'Female']

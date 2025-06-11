@@ -1,0 +1,63 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Import existing styles */
+@import 'admin.css';
+
+/* Custom components */
+@layer components {
+  .gradient-text {
+    @apply bg-gradient-to-r from-tunis-red-500 to-tunis-red-600 bg-clip-text text-transparent;
+  }
+
+  .pattern-bg {
+    background-color: #AE191B;
+    background-image: url("/static/images/pattern.svg");
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center px-4 py-2 rounded-md font-medium transition-all duration-150 border-0 cursor-pointer;
+  }
+
+  .btn-primary {
+    @apply bg-red-600 text-white hover:bg-red-700;
+  }
+
+  .btn-secondary {
+    @apply bg-gray-600 text-white hover:bg-gray-700;
+  }
+
+  .btn-success {
+    @apply bg-green-600 text-white hover:bg-green-700;
+  }
+
+  .btn-danger {
+    @apply bg-red-600 text-white hover:bg-red-700;
+  }
+
+  .btn-warning {
+    @apply bg-yellow-600 text-white hover:bg-yellow-700;
+  }
+}
+
+/* Keep your existing custom styles */
+body {
+  font-family: 'Inter', sans-serif;
+}
+
+@media (max-width: 768px) {
+    table {
+        display: block;
+        overflow-x: auto;
+        white-space: nowrap;
+    }
+}
+
+@media print {
+    .no-print {
+        display: none !important;
+    }
+}

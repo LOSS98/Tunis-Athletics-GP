@@ -1,6 +1,7 @@
 from flask import render_template, request
 from database.models.game import Game
 from database.models import StartList
+from config import config
 def register_routes(bp):
     @bp.route('/startlists')
     def startlists():
@@ -29,4 +30,4 @@ def register_routes(bp):
         return render_template('public/startlist_detail.html',
                                game=game,
                                startlist=startlist,
-                               config=Config)
+                               config=config)

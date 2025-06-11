@@ -11,7 +11,12 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+COPY package*.json ./
+RUN npm install
+
 COPY . .
+
+RUN npm run build-css
 
 RUN chmod -R 755 static/
 

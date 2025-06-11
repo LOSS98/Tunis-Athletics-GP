@@ -1256,6 +1256,63 @@ document.addEventListener('click', function(e) {
         guideResults.classList.add('hidden');
     }
 });
+function viewStartlistPdf(gameId) {
+    window.open(`/admin/games/${gameId}/view-startlist-pdf`, '_blank');
+}
+
+function viewResultsPdf(gameId) {
+    window.open(`/admin/games/${gameId}/view-results-pdf`, '_blank');
+}
+
+function deleteStartlistPdf(gameId) {
+    if (confirm('Delete the start list PDF? This action cannot be undone.')) {
+        fetch(`/admin/games/${gameId}/delete-startlist-pdf`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('Start list PDF deleted successfully', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showNotification(data.error || 'Error deleting PDF', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Error deleting PDF', 'error');
+        });
+    }
+}
+
+function deleteResultsPdf(gameId) {
+    if (confirm('Delete the results PDF? This action cannot be undone.')) {
+        fetch(`/admin/games/${gameId}/delete-results-pdf`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('Results PDF deleted successfully', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showNotification(data.error || 'Error deleting PDF', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showNotification('Error deleting PDF', 'error');
+        });
+    }
+}
 
 // Main initialization
 document.addEventListener('DOMContentLoaded', function() {
@@ -1298,3 +1355,7 @@ window.publishAutoResultsPdf = publishAutoResultsPdf;
 window.publishAutoPdfs = publishAutoPdfs;
 window.bulkGeneratePdfs = bulkGeneratePdfs;
 window.addAthleteToStartlist = addAthleteToStartlist;
+window.viewStartlistPdf = viewStartlistPdf;
+window.viewResultsPdf = viewResultsPdf;
+window.deleteStartlistPdf = deleteStartlistPdf;
+window.deleteResultsPdf = deleteResultsPdf;

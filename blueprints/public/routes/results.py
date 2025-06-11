@@ -1,6 +1,6 @@
 from flask import render_template, request, send_file, abort
 import os
-from config import Config
+from config import config
 from database.models import Game, Result, StartList, HeatGroup
 
 
@@ -73,7 +73,7 @@ def register_routes(bp):
                                heat_games=heat_games,
                                combined_results=combined_results,
                                all_startlists=all_startlists,
-                               config=Config)
+                               config=config)
 
 
 

@@ -388,7 +388,6 @@ class PDFGenerator:
         return table
 
     def generate_results_pdf(self, game, results, heat_group=None, combined_results=None):
-        """Generate results PDF matching book1.pdf exactly"""
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(
             buffer,
@@ -401,31 +400,103 @@ class PDFGenerator:
 
         story = []
 
-        # Header
         header_content = self.get_header_content(game)
         story.extend(header_content)
         story.append(Spacer(1, 8 * mm))
 
-        # Wind info for track events
         if game.get('wind_velocity') is not None and game['event'] in Config.get_track_events():
             wind_text = f"Wind: {game['wind_velocity']:+.1f} m/s"
             story.append(Paragraph(wind_text, self.styles['PDFVenue']))
             story.append(Spacer(1, 3 * mm))
 
-        # Create appropriate table
-        if game['event'] == 'High Jump':
-            table = self.create_high_jump_table(game, results)
-        elif game['event'] in Config.get_field_events():
-            table = self.create_field_event_table(game, results)
+        if heat_group and combined_results:
+            from database.models.heat_group import HeatGroup
+            from database.models.game import Game as GameModel
+            from database.models.result import Result
+
+            heat_games = HeatGroup.get_games(heat_group['id'])
+
+            for heat_game in heat_games:
+                story.append(Paragraph(f"Heat {heat_game['heat_number']} Results", self.styles['PDFEventTitle']))
+                story.append(Spacer(1, 3 * mm))
+
+                heat_results = Result.get_all(game_id=heat_game['id'])
+
+                if heat_results:
+                    if heat_game['event'] == 'High Jump':
+                        table = self.create_high_jump_table(heat_game, heat_results)
+                    elif heat_game['event'] in Config.get_field_events():
+                        table = self.create_field_event_table(heat_game, heat_results)
+                    else:
+                        table = self.create_track_event_table(heat_results, heat_game)
+
+                    story.append(table)
+                    story.append(Spacer(1, 8 * mm))
+
+            story.append(PageBreak())
+            story.append(Paragraph("Final Combined Results", self.styles['PDFEventTitle']))
+            story.append(Spacer(1, 5 * mm))
+
+            combined_table = self.create_combined_results_table(combined_results, game)
+            story.append(combined_table)
+
         else:
-            table = self.create_track_event_table(results, game)
+            if game['event'] == 'High Jump':
+                table = self.create_high_jump_table(game, results)
+            elif game['event'] in Config.get_field_events():
+                table = self.create_field_event_table(game, results)
+            else:
+                table = self.create_track_event_table(results, game)
 
-        story.append(table)
+            story.append(table)
 
-        # Build PDF
         doc.build(story, canvasmaker=NumberedCanvas)
         buffer.seek(0)
         return buffer
+
+    def create_combined_results_table(self, combined_results, game):
+        headers = ['Final Rank', 'Heat', 'SDMS', 'First Name', 'Last Name', 'NPC', 'Class', 'Performance']
+        if game.get('wpa_points', False):
+            headers.append('WPA Po')
+
+        data = [headers]
+
+        for result in combined_results:
+            row = [
+                str(result.get('final_rank', '')),
+                f"Heat {result.get('heat_number', '')}",
+                str(result['athlete_sdms']),
+                result['firstname'] or '',
+                result['lastname'] or '',
+                result['npc'] or '',
+                result.get('athlete_class', '').split(',')[0] if result.get('athlete_class') else '',
+                result['value'] or ''
+            ]
+
+            if game.get('wpa_points', False):
+                row.append(str(result['raza_score']) if result.get('raza_score') else '')
+
+            data.append(row)
+
+        table = Table(data, repeatRows=1)
+        table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.Color(0.8, 0.9, 1.0)),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 7),
+            ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
+            ('TOPPADDING', (0, 0), (-1, 0), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 4),
+
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 1), (-1, -1), 6),
+            ('ALIGN', (0, 1), (-1, -1), 'CENTER'),
+            ('TOPPADDING', (0, 1), (-1, -1), 2),
+            ('BOTTOMPADDING', (0, 1), (-1, -1), 2),
+
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ]))
+
+        return table
 
     def generate_startlist_pdf(self, game, startlist):
         """Generate start list PDF"""

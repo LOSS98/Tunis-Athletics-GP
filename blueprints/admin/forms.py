@@ -37,6 +37,7 @@ class GameForm(FlaskForm):
     nb_athletes = IntegerField('Number of Athletes', validators=[DataRequired(), NumberRange(min=1)])
     status = SelectField('Status', choices=[
         ('scheduled', 'Scheduled'),
+        ('delayed', 'Delayed'),
         ('started', 'Started'),
         ('in_progress', 'In Progress'),
         ('finished', 'Finished'),
