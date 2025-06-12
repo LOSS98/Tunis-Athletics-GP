@@ -99,7 +99,7 @@
                             {% elif game.status == 'in_progress' %}bg-yellow-100 text-yellow-800
                             {% elif game.status == 'cancelled' %}bg-red-100 text-red-800
                             {% else %}bg-gray-100 text-gray-800{% endif %}">
-                            {{ game.status.replace('_', ' ').title() }}
+                            {{ (game.status or 'Unknown').replace('_', ' ').title() }}
                         </span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
