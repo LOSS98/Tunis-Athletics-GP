@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, date
 
 from database.db_manager import execute_one, execute_query
 
