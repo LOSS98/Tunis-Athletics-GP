@@ -13,7 +13,7 @@ def register_routes(bp):
                     search.lower() in g['gender'].lower() or
                     search.lower() in g['classes'].lower() or
                     str(g['day']) in search]
-        return render_template('public/startlists.html', games=games, search=search)
+        return render_template('public/startlists.html', games=games, search=search, config=config)
     @bp.route('/game/<int:id>/startlist')
     def game_startlist_detail(id):
         game = Game.get_by_id(id)

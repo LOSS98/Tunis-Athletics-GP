@@ -4,7 +4,7 @@
 <div class="mb-8">
     <div class="flex items-center justify-between">
         <div>
-            <h1 class="text-3xl font-bold mb-2">{{ game.event }} - {{ game.genders }} {{ game.classes }}</h1>
+            <h1 class="text-3xl font-bold mb-2">{{ game.event }} - {{ config.format_gender_for_display(game.genders) }} {{ game.classes }}</h1>
             <p class="text-gray-600">Day {{ game.day }} at {{ game.time }} {% if game.phase %} - {{ game.phase }}{% endif %}</p>
         </div>
         <div class="text-right">
@@ -212,7 +212,7 @@
                             <span class="text-red-600">{{ result.value }}</span>
                         {% else %}
                             {% if game.event in config.TRACK_EVENTS %}
-                                {{ config.format_time(result.value) }}
+                                {{ config.format_time(result.value, True) }}
                             {% elif game.event in config.FIELD_EVENTS %}
                                 {{ config.format_distance(result.value) }} m
                             {% else %}
@@ -329,7 +329,7 @@
                                 <span class="text-red-600">{{ result.value }}</span>
                             {% else %}
                                 {% if game.event in config.TRACK_EVENTS %}
-                                    {{ config.format_time(result.value) }}
+                                    {{ config.format_time(result.value, True) }}
                                 {% elif game.event in config.FIELD_EVENTS %}
                                     {{ config.format_distance(result.value) }} m
                                 {% else %}
@@ -614,7 +614,7 @@
                             <span class="text-red-600">{{ result.value }}</span>
                         {% else %}
                             {% if game.event in config.TRACK_EVENTS %}
-                                {{ config.format_time(result.value) }}
+                                {{ config.format_time(result.value, True) }}
                             {% elif game.event in config.FIELD_EVENTS %}
                                 {{ config.format_distance(result.value) }} m
                             {% else %}

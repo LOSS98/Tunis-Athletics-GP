@@ -161,7 +161,7 @@ class Config:
             return []
 
     @staticmethod
-    def format_time(time_value):
+    def format_time(time_value, for_public=False):
         if not time_value or time_value in Config.get_result_special_values():
             return time_value
         try:
@@ -174,7 +174,10 @@ class Config:
                 time_float = float(time_str)
                 minutes = int(time_float // 60)
                 seconds = time_float % 60
-            return f"{minutes:02d}:{seconds:06.3f}"
+            if for_public:
+                return f"{minutes:02d}:{seconds:05.2f}"
+            else:
+                return f"{minutes:02d}:{seconds:06.3f}"
         except:
             return time_value
 

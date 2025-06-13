@@ -166,7 +166,7 @@ class Athlete:
             pb_query = """
             SELECT event, athlete_class, performance, location, record_date
             FROM personal_bests
-            WHERE sdms = %s AND approved = TRUE
+            WHERE sdms = %s
             ORDER BY record_date DESC
             """
             athlete['personal_bests'] = execute_query(pb_query, (sdms,), fetch=True)

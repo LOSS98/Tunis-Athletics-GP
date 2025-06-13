@@ -1,5 +1,7 @@
 import os
 from datetime import datetime
+
+from werkzeug.routing import ValidationError
 from werkzeug.utils import secure_filename
 from config import Config
 from flask import current_app

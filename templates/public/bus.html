@@ -1,0 +1,411 @@
+{% extends "base.html" %}
+{% block title %}Shuttle Bus Services - World Para Athletics Grand Prix{% endblock %}
+{% block content %}
+
+<div class="mb-8">
+    <h1 class="text-3xl font-bold mb-4">Shuttle Bus Services</h1>
+    <p class="text-gray-600">Complete shuttle transportation schedule - Tunisia 2025</p>
+</div>
+
+<!-- Important Notice -->
+<div class="mb-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
+    <div class="flex items-start space-x-3">
+        <i class="fas fa-info-circle text-2xl text-blue-600 mt-1"></i>
+        <div>
+            <h3 class="text-lg font-bold text-blue-900 mb-2">Transportation Information</h3>
+            <p class="text-blue-800 mb-2">
+                Regular shuttle service between hotels and competition venues throughout the event period.
+            </p>
+            <p class="text-sm text-blue-700">
+                <strong>Special Note:</strong> Special Transport for athletes involved in classification or Doping Control will be activated based on the effective necessities.
+            </p>
+        </div>
+    </div>
+</div>
+
+<!-- Classification Period (13-15 June) -->
+<div class="mb-8">
+    <div class="bg-gradient-to-r from-purple-600 to-purple-700 text-white rounded-t-lg p-4">
+        <h2 class="text-2xl font-bold flex items-center">
+            <i class="fas fa-clipboard-check mr-3"></i>
+            Classification Period (June 13-15, 2025)
+        </h2>
+    </div>
+
+    <div class="bg-white rounded-b-lg shadow overflow-hidden">
+        <!-- From Hotel to Venues -->
+        <div class="border-b bg-gray-50 p-4">
+            <h3 class="text-lg font-bold text-gray-800 flex items-center">
+                <i class="fas fa-arrow-right text-blue-600 mr-2"></i>
+                From Hotel to Stadium/Ophthalmological Clinic
+            </h3>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Date</th>
+                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Purpose</th>
+                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Times</th>
+                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Destination</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-4 font-medium">June 13, 2025</td>
+                        <td class="px-4 py-4">
+                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                Classification PI + Training
+                            </span>
+                        </td>
+                        <td class="px-4 py-4">
+                            <div class="flex flex-wrap gap-1">
+                                <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">07:00</span>
+                                <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">10:00</span>
+                                <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">13:00</span>
+                                <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">15:00</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4 text-sm">Rades Athletics Stadium</td>
+                    </tr>
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-4 font-medium">June 13, 2025</td>
+                        <td class="px-4 py-4">
+                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                                Classification -VI
+                            </span>
+                        </td>
+                        <td class="px-4 py-4">
+                            <div class="flex flex-wrap gap-1">
+                                <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">11:00</span>
+                                <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">14:00</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4 text-sm">Ophthalmological Clinic</td>
+                    </tr>
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-4 font-medium">June 14, 2025</td>
+                        <td class="px-4 py-4">
+                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                Classification PI - II-VI + Training
+                            </span>
+                        </td>
+                        <td class="px-4 py-4">
+                            <div class="flex flex-wrap gap-1">
+                                <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">07:00</span>
+                                <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">10:00</span>
+                                <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">12:00</span>
+                                <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">15:00</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4 text-sm">Rades Athletics Stadium + Ophthalmological Clinic</td>
+                    </tr>
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-4 font-medium">June 15, 2025</td>
+                        <td class="px-4 py-4">
+                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                                Classification PI -II-VI+ Training
+                            </span>
+                        </td>
+                        <td class="px-4 py-4">
+                            <div class="flex flex-wrap gap-1">
+                                <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">07:00</span>
+                                <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">10:00</span>
+                                <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">13:00</span>
+                                <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">15:00</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4 text-sm">Rades Athletics Stadium</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- From Venues to Hotel -->
+        <div class="border-t border-b bg-gray-50 p-4 mt-4">
+            <h3 class="text-lg font-bold text-gray-800 flex items-center">
+                <i class="fas fa-arrow-left text-red-600 mr-2"></i>
+                From Stadium/Ophthalmological Clinic to Hotel
+            </h3>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Date</th>
+                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Times</th>
+                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Destination</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-4 font-medium">June 13, 2025</td>
+                        <td class="px-4 py-4">
+                            <div class="flex flex-wrap gap-1">
+                                <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">10:30</span>
+                                <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">12:30</span>
+                                <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">16:30</span>
+                                <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">18:30</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4 text-sm">Hotel Al Mouradi+ Carthage Thalasso + Ezzahra Hotel</td>
+                    </tr>
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-4 font-medium">June 14, 2025</td>
+                        <td class="px-4 py-4">
+                            <div class="flex flex-wrap gap-1">
+                                <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">10:30</span>
+                                <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">12:30</span>
+                                <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">16:30</span>
+                                <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">18:30</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4 text-sm">Hotel Al Mouradi+ Carthage Thalasso + Ezzahra Hotel</td>
+                    </tr>
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-4 font-medium">June 15, 2025</td>
+                        <td class="px-4 py-4">
+                            <div class="flex flex-wrap gap-1">
+                                <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">10:30</span>
+                                <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">12:30</span>
+                                <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">16:30</span>
+                                <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">18:30</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4 text-sm">Hotel Al Mouradi+ Carthage Thalasso + Ezzahra Hotel</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Competition Period (16-18 June) -->
+<div class="mb-8">
+    <div class="bg-gradient-to-r from-red-600 to-red-700 text-white rounded-t-lg p-4">
+        <h2 class="text-2xl font-bold flex items-center">
+            <i class="fas fa-trophy mr-3"></i>
+            Competition Period (June 16-18, 2025)
+        </h2>
+    </div>
+
+    <div class="bg-white rounded-b-lg shadow overflow-hidden">
+        <!-- From Hotel to Stadium -->
+        <div class="border-b bg-gray-50 p-4">
+            <h3 class="text-lg font-bold text-gray-800 flex items-center">
+                <i class="fas fa-arrow-right text-blue-600 mr-2"></i>
+                From Hotel to Stadium
+            </h3>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Date</th>
+                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Times</th>
+                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Destination</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-4 font-medium">
+                            <div class="flex items-center">
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 mr-2">
+                                    Day 1
+                                </span>
+                                June 16, 2025
+                            </div>
+                        </td>
+                        <td class="px-4 py-4">
+                            <div class="flex flex-wrap gap-1">
+                                <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">12:30</span>
+                                <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">14:30</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4 text-sm">Rades Athletics Stadium</td>
+                    </tr>
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-4 font-medium">
+                            <div class="flex items-center">
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 mr-2">
+                                    Day 2
+                                </span>
+                                June 17, 2025
+                            </div>
+                        </td>
+                        <td class="px-4 py-4">
+                            <div class="flex flex-wrap gap-1">
+                                <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">07:00</span>
+                                <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">12:00</span>
+                                <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">14:30</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4 text-sm">Rades Athletics Stadium</td>
+                    </tr>
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-4 font-medium">
+                            <div class="flex items-center">
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 mr-2">
+                                    Day 3
+                                </span>
+                                June 18, 2025
+                            </div>
+                        </td>
+                        <td class="px-4 py-4">
+                            <div class="flex flex-wrap gap-1">
+                                <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">12:00</span>
+                                <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">13:30</span>
+                                <span class="bg-green-100 text-green-800 px-2 py-1 rounded text-sm">14:30</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4 text-sm">Rades Athletics Stadium</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- From Stadium to Hotel -->
+        <div class="border-t border-b bg-gray-50 p-4 mt-4">
+            <h3 class="text-lg font-bold text-gray-800 flex items-center">
+                <i class="fas fa-arrow-left text-red-600 mr-2"></i>
+                From Stadium to Hotel
+            </h3>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Date</th>
+                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Times</th>
+                        <th class="px-4 py-3 text-left text-sm font-medium text-gray-700">Destination</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-4 font-medium">
+                            <div class="flex items-center">
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 mr-2">
+                                    Day 1
+                                </span>
+                                June 16, 2025
+                            </div>
+                        </td>
+                        <td class="px-4 py-4">
+                            <div class="flex flex-wrap gap-1">
+                                <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">18:30</span>
+                                <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">19:45</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4 text-sm">Hotel Al Mouradi+ Carthage Thalasso + Ezzahra Hotel</td>
+                    </tr>
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-4 font-medium">
+                            <div class="flex items-center">
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 mr-2">
+                                    Day 2
+                                </span>
+                                June 17, 2025
+                            </div>
+                        </td>
+                        <td class="px-4 py-4">
+                            <div class="flex flex-wrap gap-1">
+                                <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">12:45</span>
+                                <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">18:30</span>
+                                <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">19:45</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4 text-sm">Hotel Al Mouradi+ Carthage Thalasso + Ezzahra Hotel</td>
+                    </tr>
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-4 py-4 font-medium">
+                            <div class="flex items-center">
+                                <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800 mr-2">
+                                    Day 3
+                                </span>
+                                June 18, 2025
+                            </div>
+                        </td>
+                        <td class="px-4 py-4">
+                            <div class="flex flex-wrap gap-1">
+                                <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">18:00</span>
+                                <span class="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm">19:00</span>
+                            </div>
+                        </td>
+                        <td class="px-4 py-4 text-sm">Hotel Al Mouradi+ Carthage Thalasso + Ezzahra Hotel</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Reference -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- Venues -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-xl font-bold mb-4 flex items-center">
+            <i class="fas fa-map-marker-alt text-red-600 mr-2"></i>
+            Venues
+        </h3>
+        <div class="space-y-3">
+            <div class="flex items-start space-x-3">
+                <i class="fas fa-running text-blue-600 mt-1"></i>
+                <div>
+                    <div class="font-semibold">Rades Athletics Stadium</div>
+                    <div class="text-sm text-gray-600">Main competition venue</div>
+                </div>
+            </div>
+            <div class="flex items-start space-x-3">
+                <i class="fas fa-eye text-green-600 mt-1"></i>
+                <div>
+                    <div class="font-semibold">Ophthalmological Clinic</div>
+                    <div class="text-sm text-gray-600">Classification venue for visually impaired athletes</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hotels -->
+    <div class="bg-white rounded-lg shadow p-6">
+        <h3 class="text-xl font-bold mb-4 flex items-center">
+            <i class="fas fa-hotel text-blue-600 mr-2"></i>
+            Accommodation
+        </h3>
+        <div class="space-y-2 text-sm">
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-bed text-gray-400"></i>
+                <span>Hotel Al Mouradi</span>
+            </div>
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-bed text-gray-400"></i>
+                <span>Carthage Thalasso</span>
+            </div>
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-bed text-gray-400"></i>
+                <span>Ezzahra Hotel</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Additional Information -->
+<div class="mt-8 bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+    <div class="flex items-start space-x-3">
+        <i class="fas fa-exclamation-triangle text-2xl text-yellow-600 mt-1"></i>
+        <div>
+            <h3 class="text-lg font-bold text-yellow-900 mb-2">Important Transportation Notes</h3>
+            <ul class="text-yellow-800 space-y-1">
+                <li>• Please be at the pickup point 15 minutes before scheduled departure time</li>
+                <li>• Special transport arrangements will be made for athletes undergoing classification or doping control</li>
+                <li>• Shuttle schedules are subject to change based on competition requirements</li>
+                <li>• All times are local time (GMT+1)</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

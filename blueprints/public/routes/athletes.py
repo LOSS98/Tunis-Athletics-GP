@@ -1,6 +1,6 @@
 from flask import render_template, request
 from database.models import Athlete
-from config import Config
+from config import config
 
 
 def register_routes(bp):
@@ -29,11 +29,11 @@ def register_routes(bp):
                                gender_filter=gender_filter,
                                npc_filter=npc_filter,
                                npcs=npcs,
-                               genders=Config.get_genders())
+                               genders=config.GENDERS)
 
     @bp.route('/athlete/<int:sdms>')
     def athlete_detail(sdms):
         athlete = Athlete.get_athlete_detail(sdms)
         if not athlete:
             return render_template('404.html'), 404
-        return render_template('public/athlete_detail.html', athlete=athlete)
+        return render_template('public/athlete_detail.html', athlete=athlete, config=config)

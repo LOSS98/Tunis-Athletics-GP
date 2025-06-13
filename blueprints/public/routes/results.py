@@ -28,7 +28,7 @@ def register_routes(bp):
             if 'generated_results_pdf' not in game:
                 game['generated_results_pdf'] = None
 
-        return render_template('public/results.html', games=published_games, search=search)
+        return render_template('public/results.html', games=published_games, search=search, config=config)
 
     @bp.route('/game/<int:id>')
     def game_detail(id):

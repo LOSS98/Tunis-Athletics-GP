@@ -101,13 +101,7 @@
                             </td>
                             <td class="px-4 py-4">
                                 <div class="font-medium">
-                                    {% if game.genders == 'Male' %}
-                                        Men's
-                                    {% elif game.genders == 'Female' %}
-                                        Women's
-                                    {% else %}
-                                        {{ game.genders|replace('Male', 'Men\'s')|replace('Female', 'Women\'s') }}
-                                    {% endif %}
+                                    {{ config.format_gender_for_display(game.genders)}}
                                 </div>
                                 {% if game.wpa_points %}
                                     <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
