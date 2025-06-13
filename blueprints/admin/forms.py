@@ -45,6 +45,7 @@ class GameForm(FlaskForm):
     ], validators=[DataRequired()])
     published = BooleanField('Published')
     wpa_points = BooleanField('Use WPA Points (RAZA Scoring)')
+    photo_finish = FileField('Photo Finish', validators=[Optional(), FileAllowed(['jpg', 'jpeg', 'png', 'pdf'], 'Image files only')])
 
     def __init__(self, *args, **kwargs):
         super(GameForm, self).__init__(*args, **kwargs)
