@@ -40,15 +40,27 @@
 </div>
 
 {% if event_counts %}
-<div class="mb-6 bg-white rounded-lg shadow p-4">
-    <h3 class="text-lg font-bold mb-3">Event Statistics</h3>
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {% for event_stat in event_counts %}
-        <div class="bg-blue-50 rounded p-3 text-center">
-            <div class="text-2xl font-bold text-blue-600">{{ event_stat.athlete_count }}</div>
-            <div class="text-sm text-gray-600">{{ event_stat.event_name }}</div>
+<div class="mb-6 bg-white rounded-lg shadow">
+    <div class="p-4 border-b cursor-pointer hover:bg-gray-50 transition-colors" onclick="toggleEventStats()">
+        <div class="flex justify-between items-center">
+            <h3 class="text-lg font-bold">Event Statistics</h3>
+            <div class="flex items-center">
+                <span class="text-sm text-gray-500 mr-2">{{ event_counts|length }} events</span>
+                <i id="statsToggleIcon" class="fas fa-chevron-right transform transition-transform duration-200"></i>
+            </div>
         </div>
-        {% endfor %}
+    </div>
+    <div id="eventStatsContent" class="hidden">
+        <div class="p-4">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {% for event_stat in event_counts %}
+                <div class="bg-blue-50 rounded p-3 text-center">
+                    <div class="text-2xl font-bold text-blue-600">{{ event_stat.athlete_count }}</div>
+                    <div class="text-sm text-gray-600">{{ event_stat.event_name }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
     </div>
 </div>
 {% endif %}
@@ -151,5 +163,24 @@
         </table>
     </div>
 </div>
+
+<script>
+function toggleEventStats() {
+    const content = document.getElementById('eventStatsContent');
+    const icon = document.getElementById('statsToggleIcon');
+
+    if (content.classList.contains('hidden')) {
+        content.classList.remove('hidden');
+        icon.classList.remove('fa-chevron-right');
+        icon.classList.add('fa-chevron-down');
+        icon.style.transform = 'rotate(90deg)';
+    } else {
+        content.classList.add('hidden');
+        icon.classList.remove('fa-chevron-down');
+        icon.classList.add('fa-chevron-right');
+        icon.style.transform = 'rotate(0deg)';
+    }
+}
+</script>
 
 {% endblock %}

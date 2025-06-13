@@ -1,6 +1,8 @@
 from config import Config
 from database.db_manager import execute_one, execute_query
 from utils.raza_calculation import calculate_raza, verify_combination
+
+
 class Attempt:
     @staticmethod
     def get_by_result(result_id):
@@ -8,6 +10,7 @@ class Attempt:
             "SELECT * FROM attempts WHERE result_id = %s ORDER BY attempt_number",
             (result_id,), fetch=True
         )
+
     @staticmethod
     def create(result_id, attempt_number, value, wind_velocity=None, raza_score=None, raza_score_precise=None,
                height=None):
@@ -17,12 +20,14 @@ class Attempt:
             "INSERT INTO attempts (result_id, attempt_number, value, raza_score, raza_score_precise, wind_velocity, height) VALUES (%s, %s, %s, %s, %s, %s, %s)",
             (result_id, attempt_number, value, raza_score, raza_score_precise, wind_velocity, height)
         )
+
     @staticmethod
     def update(attempt_id, **data):
         set_clause = ', '.join([f"{k} = %s" for k in data.keys()])
         query = f"UPDATE attempts SET {set_clause} WHERE id = %s"
         params = list(data.values()) + [attempt_id]
         return execute_query(query, params)
+
     @staticmethod
     def create_multiple(result_id, attempts=None):
         if attempts is None:
@@ -42,6 +47,7 @@ class Attempt:
                 (result_id, attempt_number, value, raza_score, raza_score_decimal, wind_velocity, height)
             )
         return True
+
     @staticmethod
     def update_partial(result_id, attempts_data):
         for attempt_number, attempt_data in attempts_data.items():
@@ -69,9 +75,11 @@ class Attempt:
                     (result_id, attempt_number, value, raza_score, raza_score_decimal, wind_velocity, height)
                 )
         return True
+
     @staticmethod
     def delete_by_result(result_id):
         return execute_query("DELETE FROM attempts WHERE result_id = %s", (result_id,))
+
     @staticmethod
     def add_long_jump_attempt(result_id, value, height=None, wind_velocity=None):
         existing_attempts = execute_query(

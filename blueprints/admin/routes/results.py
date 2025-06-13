@@ -282,7 +282,6 @@ def register_routes(bp):
             heat_siblings = Game.get_heat_siblings(game)
             combined_results = HeatGroup.get_combined_results(game['heat_group_id'])
             for i, result in enumerate(combined_results):
-                result['final_rank'] = i + 1
                 result['athlete_classes'] = result['athlete_class'].split(',') if result['athlete_class'] else []
 
         game_json = {
@@ -319,7 +318,7 @@ def register_routes(bp):
                                startlist=startlist,
                                form=form,
                                config=config,
-                                 has_r1_qualifying=has_r1_qualifying,
+                               has_r1_qualifying=has_r1_qualifying,
                                heat_group=heat_group,
                                heat_siblings=heat_siblings,
                                combined_results=combined_results,

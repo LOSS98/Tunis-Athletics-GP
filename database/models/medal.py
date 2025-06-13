@@ -1,29 +1,21 @@
 from database.db_manager import execute_query, execute_one
 
-
 class Medal:
     @staticmethod
     def get_all():
-        """Get all medal standings with NPC info and proper ranking"""
         query = """
         SELECT m.*, n.name as npc_name, n.flag_file_path,
-               r.name as region_name, r.continent
+               r.name as region_name, r.continent,
+               RANK() OVER (ORDER BY m.gold DESC, m.silver DESC, m.bronze DESC, m.total DESC) as rank
         FROM medals m
         JOIN npcs n ON m.npc = n.code
         LEFT JOIN regions r ON n.region_code = r.code
         ORDER BY m.gold DESC, m.silver DESC, m.bronze DESC, m.total DESC
         """
-        medals = execute_query(query, fetch=True)
-
-        # Add proper ranking with tie handling
-        if medals:
-            medals = add_proper_ranking(medals)
-
-        return medals
+        return execute_query(query, fetch=True)
 
     @staticmethod
     def get_by_npc(npc_code):
-        """Get medal count for specific NPC"""
         query = """
         SELECT m.*, n.name as npc_name, n.flag_file_path
         FROM medals m
@@ -34,11 +26,8 @@ class Medal:
 
     @staticmethod
     def calculate_from_results():
-        """Calculate medals from official results automatically"""
-        # First, clear existing auto-calculated medals
         execute_query("DELETE FROM medals WHERE manual_override = FALSE")
 
-        # Calculate medals from results where rank is 1, 2, or 3 and game is official
         query = """
         INSERT INTO medals (npc, gold, silver, bronze, total, manual_override, last_calculated)
         SELECT 
@@ -66,7 +55,6 @@ class Medal:
 
     @staticmethod
     def update_manual(npc_code, gold, silver, bronze):
-        """Update medal count manually"""
         total = gold + silver + bronze
         query = """
         INSERT INTO medals (npc, gold, silver, bronze, total, manual_override, updated_at)
@@ -83,36 +71,4 @@ class Medal:
 
     @staticmethod
     def delete_by_npc(npc_code):
-        """Delete medal record for NPC"""
         return execute_query("DELETE FROM medals WHERE npc = %s", (npc_code,))
-
-
-def add_proper_ranking(medals):
-    """Add proper ranking with tie handling"""
-    if not medals:
-        return medals
-
-    # Sort medals by gold, silver, bronze, total
-    sorted_medals = sorted(medals, key=lambda x: (x['gold'], x['silver'], x['bronze'], x['total']), reverse=True)
-
-    # Add ranking with proper tie handling
-    current_rank = 1
-
-    for i, medal in enumerate(sorted_medals):
-        if i == 0:
-            medal['rank'] = current_rank
-        else:
-            # Check if current medal is tied with previous
-            prev_medal = sorted_medals[i - 1]
-            if (medal['gold'] == prev_medal['gold'] and
-                    medal['silver'] == prev_medal['silver'] and
-                    medal['bronze'] == prev_medal['bronze'] and
-                    medal['total'] == prev_medal['total']):
-                # Same ranking as previous
-                medal['rank'] = prev_medal['rank']
-            else:
-                # New ranking = current position + 1
-                medal['rank'] = i + 1
-                current_rank = i + 1
-
-    return sorted_medals

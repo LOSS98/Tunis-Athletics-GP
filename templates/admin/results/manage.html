@@ -949,15 +949,14 @@
                 {% for result in combined_results %}
                 <tr class="{% if result.game_id == game.id %}bg-purple-50{% else %}hover:bg-gray-50{% endif %}">
                     <td class="px-4 py-4">
-                        {% set rank = result.final_rank %}
                         {% if rank == 1 %}
-                            <span class="text-2xl mr-2">🥇</span><span class="font-bold text-yellow-600">{{ rank }}</span>
+                            <span class="text-2xl mr-2">🥇</span><span class="font-bold text-yellow-600">{{ result.rank }}</span>
                         {% elif rank == 2 %}
-                            <span class="text-2xl mr-2">🥈</span><span class="font-bold text-gray-600">{{ rank }}</span>
+                            <span class="text-2xl mr-2">🥈</span><span class="font-bold text-gray-600">{{ result.rank }}</span>
                         {% elif rank == 3 %}
-                            <span class="text-2xl mr-2">🥉</span><span class="font-bold text-orange-600">{{ rank }}</span>
+                            <span class="text-2xl mr-2">🥉</span><span class="font-bold text-orange-600">{{ result.rank }}</span>
                         {% else %}
-                            <span class="font-bold text-gray-900">{{ rank }}</span>
+                            <span class="font-bold text-gray-900">{{ result.rank }}</span>
                         {% endif %}
                     </td>
                     <td class="px-4 py-4">

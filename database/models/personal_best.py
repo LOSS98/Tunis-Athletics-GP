@@ -3,37 +3,40 @@ from database.db_manager import execute_one, execute_query
 class PersonalBest:
     @staticmethod
     def get_all(approved_only=True, competition_only=True):
-        query = """
-            SELECT pb.*, a.firstname, a.lastname,
-                   u.username as approved_by_username
-            FROM personal_bests pb
-            JOIN athletes a ON pb.sdms = a.sdms
-            LEFT JOIN users u ON pb.approved_by = u.id
-        """
         conditions = []
         if approved_only:
             conditions.append("pb.approved = TRUE")
         if competition_only:
             conditions.append("pb.made_in_competition = TRUE")
 
-        if conditions:
-            query += " WHERE " + " AND ".join(conditions)
+        where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
 
-        query += " ORDER BY pb.record_date DESC, pb.created_at DESC"
+        query = f"""
+            SELECT pb.*, a.firstname, a.lastname,
+                   u.username as approved_by_username
+            FROM personal_bests pb
+            JOIN athletes a ON pb.sdms = a.sdms
+            LEFT JOIN users u ON pb.approved_by = u.id
+            {where_clause}
+            ORDER BY pb.record_date DESC, pb.created_at DESC
+        """
         return execute_query(query, fetch=True)
 
     @staticmethod
     def get_pending(competition_only=True):
-        query = """
+        conditions = ["pb.approved = FALSE"]
+        if competition_only:
+            conditions.append("pb.made_in_competition = TRUE")
+
+        where_clause = " WHERE " + " AND ".join(conditions)
+
+        query = f"""
             SELECT pb.*, a.firstname, a.lastname
             FROM personal_bests pb
             JOIN athletes a ON pb.sdms = a.sdms
-            WHERE pb.approved = FALSE
+            {where_clause}
+            ORDER BY pb.created_at DESC
         """
-        if competition_only:
-            query += " AND pb.made_in_competition = TRUE"
-
-        query += " ORDER BY pb.created_at DESC"
         return execute_query(query, fetch=True)
 
     @staticmethod

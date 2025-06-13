@@ -61,7 +61,7 @@ def register_routes(bp):
             except Exception as e:
                 flash(f'Error adding registration: {str(e)}', 'danger')
 
-        events = Config.get_field_events() + Config.get_track_events()
+        events = Registration.get_distinct_events()
         return render_template('admin/registrations/add.html', events=events)
 
     @bp.route('/athletes/<int:sdms>/registrations')

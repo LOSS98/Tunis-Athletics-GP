@@ -147,7 +147,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 <!-- Results -->
                 <div class="border-t border-gray-100 pt-4">
-                    {% set top_results = game.results[:3] if game.results else [] %}
+                    {% set top_results = game.top_3[:3] if game.top_3 else [] %}
                     {% if top_results %}
                     <div class="space-y-3">
                         {% for result in top_results %}
@@ -162,7 +162,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     {% elif result.rank == '3' %}
                                         <span class="text-2xl">🥉</span>
                                     {% else %}
-                                        <span class="text-lg font-bold text-gray-600">{{ result.rank }}</span>
+                                        <span class="text-lg font-bold text-gray-600">{{ result.rank or '-'}}</span>
                                     {% endif %}
                                 </div>
 
@@ -179,7 +179,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <span class="text-sm text-gray-600">{{ result.npc }}</span>
                                     </div>
                                     <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
-                                        {{ result.athlete_class }}
+                                        {{ result.class }}
                                     </span>
                                 </div>
                             </div>

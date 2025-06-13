@@ -1,4 +1,3 @@
-# utils/pdf_generator.py
 import io
 from datetime import datetime
 from reportlab.lib.pagesizes import A4
@@ -14,6 +13,8 @@ import os
 
 class NumberedCanvas(canvas.Canvas):
     def __init__(self, *args, **kwargs):
+        # Extraire game_title s'il est passé
+        self.game_title = kwargs.pop('game_title', '')
         canvas.Canvas.__init__(self, *args, **kwargs)
         self._saved_page_states = []
         self.page_num = 0
@@ -53,6 +54,18 @@ class NumberedCanvas(canvas.Canvas):
         except:
             pass
 
+        # Titre centré entre les logos
+        if hasattr(self, 'game_title') and self.game_title:
+            self.setFont("Helvetica-Bold", 12)
+            title_y = A4[1] - 17.5 * mm
+
+            left_logo_end = 15 * mm + 25 * mm
+            right_logo_start = A4[0] - 40 * mm
+            available_width = right_logo_start - left_logo_end
+            center_x = left_logo_end + (available_width / 2)
+
+            text_width = self.stringWidth(self.game_title, "Helvetica-Bold", 12)
+            self.drawString(center_x - text_width / 2, title_y, self.game_title)
         # Footer logos
         try:
             footer_logos = ['basar.png', 'ministere.png', 'monoprix.png', 'nextstep.png', 'npc.png', 'wpa.png']
@@ -64,7 +77,8 @@ class NumberedCanvas(canvas.Canvas):
                 logo_path = os.path.join('static', 'images', 'logos', logo_file)
                 if os.path.exists(logo_path):
                     x_pos = start_x + (i * logo_width)
-                    self.drawImage(logo_path, x_pos, 5 * mm, width=12 * mm, height=8 * mm, preserveAspectRatio=True, mask='auto')
+                    self.drawImage(logo_path, x_pos, 5 * mm, width=12 * mm, height=8 * mm, preserveAspectRatio=True,
+                                   mask='auto')
         except:
             pass
 
@@ -114,34 +128,17 @@ class PDFGenerator:
             return "Women's"
         return gender
 
-    def get_header_content(self, game):
-        content = []
-        content.append(Paragraph("World Para Athletics Grand Prix", self.styles['PDFMainTitle']))
-        content.append(Paragraph("Rades Stadium, Tunis, Tunisia", self.styles['PDFVenue']))
-
-        gender_title = self.format_gender_title(game['genders'])
-        event_title = f"{gender_title} {game['event']} {game['classes']}"
-        if game.get('phase'):
-            event_title += f" - {game['phase']}"
-
-        content.append(Paragraph(event_title, self.styles['PDFEventTitle']))
-        content.append(Paragraph(f"Day {game['day']} - {game['time']}", self.styles['PDFVenue']))
-
-        return content
-
     def create_track_event_table(self, results, game):
-        """Create table exactly like Track events"""
-        headers = ['Line', 'SDMS', 'First Name', 'Last Name', 'Gender', 'NPC', 'Class', 'Electronic']
+        headers = ['Rank', 'lane', 'SDMS', 'First Name', 'Last Name', 'Gender', 'NPC', 'Class', 'Electronic']
 
         if game.get('wpa_points', False):
-            headers.append('WPA Po')
-
-        headers.append('Rank')
+            headers.append('WPA Points')
 
         data = [headers]
 
         for i, result in enumerate(results, 1):
             row = [
+                result['rank'] or str(i),
                 str(i),
                 str(result['athlete_sdms']),
                 result['firstname'] or '',
@@ -155,12 +152,10 @@ class PDFGenerator:
             if game.get('wpa_points', False):
                 row.append(str(result['raza_score']) if result.get('raza_score') else '')
 
-            row.append(result['rank'] or str(i))
             data.append(row)
 
         table = Table(data, repeatRows=1)
         table.setStyle(TableStyle([
-            # Header row
             ('BACKGROUND', (0, 0), (-1, 0), colors.Color(0.8, 0.9, 1.0)),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('FONTSIZE', (0, 0), (-1, 0), 7),
@@ -168,22 +163,19 @@ class PDFGenerator:
             ('TOPPADDING', (0, 0), (-1, 0), 4),
             ('BOTTOMPADDING', (0, 0), (-1, 0), 4),
 
-            # Data rows
             ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
             ('FONTSIZE', (0, 1), (-1, -1), 6),
             ('ALIGN', (0, 1), (-1, -1), 'CENTER'),
             ('TOPPADDING', (0, 1), (-1, -1), 2),
             ('BOTTOMPADDING', (0, 1), (-1, -1), 2),
 
-            # NO GRID - removed all GRID styles
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ]))
 
         return table
 
     def create_field_event_table(self, game, results):
-        """Create table exactly like Field events"""
-        headers = ['Order', 'SDMS', 'First Name', 'Last Name', 'Gender', 'NPC']
+        headers = ['Rank', 'Order', 'SDMS', 'First Name', 'Last Name', 'Gender', 'NPC']
 
         if game['event'] in Config.get_weight_field_events():
             headers.append('Weight')
@@ -193,14 +185,12 @@ class PDFGenerator:
         if game.get('wpa_points', False):
             headers.append('WPA Points')
 
-        headers.append('Rank')
-
         data = [headers]
-        athlete_rows = []  # Track which rows are athlete rows for styling
+        athlete_rows = []
 
         for i, result in enumerate(results, 1):
-            # Main athlete row
             row = [
+                result['rank'] or str(i),
                 str(i),
                 str(result['athlete_sdms']),
                 result['firstname'] or '',
@@ -213,7 +203,6 @@ class PDFGenerator:
                 weight_val = f"{result['weight']:.3f} kg" if result.get('weight') else '3.000 kg'
                 row.append(weight_val)
 
-            # R1/P1 (final_order)
             total_finalists = len([r for r in results if r.get('final_order')])
             r1_order = f"{result['final_order']}/{total_finalists}" if result.get('final_order') else ''
             row.append(r1_order)
@@ -226,39 +215,31 @@ class PDFGenerator:
             if game.get('wpa_points', False):
                 row.append(str(result['raza_score']) if result.get('raza_score') else '')
 
-            row.append(result['rank'] or str(i))
-
             data.append(row)
-            athlete_rows.append(len(data) - 1)  # Track this row as athlete row
+            athlete_rows.append(len(data) - 1)
 
-            # Add attempts rows with REAL VALUES
             attempts = result.get('attempts', [])
             for attempt_num in range(1, 7):
                 attempt = next((a for a in attempts if a['attempt_number'] == attempt_num), None)
 
                 attempt_row = [''] * len(headers)
-                attempt_row[0] = f'Attempt {attempt_num}'
+                attempt_row[1] = f'Attempt {attempt_num}'
 
                 if attempt and attempt.get('value'):
-                    # Real attempt value
-                    attempt_row[1] = attempt['value']
+                    attempt_row[2] = attempt['value']
 
-                    # WPA points if available and enabled
                     if game.get('wpa_points', False) and attempt.get('raza_score'):
-                        attempt_row[2] = str(attempt['raza_score'])
+                        attempt_row[3] = str(attempt['raza_score'])
 
-                    # Wind if applicable
                     if game['event'] in Config.get_wind_affected_field_events() and attempt.get('wind_velocity'):
-                        wind_col = 3 if game.get('wpa_points', False) else 2
+                        wind_col = 4 if game.get('wpa_points', False) else 3
                         attempt_row[wind_col] = f"{attempt['wind_velocity']:+.2f} m/s"
 
                 data.append(attempt_row)
 
         table = Table(data, repeatRows=1)
 
-        # Build style list
         style_commands = [
-            # Header row
             ('BACKGROUND', (0, 0), (-1, 0), colors.Color(0.8, 0.9, 1.0)),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('FONTSIZE', (0, 0), (-1, 0), 6),
@@ -266,16 +247,14 @@ class PDFGenerator:
             ('TOPPADDING', (0, 0), (-1, 0), 3),
             ('BOTTOMPADDING', (0, 0), (-1, 0), 3),
 
-            # All data rows
             ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
             ('FONTSIZE', (0, 1), (-1, -1), 6),
             ('ALIGN', (0, 1), (-1, -1), 'CENTER'),
-            ('TOPPADDING', (0, 1), (-1, -1), 1),  # Reduced padding
-            ('BOTTOMPADDING', (0, 1), (-1, -1), 1),  # Reduced padding
+            ('TOPPADDING', (0, 1), (-1, -1), 1),
+            ('BOTTOMPADDING', (0, 1), (-1, -1), 1),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ]
 
-        # Highlight athlete rows
         for row_idx in athlete_rows:
             style_commands.append(('BACKGROUND', (0, row_idx), (-1, row_idx), colors.Color(0.9, 0.95, 1.0)))
             style_commands.append(('FONTNAME', (0, row_idx), (-1, row_idx), 'Helvetica-Bold'))
@@ -284,8 +263,6 @@ class PDFGenerator:
         return table
 
     def create_high_jump_table(self, game, results):
-        """Create table exactly like High Jump"""
-        # Find all unique heights
         all_heights = set()
         for result in results:
             for attempt in result.get('attempts', []):
@@ -294,17 +271,16 @@ class PDFGenerator:
 
         sorted_heights = sorted(all_heights)
 
-        headers = ['Order', 'SDMS', 'First Name', 'Last Name', 'Gender', 'NPC', 'Class', 'Performance']
+        headers = ['Rank', 'Order', 'SDMS', 'First Name', 'Last Name', 'Gender', 'NPC', 'Class', 'Performance']
         if game.get('wpa_points', False):
-            headers.append('WPA Po')
-        headers.append('Rank')
+            headers.append('WPA Points')
 
         data = [headers]
         athlete_rows = []
 
         for i, result in enumerate(results, 1):
-            # Main athlete row
             row = [
+                result['rank'] or str(i),
                 str(i),
                 str(result['athlete_sdms']),
                 result['firstname'] or '',
@@ -318,11 +294,9 @@ class PDFGenerator:
             if game.get('wpa_points', False):
                 row.append(str(result['raza_score']) if result.get('raza_score') else '')
 
-            row.append(result['rank'] or str(i))
             data.append(row)
             athlete_rows.append(len(data) - 1)
 
-            # Group attempts by height
             attempts_by_height = {}
             for attempt in result.get('attempts', []):
                 height = attempt.get('height')
@@ -332,37 +306,30 @@ class PDFGenerator:
                         attempts_by_height[height_key] = []
                     attempts_by_height[height_key].append(attempt['value'])
 
-            # Add attempt rows for each height with REAL VALUES
             for j, height in enumerate(sorted_heights, 1):
                 attempt_row = [''] * len(headers)
-                attempt_row[0] = f'Attempt {j}'
-                attempt_row[1] = f'{height:.2f}'
+                attempt_row[1] = f'Attempt {j}'
+                attempt_row[2] = f'{height:.2f}'
 
                 if height in attempts_by_height:
-                    # Real attempt values joined together (like "XO" or "XXO")
-                    attempt_row[2] = ''.join(attempts_by_height[height])
+                    attempt_row[3] = ''.join(attempts_by_height[height])
 
-                    # WPA points if available
                     if game.get('wpa_points', False):
-                        # Find WPA points for successful attempts at this height
                         for attempt in result.get('attempts', []):
                             if (attempt.get('height') == height and
                                     attempt.get('value') == 'O' and
                                     attempt.get('raza_score')):
-                                attempt_row[3] = str(attempt['raza_score'])
+                                attempt_row[4] = str(attempt['raza_score'])
                                 break
 
-
                 else:
-                    attempt_row[2] = '-'
+                    attempt_row[3] = '-'
 
                 data.append(attempt_row)
 
         table = Table(data, repeatRows=1)
 
-        # Build style list
         style_commands = [
-            # Header row - Pink for High Jump
             ('BACKGROUND', (0, 0), (-1, 0), colors.Color(1.0, 0.8, 0.8)),
             ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
             ('FONTSIZE', (0, 0), (-1, 0), 6),
@@ -370,16 +337,14 @@ class PDFGenerator:
             ('TOPPADDING', (0, 0), (-1, 0), 3),
             ('BOTTOMPADDING', (0, 0), (-1, 0), 3),
 
-            # All data rows
             ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
             ('FONTSIZE', (0, 1), (-1, -1), 6),
             ('ALIGN', (0, 1), (-1, -1), 'CENTER'),
-            ('TOPPADDING', (0, 1), (-1, -1), 1),  # Reduced padding
-            ('BOTTOMPADDING', (0, 1), (-1, -1), 1),  # Reduced padding
+            ('TOPPADDING', (0, 1), (-1, -1), 1),
+            ('BOTTOMPADDING', (0, 1), (-1, -1), 1),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ]
 
-        # Highlight athlete rows
         for row_idx in athlete_rows:
             style_commands.append(('BACKGROUND', (0, row_idx), (-1, row_idx), colors.Color(1.0, 0.9, 0.9)))
             style_commands.append(('FONTNAME', (0, row_idx), (-1, row_idx), 'Helvetica-Bold'))
@@ -389,36 +354,56 @@ class PDFGenerator:
 
     def generate_results_pdf(self, game, results, heat_group=None, combined_results=None):
         buffer = io.BytesIO()
+
+        # Créer le titre pour le header
+        gender_title = self.format_gender_title(game['genders'])
+        game_title = f"{gender_title} {game['event']} {game['classes']}"
+        if game.get('phase'):
+            game_title += f" - {game['phase']}"
+        game_title += " - Results"
+
+        # Créer le canvas maker avec le titre
+        def make_canvas(*args, **kwargs):
+            kwargs['game_title'] = game_title
+            return NumberedCanvas(*args, **kwargs)
+
         doc = SimpleDocTemplate(
             buffer,
             pagesize=A4,
             topMargin=35 * mm,
             bottomMargin=25 * mm,
-            leftMargin=15 * mm,
-            rightMargin=15 * mm
+            leftMargin=10 * mm,
+            rightMargin=10 * mm
         )
 
         story = []
 
-        header_content = self.get_header_content(game)
-        story.extend(header_content)
+        # Ajouter les infos de base
+        story.append(Paragraph("World Para Athletics Grand Prix", self.styles['PDFMainTitle']))
+        story.append(Paragraph("Rades Stadium, Tunis, Tunisia", self.styles['PDFVenue']))
+        story.append(Paragraph(f"Day {game['day']} - {game['time']}", self.styles['PDFVenue']))
         story.append(Spacer(1, 8 * mm))
 
-        if game.get('wind_velocity') is not None and game['event'] in Config.get_track_events():
-            wind_text = f"Wind: {game['wind_velocity']:+.1f} m/s"
-            story.append(Paragraph(wind_text, self.styles['PDFVenue']))
-            story.append(Spacer(1, 3 * mm))
-
-        if heat_group and combined_results:
+        game_heat_group_id = game.get('heat_group_id')
+        if game_heat_group_id or heat_group:
             from database.models.heat_group import HeatGroup
-            from database.models.game import Game as GameModel
             from database.models.result import Result
 
-            heat_games = HeatGroup.get_games(heat_group['id'])
+            heat_group_id = heat_group['id'] if heat_group else game_heat_group_id
 
-            for heat_game in heat_games:
-                story.append(Paragraph(f"Heat {heat_game['heat_number']} Results", self.styles['PDFEventTitle']))
+            all_heat_games = HeatGroup.get_games(heat_group_id)
+            all_heat_games = sorted(all_heat_games, key=lambda x: x.get('heat_number', 0))
+
+            for heat_game in all_heat_games:
+                story.append(
+                    Paragraph(f"Heat {heat_game.get('heat_number', '?')} Results", self.styles['PDFEventTitle']))
                 story.append(Spacer(1, 3 * mm))
+
+                # Ajouter la vitesse du vent pour ce heat spécifique
+                if heat_game.get('wind_velocity') is not None and heat_game['event'] in Config.get_track_events():
+                    wind_text = f"Wind: {heat_game['wind_velocity']:+.1f} m/s"
+                    story.append(Paragraph(wind_text, self.styles['PDFVenue']))
+                    story.append(Spacer(1, 3 * mm))
 
                 heat_results = Result.get_all(game_id=heat_game['id'])
 
@@ -433,14 +418,30 @@ class PDFGenerator:
                     story.append(table)
                     story.append(Spacer(1, 8 * mm))
 
-            story.append(PageBreak())
-            story.append(Paragraph("Final Combined Results", self.styles['PDFEventTitle']))
-            story.append(Spacer(1, 5 * mm))
+            if combined_results:
+                story.append(PageBreak())
+                story.append(Paragraph("Final Combined Results", self.styles['PDFEventTitle']))
+                story.append(Spacer(1, 5 * mm))
 
-            combined_table = self.create_combined_results_table(combined_results, game)
-            story.append(combined_table)
+                combined_table = self.create_combined_results_table(combined_results, game)
+                story.append(combined_table)
+            else:
+                story.append(PageBreak())
+                story.append(Paragraph("Final Combined Results", self.styles['PDFEventTitle']))
+                story.append(Spacer(1, 5 * mm))
+
+                auto_combined_results = HeatGroup.get_combined_results(heat_group_id)
+                if auto_combined_results:
+                    combined_table = self.create_combined_results_table(auto_combined_results, game)
+                    story.append(combined_table)
 
         else:
+            # Game individuel - afficher le vent du game principal
+            if game.get('wind_velocity') is not None and game['event'] in Config.get_track_events():
+                wind_text = f"Wind: {game['wind_velocity']:+.1f} m/s"
+                story.append(Paragraph(wind_text, self.styles['PDFVenue']))
+                story.append(Spacer(1, 3 * mm))
+
             if game['event'] == 'High Jump':
                 table = self.create_high_jump_table(game, results)
             elif game['event'] in Config.get_field_events():
@@ -450,20 +451,20 @@ class PDFGenerator:
 
             story.append(table)
 
-        doc.build(story, canvasmaker=NumberedCanvas)
+        doc.build(story, canvasmaker=make_canvas)
         buffer.seek(0)
         return buffer
 
     def create_combined_results_table(self, combined_results, game):
-        headers = ['Final Rank', 'Heat', 'SDMS', 'First Name', 'Last Name', 'NPC', 'Class', 'Performance']
+        headers = ['Rank', 'Heat', 'SDMS', 'First Name', 'Last Name', 'NPC', 'Class', 'Performance']
         if game.get('wpa_points', False):
-            headers.append('WPA Po')
+            headers.append('WPA Points')
 
         data = [headers]
 
         for result in combined_results:
             row = [
-                str(result.get('final_rank', '')),
+                str(result.get('rank', '')),
                 f"Heat {result.get('heat_number', '')}",
                 str(result['athlete_sdms']),
                 result['firstname'] or '',
@@ -499,29 +500,39 @@ class PDFGenerator:
         return table
 
     def generate_startlist_pdf(self, game, startlist):
-        """Generate start list PDF"""
         buffer = io.BytesIO()
+
+        # Créer le titre pour le header
+        gender_title = self.format_gender_title(game['genders'])
+        game_title = f"{gender_title} {game['event']} {game['classes']}"
+        if game.get('phase'):
+            game_title += f" - {game['phase']}"
+
+        # Créer le canvas maker avec le titre
+        def make_canvas(*args, **kwargs):
+            kwargs['game_title'] = game_title
+            return NumberedCanvas(*args, **kwargs)
+
         doc = SimpleDocTemplate(
             buffer,
             pagesize=A4,
             topMargin=35 * mm,
             bottomMargin=25 * mm,
-            leftMargin=15 * mm,
-            rightMargin=15 * mm
+            leftMargin=10 * mm,
+            rightMargin=10 * mm
         )
 
         story = []
 
-        # Header
-        header_content = self.get_header_content(game)
-        story.extend(header_content)
+        # Ajouter les infos de base
+        story.append(Paragraph("World Para Athletics Grand Prix", self.styles['PDFMainTitle']))
+        story.append(Paragraph("Rades Stadium, Tunis, Tunisia", self.styles['PDFVenue']))
+        story.append(Paragraph(f"Day {game['day']} - {game['time']}", self.styles['PDFVenue']))
         story.append(Spacer(1, 8 * mm))
 
-        # Start List title
         story.append(Paragraph("Start List", self.styles['PDFEventTitle']))
         story.append(Spacer(1, 5 * mm))
 
-        # Create start list table
         headers = ['Lane', 'SDMS', 'First Name', 'Last Name', 'NPC', 'Class', 'Gender']
 
         data = [headers]
@@ -536,6 +547,7 @@ class PDFGenerator:
                 entry['gender'] or ''
             ]
             data.append(row)
+            data.append([''] * len(headers))
 
         table = Table(data, repeatRows=1)
         table.setStyle(TableStyle([
@@ -557,6 +569,6 @@ class PDFGenerator:
 
         story.append(table)
 
-        doc.build(story, canvasmaker=NumberedCanvas)
+        doc.build(story, canvasmaker=make_canvas)
         buffer.seek(0)
         return buffer

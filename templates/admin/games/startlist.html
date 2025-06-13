@@ -95,6 +95,14 @@
             </div>
         </div>
         <div id="quickSelectContainer" class="hidden">
+            <div id="addAllButtonContainer" class="hidden mb-3 text-center">
+                <button onclick="addAllToStartList()" class="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600 text-sm font-medium">
+                    <i class="fas fa-plus-circle mr-2"></i>Add All to Start List
+                </button>
+                <div class="text-xs text-gray-600 mt-1">
+                    Add all <span id="athleteCount">0</span> athletes to the start list
+                </div>
+            </div>
             <div id="quickSelectAthletes" class="grid grid-cols-2 md:grid-cols-4 gap-2 max-h-40 overflow-y-auto"></div>
         </div>
     </div>
@@ -325,9 +333,27 @@ window.specialValues = [];
 window.gameId = {{ game.id }};
 window.finalistsCount = 0;
 
+let currentQuickSelectAthletes = [];
+
 function getCSRFToken() {
     const csrfInput = document.querySelector('input[name="csrf_token"]');
     return csrfInput ? csrfInput.value : '';
+}
+
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 transition-opacity ${
+        type === 'success' ? 'bg-green-500 text-white' :
+        type === 'error' ? 'bg-red-500 text-white' :
+        type === 'warning' ? 'bg-yellow-500 text-white' :
+        'bg-blue-500 text-white'
+    }`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    setTimeout(() => {
+        notification.style.opacity = '0';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
 }
 
 // Load quick event filter options
@@ -336,11 +362,21 @@ fetch('/admin/api/events/list')
     .then(events => {
         const quickEventFilter = document.getElementById('quickEventFilter');
         if (quickEventFilter) {
+            // Ajouter les événements au select
             events.forEach(event => {
                 const option = document.createElement('option');
                 option.value = event;
                 option.textContent = event;
                 quickEventFilter.appendChild(option);
+            });
+
+            // Ajouter l'event listener pour cacher le bouton "Add All" quand on change d'événement
+            quickEventFilter.addEventListener('change', function() {
+                const addAllButtonContainer = document.getElementById('addAllButtonContainer');
+                if (addAllButtonContainer) {
+                    addAllButtonContainer.classList.add('hidden');
+                }
+                currentQuickSelectAthletes = [];
             });
         }
     })
@@ -355,17 +391,23 @@ function loadQuickSelectAthletes() {
 
     const container = document.getElementById('quickSelectContainer');
     const athletesDiv = document.getElementById('quickSelectAthletes');
+    const addAllButtonContainer = document.getElementById('addAllButtonContainer');
 
     athletesDiv.innerHTML = '<div class="text-center py-4"><i class="fas fa-spinner fa-spin mr-2"></i>Loading athletes...</div>';
     container.classList.remove('hidden');
+    addAllButtonContainer.classList.add('hidden');
 
     fetch(`/admin/api/athletes/search?q=*&event_filter=${encodeURIComponent(selectedEvent)}`)
         .then(response => response.json())
         .then(athletes => {
             if (athletes.length === 0) {
                 athletesDiv.innerHTML = `<div class="text-center py-4 text-gray-500">No athletes registered for "${selectedEvent}"</div>`;
+                currentQuickSelectAthletes = [];
                 return;
             }
+
+            // Stocker les athlètes pour la fonction addAllToStartList
+            currentQuickSelectAthletes = athletes;
 
             athletesDiv.innerHTML = '';
             athletes.forEach(athlete => {
@@ -388,27 +430,95 @@ function loadQuickSelectAthletes() {
                 );
                 athletesDiv.appendChild(div);
             });
+
+            // Afficher le bouton "Add All" avec le nombre d'athlètes
+            const athleteCountSpan = document.getElementById('athleteCount');
+            if (athleteCountSpan) {
+                athleteCountSpan.textContent = athletes.length;
+            }
+            addAllButtonContainer.classList.remove('hidden');
         })
         .catch(error => {
             console.error('Error:', error);
             athletesDiv.innerHTML = '<div class="text-center py-4 text-red-500">Error loading athletes</div>';
+            currentQuickSelectAthletes = [];
         });
 }
 
-function showNotification(message, type = 'info') {
-    const notification = document.createElement('div');
-    notification.className = `fixed top-4 right-4 px-6 py-3 rounded-lg shadow-lg z-50 transition-opacity ${
-        type === 'success' ? 'bg-green-500 text-white' :
-        type === 'error' ? 'bg-red-500 text-white' :
-        type === 'warning' ? 'bg-yellow-500 text-white' :
-        'bg-blue-500 text-white'
-    }`;
-    notification.textContent = message;
-    document.body.appendChild(notification);
-    setTimeout(() => {
-        notification.style.opacity = '0';
-        setTimeout(() => notification.remove(), 300);
-    }, 3000);
+function addAllToStartList() {
+    if (!currentQuickSelectAthletes.length) {
+        showNotification('No athletes to add', 'warning');
+        return;
+    }
+
+    if (!confirm(`Add all ${currentQuickSelectAthletes.length} athletes to the start list?`)) {
+        return;
+    }
+
+    const addAllButton = document.querySelector('[onclick="addAllToStartList()"]');
+    const originalText = addAllButton.innerHTML;
+    addAllButton.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Adding athletes...';
+    addAllButton.disabled = true;
+
+    let successCount = 0;
+    let errorCount = 0;
+    let processedCount = 0;
+
+    function processAthlete(athlete) {
+        return fetch(`/admin/games/${window.gameId}/startlist/add`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': getCSRFToken()
+            },
+            body: new URLSearchParams({
+                'csrf_token': getCSRFToken(),
+                'athlete_sdms': athlete.sdms,
+                'guide_sdms': '',
+                'lane_order': ''
+            })
+        })
+        .then(response => {
+            if (response.ok) {
+                successCount++;
+            } else {
+                errorCount++;
+            }
+        })
+        .catch(error => {
+            console.error(`Error adding athlete ${athlete.sdms}:`, error);
+            errorCount++;
+        })
+        .finally(() => {
+            processedCount++;
+
+            const progress = Math.round((processedCount / currentQuickSelectAthletes.length) * 100);
+            addAllButton.innerHTML = `<i class="fas fa-spinner fa-spin mr-2"></i>Adding... ${progress}%`;
+
+            if (processedCount === currentQuickSelectAthletes.length) {
+                addAllButton.innerHTML = originalText;
+                addAllButton.disabled = false;
+
+                if (successCount > 0) {
+                    showNotification(
+                        `Successfully added ${successCount} athletes to start list` +
+                        (errorCount > 0 ? ` (${errorCount} failed)` : ''),
+                        successCount === currentQuickSelectAthletes.length ? 'success' : 'warning'
+                    );
+
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showNotification('Failed to add athletes to start list', 'error');
+                }
+            }
+        });
+    }
+
+    currentQuickSelectAthletes.forEach((athlete, index) => {
+        setTimeout(() => {
+            processAthlete(athlete);
+        }, index * 100);
+    });
 }
 
 // Make lane/order editable
@@ -508,6 +618,8 @@ document.addEventListener('click', function(e) {
     }
 });
 
+// Export functions to global scope
+window.addAllToStartList = addAllToStartList;
 window.loadQuickSelectAthletes = loadQuickSelectAthletes;
 </script>
 

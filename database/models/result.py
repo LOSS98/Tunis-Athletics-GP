@@ -6,7 +6,16 @@ from database.db_manager import execute_query, execute_one
 class Result:
     @staticmethod
     def get_all(**filters):
-        query = """
+        conditions = ["1=1"]
+        params = []
+
+        if filters:
+            for key, value in filters.items():
+                if value:
+                    conditions.append(f"r.{key} = %s")
+                    params.append(value)
+
+        query = f"""
             SELECT r.*, a.firstname, a.lastname, a.npc, a.gender as athlete_gender, a.class as athlete_class,
                    g.firstname AS guide_firstname, g.lastname AS guide_lastname,
                    gm.classes as game_classes
@@ -14,16 +23,9 @@ class Result:
             JOIN athletes a ON r.athlete_sdms = a.sdms
             LEFT JOIN athletes g ON r.guide_sdms = g.sdms
             LEFT JOIN games gm ON r.game_id = gm.id
-            WHERE 1=1
+            WHERE {' AND '.join(conditions)}
+            ORDER BY CASE WHEN r.rank ~ '^[0-9]+' THEN CAST(r.rank AS INTEGER) ELSE 999 END, r.rank
         """
-        params = []
-        if filters:
-            for key, value in filters.items():
-                if value:
-                    query += f" AND r.{key} = %s"
-                    params.append(value)
-
-        query += " ORDER BY CASE WHEN r.rank ~ '^[0-9]+' THEN CAST(r.rank AS INTEGER) ELSE 999 END, r.rank"
 
         results = execute_query(query, params, fetch=True)
 
@@ -53,6 +55,10 @@ class Result:
     @staticmethod
     def get_by_id(id):
         return execute_one("SELECT * FROM results WHERE id = %s", (id,))
+
+    @staticmethod
+    def get_by_game(game_id):
+        return execute_query("SELECT * FROM results WHERE game_id = %s", (game_id,), fetch=True)
 
     @staticmethod
     def get_by_game_athlete(game_id, athlete_sdms):

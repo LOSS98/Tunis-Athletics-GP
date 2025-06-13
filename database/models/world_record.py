@@ -1,9 +1,18 @@
 from database.db_manager import execute_one, execute_query
 
+
 class WorldRecord:
     @staticmethod
     def get_all(approved_only=True, competition_only=True):
-        query = """
+        conditions = []
+        if approved_only:
+            conditions.append("wr.approved = TRUE")
+        if competition_only:
+            conditions.append("wr.made_in_competition = TRUE")
+
+        where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
+
+        query = f"""
             SELECT wr.*, a.firstname, a.lastname, n.name as npc_name, 
                    n.region_code, r.name as region_name,
                    u.username as approved_by_username
@@ -12,34 +21,29 @@ class WorldRecord:
             LEFT JOIN npcs n ON wr.npc = n.code
             LEFT JOIN regions r ON n.region_code = r.code
             LEFT JOIN users u ON wr.approved_by = u.id
+            {where_clause}
+            ORDER BY wr.record_date DESC, wr.created_at DESC
         """
-        conditions = []
-        if approved_only:
-            conditions.append("wr.approved = TRUE")
-        if competition_only:
-            conditions.append("wr.made_in_competition = TRUE")
-
-        if conditions:
-            query += " WHERE " + " AND ".join(conditions)
-
-        query += " ORDER BY wr.record_date DESC, wr.created_at DESC"
         return execute_query(query, fetch=True)
 
     @staticmethod
     def get_pending(competition_only=True):
-        query = """
+        conditions = ["wr.approved = FALSE"]
+        if competition_only:
+            conditions.append("wr.made_in_competition = TRUE")
+
+        where_clause = " WHERE " + " AND ".join(conditions)
+
+        query = f"""
             SELECT wr.*, a.firstname, a.lastname, n.name as npc_name, 
                    n.region_code, r.name as region_name
             FROM world_records wr
             LEFT JOIN athletes a ON wr.sdms = a.sdms
             LEFT JOIN npcs n ON wr.npc = n.code
             LEFT JOIN regions r ON n.region_code = r.code
-            WHERE wr.approved = FALSE
+            {where_clause}
+            ORDER BY wr.created_at DESC
         """
-        if competition_only:
-            query += " AND wr.made_in_competition = TRUE"
-
-        query += " ORDER BY wr.created_at DESC"
         return execute_query(query, fetch=True)
 
     @staticmethod
@@ -115,7 +119,9 @@ class WorldRecord:
 
     @staticmethod
     def get_all_with_competition_details(approved_only=True):
-        query = """
+        where_clause = " WHERE wr.approved = TRUE" if approved_only else ""
+
+        query = f"""
             SELECT wr.*, a.firstname, a.lastname, a.photo, n.name as npc_name, 
                    n.region_code, r.name as region_name,
                    u.username as approved_by_username,
@@ -129,8 +135,7 @@ class WorldRecord:
             LEFT JOIN users u ON wr.approved_by = u.id
             LEFT JOIN games g ON wr.competition_id = g.id
             LEFT JOIN results res ON (res.game_id = g.id AND res.athlete_sdms = wr.sdms)
+            {where_clause}
+            ORDER BY wr.record_type, wr.record_date DESC, wr.created_at DESC
         """
-        if approved_only:
-            query += " WHERE wr.approved = TRUE"
-        query += " ORDER BY wr.record_type, wr.record_date DESC, wr.created_at DESC"
         return execute_query(query, fetch=True)

@@ -31,7 +31,6 @@ def register_routes(bp):
             return jsonify([])
 
         try:
-            # Handle wildcard search for event filtering
             if query == '*' and event_filter:
                 athletes = execute_query("""
                     SELECT a.*, COALESCE(STRING_AGG(DISTINCT reg.event_name, ', ' ORDER BY reg.event_name), '') as registered_events
@@ -46,7 +45,6 @@ def register_routes(bp):
 
             results = []
             for athlete in athletes:
-                # Add classes_list processing
                 if athlete.get('class'):
                     athlete['classes_list'] = [c.strip() for c in athlete['class'].split(',')]
                 else:

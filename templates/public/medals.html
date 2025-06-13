@@ -22,17 +22,17 @@
             </thead>
             <tbody class="divide-y divide-gray-200">
                 {% for medal in medals %}
-                <tr class="hover:bg-gray-50 {% if loop.index <= 3 %}{% if loop.index == 1 %}bg-yellow-50{% elif loop.index == 2 %}bg-gray-50{% elif loop.index == 3 %}bg-orange-50{% endif %}{% endif %}">
+                <tr class="hover:bg-gray-50 {% if medal.rank <= 3 %}{% if medal.rank == 1 %}bg-yellow-50{% elif medal.rank == 2 %}bg-gray-50{% elif medal.rank == 3 %}bg-orange-50{% endif %}{% endif %}">
                     <td class="px-6 py-4">
                         <div class="flex items-center">
-                            {% if loop.index == 1 %}
+                            {% if medal.rank == 1 %}
                                 <span class="text-3xl mr-2">🥇</span>
-                            {% elif loop.index == 2 %}
+                            {% elif medal.rank == 2 %}
                                 <span class="text-3xl mr-2">🥈</span>
-                            {% elif loop.index == 3 %}
+                            {% elif medal.rank == 3 %}
                                 <span class="text-3xl mr-2">🥉</span>
                             {% endif %}
-                            <span class="text-2xl font-bold {% if loop.index <= 3 %}text-yellow-600{% endif %}">{{ loop.index }}</span>
+                            <span class="text-2xl font-bold {% if medal.rank <= 3 %}text-yellow-600{% endif %}">{{ medal.rank }}</span>
                         </div>
                     </td>
                     <td class="px-6 py-4">

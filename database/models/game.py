@@ -32,7 +32,6 @@ class Game:
             game['classes_list'] = [c.strip() for c in classes.split(',') if c.strip()]
             game['genders_list'] = [g.strip() for g in genders.split(',') if g.strip()]
 
-            # S'assurer que les champs PDF existent (au cas où les colonnes n'existent pas encore)
             pdf_fields = ['manual_startlist_pdf', 'generated_startlist_pdf', 'manual_results_pdf',
                           'generated_results_pdf']
             for field in pdf_fields:
@@ -41,7 +40,6 @@ class Game:
 
         return game
 
-    # Garder toutes les autres méthodes existantes telles quelles...
     @staticmethod
     def create(**data):
         keys = ', '.join(data.keys())
@@ -99,7 +97,8 @@ class Game:
     @staticmethod
     def has_results(game_id):
         count = execute_one("SELECT COUNT(*) as count FROM results WHERE game_id = %s", (game_id,))
-        return count['count'] > 0 if count else False
+        state = execute_one("SELECT published FROM games WHERE id = %s", (game_id,))
+        return (count['count'] > 0 or state['published']) if count else False
 
     @staticmethod
     def has_alerts(id):
@@ -135,12 +134,29 @@ class Game:
         return (result and result['count'] > 0) or (startlist_result and startlist_result['count'] > 0)
 
     @staticmethod
+    def get_last_5():
+        last_5 = execute_query("""
+            SELECT * FROM games 
+            WHERE published = TRUE and (SELECT COUNT(*) FROM results
+            WHERE game_id = games.id) > 0
+            ORDER BY day DESC, time DESC
+            LIMIT 5 ;
+        """, fetch=True)
+
+        for game in last_5:
+            game['top_3'] = execute_query("""
+            SELECT a.sdms, a.firstname, a.lastname, r.rank, r.value, a,class, a.npc 
+            FROM results r JOIN athletes a ON r.athlete_sdms = a.sdms 
+            WHERE r.game_id = %s ORDER BY r.rank::INTEGER ASC LIMIT 3;
+            """, (game['id'],), fetch=True)
+        return last_5
+
+    @staticmethod
     def get_with_status():
-        # Utiliser get_all() qui inclut maintenant les colonnes PDF
-        games = Game.get_all()
         from config import Config
-        current_day = Config.get_current_day()
         from datetime import datetime
+
+        current_day = Config.get_current_day()
         current_time = datetime.now()
 
         if current_day is None:
@@ -149,6 +165,51 @@ class Game:
             current_day = int(current_day)
         except (ValueError, TypeError):
             current_day = 1
+
+        games = execute_query("""
+            SELECT g.*,
+                   COALESCE(rc.result_count, 0) as result_count,
+                   COALESCE(sc.startlist_count, 0) as startlist_count,
+                   CASE WHEN g.start_file IS NOT NULL THEN TRUE ELSE FALSE END as has_startlist_file
+            FROM games g
+            LEFT JOIN (
+                SELECT game_id, COUNT(*) as result_count 
+                FROM results 
+                GROUP BY game_id
+            ) rc ON g.id = rc.game_id
+            LEFT JOIN (
+                SELECT game_id, COUNT(*) as startlist_count 
+                FROM startlist 
+                GROUP BY game_id
+            ) sc ON g.id = sc.game_id
+            ORDER BY g.day, g.time
+        """, fetch=True)
+
+        alert_games = execute_query("""
+            SELECT DISTINCT g.id
+            FROM games g
+            JOIN (
+                SELECT r.game_id FROM results r
+                JOIN athletes a ON r.athlete_sdms = a.sdms
+                JOIN games g2 ON r.game_id = g2.id
+                WHERE a.gender != g2.genders OR 
+                      NOT EXISTS (
+                          SELECT 1 FROM unnest(string_to_array(a.class, ',')) as ac(class_name)
+                          WHERE trim(ac.class_name) = ANY(string_to_array(g2.classes, ','))
+                      )
+                UNION
+                SELECT s.game_id FROM startlist s
+                JOIN athletes a ON s.athlete_sdms = a.sdms
+                JOIN games g2 ON s.game_id = g2.id
+                WHERE a.gender != g2.genders OR 
+                      NOT EXISTS (
+                          SELECT 1 FROM unnest(string_to_array(a.class, ',')) as ac(class_name)
+                          WHERE trim(ac.class_name) = ANY(string_to_array(g2.classes, ','))
+                      )
+            ) alerts ON g.id = alerts.game_id
+        """, fetch=True)
+
+        alert_game_ids = {alert['id'] for alert in alert_games}
 
         for game in games:
             game['classes_list'] = [c.strip() for c in game['classes'].split(',')]
@@ -178,21 +239,14 @@ class Game:
             else:
                 game['computed_status'] = game['status']
 
-            game['has_results'] = Game.has_results(game['id'])
-            from database.models.startlist import StartList
-            game['has_startlist'] = bool(game.get('start_file')) or StartList.has_startlist(game['id'])
+            game['has_results'] = game['result_count'] > 0 or game.get('published', False)
+            game['has_startlist'] = bool(game.get('start_file')) or game['startlist_count'] > 0 or game[
+                'has_startlist_file']
             game['is_published'] = game.get('published', False)
-            game['has_alerts'] = Game.has_alerts(game['id'])
+            game['has_alerts'] = game['id'] in alert_game_ids
+            game['result_is_complete'] = game['result_count'] >= game['nb_athletes']
+            game['startlist_is_complete'] = game['startlist_count'] >= game['nb_athletes']
 
-            from database.models.result import Result
-            result_count = Result.count_by_game(game['id'])
-            startlist_count = StartList.count_by_game(game['id'])
-            game['result_count'] = result_count
-            game['startlist_count'] = startlist_count
-            game['result_is_complete'] = result_count >= game['nb_athletes']
-            game['startlist_is_complete'] = startlist_count >= game['nb_athletes']
-
-            # S'assurer que les champs PDF existent
             pdf_fields = ['manual_startlist_pdf', 'generated_startlist_pdf', 'manual_results_pdf',
                           'generated_results_pdf']
             for field in pdf_fields:
@@ -205,15 +259,13 @@ class Game:
     def athlete_matches_game(athlete, game):
         if not athlete or not game:
             return False
-        # Protection contre les valeurs None
         genders_str = game.get('genders') or ''
         athlete_gender = athlete.get('gender') or ''
         if not genders_str or not athlete_gender:
             return False
-        game_genders = [g.strip() for g in genders_str.split(',') if g.strip()]  # Corriger gender_str en genders_str
+        game_genders = [g.strip() for g in genders_str.split(',') if g.strip()]
         if athlete_gender not in game_genders:
             return False
-        # Protection pour les classes
         classes_str = game.get('classes') or ''
         athlete_class_str = athlete.get('class') or ''
         if not classes_str or not athlete_class_str:
@@ -250,10 +302,8 @@ class Game:
             ORDER BY heat_number
         """, (game['heat_group_id'], game['id']), fetch=True)
 
-    # Tes nouvelles méthodes PDF restent identiques
     @staticmethod
     def update_generated_pdfs(game_id, startlist_pdf=None, results_pdf=None):
-        """Update generated PDF paths"""
         data = {}
         if startlist_pdf:
             data['generated_startlist_pdf'] = startlist_pdf
@@ -269,7 +319,6 @@ class Game:
 
     @staticmethod
     def update_manual_pdfs(game_id, startlist_pdf=None, results_pdf=None):
-        """Update manual PDF paths"""
         data = {}
         if startlist_pdf:
             data['manual_startlist_pdf'] = startlist_pdf
@@ -285,7 +334,6 @@ class Game:
 
     @staticmethod
     def get_games_for_bulk_generation():
-        """Get games that need PDF generation"""
         return execute_query("""
             SELECT * FROM games 
             WHERE manual_startlist_pdf IS NULL 
@@ -295,7 +343,6 @@ class Game:
 
     @staticmethod
     def get_games_with_pdfs():
-        """Get games that have generated PDFs"""
         return execute_query("""
             SELECT * FROM games 
             WHERE generated_startlist_pdf IS NOT NULL 

@@ -1,38 +1,38 @@
 from database.db_manager import execute_query, execute_one
 
-
 class Registration:
     @staticmethod
     def get_all(**filters):
-        query = """
-            SELECT r.*, a.firstname, a.lastname, a.npc, a.gender, a.class
-            FROM registrations r
-            JOIN athletes a ON r.sdms = a.sdms
-            WHERE 1=1
-        """
+        conditions = ["1=1"]
         params = []
 
         if filters:
             for key, value in filters.items():
                 if value:
                     if key == 'sdms':
-                        query += " AND r.sdms = %s"
+                        conditions.append("r.sdms = %s")
                         params.append(value)
                     elif key == 'event_name':
-                        query += " AND r.event_name = %s"
+                        conditions.append("r.event_name = %s")
                         params.append(value)
                     elif key == 'search':
-                        query += """ AND (
+                        conditions.append("""(
                             r.sdms::text LIKE %s OR
                             LOWER(r.event_name) LIKE LOWER(%s) OR
                             LOWER(a.firstname) LIKE LOWER(%s) OR
                             LOWER(a.lastname) LIKE LOWER(%s) OR
                             LOWER(a.npc) LIKE LOWER(%s)
-                        )"""
+                        )""")
                         search_param = f"%{value}%"
                         params.extend([search_param] * 5)
 
-        query += " ORDER BY r.event_name, a.lastname, a.firstname"
+        query = f"""
+            SELECT r.*, a.firstname, a.lastname, a.npc, a.gender, a.class
+            FROM registrations r
+            JOIN athletes a ON r.sdms = a.sdms
+            WHERE {' AND '.join(conditions)}
+            ORDER BY r.event_name, a.lastname, a.firstname
+        """
         return execute_query(query, params, fetch=True)
 
     @staticmethod

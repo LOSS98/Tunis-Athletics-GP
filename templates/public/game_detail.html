@@ -172,12 +172,11 @@
                 {% for result in combined_results %}
                 <tr class="hover:bg-gray-50 {% if result.game_id == game.id %}bg-purple-50{% endif %}">
                     <td class="px-6 py-4 whitespace-nowrap">
-                        {% set rank = result.final_rank %}
-                        {% if rank == 1 %}
+                        {% if result.rank == 1 %}
                             <span class="text-3xl">🥇</span>
-                        {% elif rank == 2 %}
+                        {% elif result.rank == 2 %}
                             <span class="text-3xl">🥈</span>
-                        {% elif rank == 3 %}
+                        {% elif result.rank == 3 %}
                             <span class="text-3xl">🥉</span>
                         {% endif %}
                         {% if result.record %}
@@ -186,7 +185,7 @@
                             </span>
                         {% endif %}
                     </td>
-                    <td class="px-6 py-4 whitespace-nowrap font-semibold">{{ result.final_rank }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap font-semibold">{{ result.rank }}</td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <span class="bg-purple-100 text-purple-800 px-2 py-1 rounded text-sm">
                             Heat {{ result.heat_number }}

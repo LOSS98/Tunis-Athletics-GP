@@ -59,6 +59,7 @@ class StartList:
             return False
         game_class_list = [c.strip() for c in game_classes.split(',') if c.strip()]
         return any(ac in game_class_list for ac in athlete_classes)
+
     @staticmethod
     def update_order_for_long_jump(game_id):
         from database.models.game import Game
@@ -79,6 +80,7 @@ class StartList:
                 (i + 1, game_id, result['athlete_sdms'])
             )
         return True
+
     @staticmethod
     def update_final_order_long_jump(game_id):
         from database.models.game import Game

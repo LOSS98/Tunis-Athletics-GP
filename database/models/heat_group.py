@@ -1,5 +1,5 @@
+from config import config
 from database.db_manager import execute_one, execute_query
-
 
 class HeatGroup:
     @staticmethod
@@ -48,7 +48,36 @@ class HeatGroup:
     @staticmethod
     def rank_combined_results(heat_group_id):
         results = HeatGroup.get_combined_results(heat_group_id)
+
+        if not results:
+            return True
+
+        special_values = config.RESULT_SPECIAL_VALUES
+
+        current_rank = 1
+        previous_value = None
+        athletes_at_current_rank = 0
+
         for i, result in enumerate(results):
-            rank = i + 1
-            execute_query("UPDATE results SET rank = %s WHERE id = %s", (str(rank), result['id']))
+            print(f"Processing result ID {result['id']} with value {result['value']}")
+            current_value = result['value']
+
+            if current_value in special_values:
+                execute_query("UPDATE results SET rank = %s WHERE id = %s",
+                              ('-', result['id']))
+                print(f"✓ Special value, rank set to '-'")
+                continue
+
+            if previous_value is not None and current_value != previous_value:
+                current_rank += athletes_at_current_rank
+                athletes_at_current_rank = 1
+            else:
+                athletes_at_current_rank += 1
+
+            execute_query("UPDATE results SET rank = %s WHERE id = %s",
+                          (str(current_rank), result['id']))
+
+            print(f"✓ Rank {current_rank} assigned (athletes at this rank: {athletes_at_current_rank})")
+            previous_value = current_value
+
         return True

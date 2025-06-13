@@ -62,60 +62,50 @@ class Athlete:
 
         base_query = """
             SELECT a.*, n.name as npc_name, n.region_code, r.name as region_name,
-                   COALESCE(
-                       STRING_AGG(DISTINCT reg.event_name, ', ' ORDER BY reg.event_name), 
-                       ''
-                   ) as registered_events
+                   COALESCE(STRING_AGG(DISTINCT reg.event_name, ', ' ORDER BY reg.event_name), '') as registered_events
             FROM athletes a
             LEFT JOIN npcs n ON a.npc = n.code
             LEFT JOIN regions r ON n.region_code = r.code
             LEFT JOIN registrations reg ON a.sdms = reg.sdms
         """
 
+        conditions = ["1=1"]
+        params = []
+
         if event_filter:
-            base_query += """
-            WHERE a.sdms IN (
-                SELECT DISTINCT sdms FROM registrations WHERE event_name = %s
-            )
-            """
-            event_params = [event_filter]
-        else:
-            base_query += " WHERE 1=1"
-            event_params = []
+            conditions.append("a.sdms IN (SELECT DISTINCT sdms FROM registrations WHERE event_name = %s)")
+            params.append(event_filter)
+
+        if guides_only:
+            conditions.append("a.is_guide = TRUE")
 
         if is_class_search:
-            search_query = base_query + " AND UPPER(a.class) LIKE UPPER(%s)"
-            params = event_params + [f"%{query}%"]
-            if guides_only:
-                search_query += " AND a.is_guide = TRUE"
-            search_query += " GROUP BY a.sdms, n.name, n.region_code, r.name ORDER BY a.sdms LIMIT 50"
+            conditions.append("UPPER(a.class) LIKE UPPER(%s)")
+            params.append(f"%{query}%")
         else:
-            search_query = base_query + """ AND (
-                LOWER(a.firstname) LIKE LOWER(%s)
-                OR LOWER(a.lastname) LIKE LOWER(%s)
-                OR LOWER(a.npc) LIKE LOWER(%s)
-                OR a.sdms::text LIKE %s
-                OR LOWER(a.class) LIKE LOWER(%s)
-            )"""
-            params = event_params + [f"%{query}%"] * 5
-            if guides_only:
-                search_query += " AND a.is_guide = TRUE"
-            if allowed_classes:
-                class_conditions = []
-                for class_name in allowed_classes:
-                    class_conditions.append("a.class LIKE %s")
-                    params.append(f"%{class_name}%")
-                if class_conditions:
-                    search_query += f" AND ({' OR '.join(class_conditions)})"
-            search_query += """ 
-                GROUP BY a.sdms, n.name, n.region_code, r.name
-                ORDER BY 
-                    CASE WHEN a.sdms::text = %s THEN 1 ELSE 2 END,
-                    CASE WHEN LOWER(a.class) LIKE LOWER(%s) THEN 1 ELSE 2 END,
-                    a.sdms
-                LIMIT 20
-            """
+            conditions.append("""(
+                LOWER(a.firstname) LIKE LOWER(%s) OR
+                LOWER(a.lastname) LIKE LOWER(%s) OR
+                LOWER(a.npc) LIKE LOWER(%s) OR
+                a.sdms::text LIKE %s OR
+                LOWER(a.class) LIKE LOWER(%s)
+            )""")
+            params.extend([f"%{query}%"] * 5)
+
+        if allowed_classes:
+            class_conditions = " OR ".join(["a.class LIKE %s"] * len(allowed_classes))
+            conditions.append(f"({class_conditions})")
+            params.extend([f"%{class_name}%" for class_name in allowed_classes])
+
+        search_query = f"{base_query} WHERE {' AND '.join(conditions)}"
+        search_query += " GROUP BY a.sdms, a.firstname, a.lastname, a.npc, a.gender, a.class, a.date_of_birth, a.photo, a.is_guide, a.created_at, n.name, n.region_code, r.name"
+
+        if not is_class_search:
+            search_query += " ORDER BY CASE WHEN a.sdms::text = %s THEN 1 ELSE 2 END, CASE WHEN LOWER(a.class) LIKE LOWER(%s) THEN 1 ELSE 2 END, a.sdms"
             params.extend([query, f"%{query}%"])
+            search_query += " LIMIT 20"
+        else:
+            search_query += " ORDER BY a.sdms LIMIT 50"
 
         athletes = execute_query(search_query, params, fetch=True)
 
@@ -162,7 +152,6 @@ class Athlete:
 
     @staticmethod
     def get_athlete_detail(sdms):
-        """Get detailed athlete information with personal bests and competitions"""
         query = """
         SELECT a.*, n.name as npc_name, n.flag_file_path,
                r.name as region_name, r.continent
@@ -174,7 +163,6 @@ class Athlete:
         athlete = execute_one(query, (sdms,))
 
         if athlete:
-            # Get personal bests
             pb_query = """
             SELECT event, athlete_class, performance, location, record_date
             FROM personal_bests
@@ -183,7 +171,6 @@ class Athlete:
             """
             athlete['personal_bests'] = execute_query(pb_query, (sdms,), fetch=True)
 
-            # Get competitions (games with results)
             comp_query = """
             SELECT DISTINCT g.id, g.event, g.genders, g.classes, g.day, g.time,
                    g.status, g.published, r.rank, r.value, r.record
@@ -194,7 +181,6 @@ class Athlete:
             """
             athlete['competitions'] = execute_query(comp_query, (sdms,), fetch=True)
 
-            # Get start list entries (upcoming competitions)
             upcoming_query = """
             SELECT DISTINCT g.id, g.event, g.genders, g.classes, g.day, g.time,
                    g.status, s.lane_order

@@ -3,7 +3,6 @@ from database.db_manager import execute_query, execute_one
 class NPC:
     @staticmethod
     def get_all():
-        """Get all NPCs with region info"""
         query = """
         SELECT n.*, r.name as region_name, r.continent
         FROM npcs n
@@ -14,7 +13,6 @@ class NPC:
 
     @staticmethod
     def get_by_code(code):
-        """Get NPC by code"""
         query = """
         SELECT n.*, r.name as region_name, r.continent
         FROM npcs n
@@ -25,7 +23,6 @@ class NPC:
 
     @staticmethod
     def create(code, name, region_code=None, flag_file_path=None):
-        """Create a new NPC"""
         query = """
         INSERT INTO npcs (code, name, region_code, flag_file_path)
         VALUES (%s, %s, %s, %s)
@@ -35,7 +32,6 @@ class NPC:
 
     @staticmethod
     def update(code, name, region_code=None, flag_file_path=None):
-        """Update an NPC"""
         query = """
         UPDATE npcs 
         SET name = %s, region_code = %s, flag_file_path = %s
@@ -45,12 +41,10 @@ class NPC:
 
     @staticmethod
     def delete(code):
-        """Delete an NPC"""
         return execute_query("DELETE FROM npcs WHERE code = %s", (code,))
 
     @staticmethod
     def search(query_text):
-        """Search NPCs by code or name"""
         query = """
         SELECT n.*, r.name as region_name, r.continent
         FROM npcs n
