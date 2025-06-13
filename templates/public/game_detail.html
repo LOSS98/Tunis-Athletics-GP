@@ -253,6 +253,17 @@
                         <span class="text-sm bg-purple-100 text-purple-800 px-2 py-1 rounded ml-2">(Current)</span>
                     {% endif %}
                 </h3>
+                {% if game.wind_velocity and game.wind_velocity != 0 and is_current_heat%}
+                <div class="mt-2 text-sm text-gray-600">
+                    <i class="fas fa-wind mr-1"></i>
+                    Wind: {{ config.format_wind(game.wind_velocity) }} m/s
+                    {% if game.wind_velocity > 2.0 %}
+                        <span class="text-red-600 ml-1">(Wind-assisted)</span>
+                    {% elif game.wind_velocity < -2.0 %}
+                        <span class="text-blue-600 ml-1">(Strong headwind)</span>
+                    {% endif %}
+                </div>
+                {% endif %}
                 {% if not is_current_heat %}
                 <a href="{{ url_for('public.game_detail', id=heat_game.id) }}"
                    class="text-blue-600 hover:text-blue-800">
