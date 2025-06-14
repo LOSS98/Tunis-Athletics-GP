@@ -1,5 +1,5 @@
 from datetime import datetime, date
-import pytz
+
 from database.db_manager import execute_one, execute_query
 
 
@@ -239,8 +239,7 @@ _cache_timestamp = None
 
 def get_cached_config(key, default=None, cache_duration=300):
     global _config_cache, _cache_timestamp
-    tunis_tz = pytz.timezone('Africa/Tunis')
-    now = datetime.now(tunis_tz)
+    now = datetime.now()
     if _cache_timestamp is None or (now - _cache_timestamp).seconds > cache_duration:
         _config_cache = ConfigManager.get_all_config()
         _cache_timestamp = now

@@ -1,5 +1,5 @@
 from database.db_manager import execute_one, execute_query
-import pytz
+
 
 class Game:
     @staticmethod
@@ -156,10 +156,8 @@ class Game:
         from config import Config
         from datetime import datetime
 
-
         current_day = Config.get_current_day()
-        tunis_tz = pytz.timezone('Africa/Tunis')
-        current_time = datetime.now(tunis_tz)
+        current_time = datetime.now()
 
         if current_day is None:
             current_day = 1
