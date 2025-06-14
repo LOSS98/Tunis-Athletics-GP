@@ -595,8 +595,6 @@ def register_routes(bp):
                             result_data['weight'] = float(weight)
                         except (ValueError, TypeError):
                             pass
-                    if record and record != '':
-                        result_data['record'] = record
 
                     Result.update(result_id, **result_data)
 
@@ -666,8 +664,6 @@ def register_routes(bp):
                         'raza_score': max_raza_score,
                         'raza_score_precise': max_raza_score_precise
                     }
-                    if record and record != '':
-                        result_data['record'] = record
 
                     Result.update(result_id, **result_data)
 
@@ -755,8 +751,6 @@ def register_routes(bp):
                     except (ValueError, TypeError):
                         pass
 
-                if record and record != '':
-                    result_data['record'] = record
 
                 result_id = Result.create(**result_data)
                 if not result_id:
@@ -798,9 +792,6 @@ def register_routes(bp):
                     'raza_score': max_raza_score,
                     'raza_score_precise': max_raza_score_precise
                 }
-
-                if record and record != '':
-                    result_data['record'] = record
 
                 result_id = Result.create(**result_data)
                 if not result_id:
