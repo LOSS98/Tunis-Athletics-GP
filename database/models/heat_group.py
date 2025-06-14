@@ -34,7 +34,7 @@ class HeatGroup:
         return execute_query("""
             SELECT r.*, a.firstname, a.lastname, a.npc, a.gender as athlete_gender, a.class as athlete_class,
                    g.firstname AS guide_firstname, g.lastname AS guide_lastname,
-                   gm.heat_number, gm.event, gm.id as game_id
+                   gm.heat_number, gm.event, gm.id as game_id, gm.wind_velocity
             FROM results r
             JOIN athletes a ON r.athlete_sdms = a.sdms
             LEFT JOIN athletes g ON r.guide_sdms = g.sdms

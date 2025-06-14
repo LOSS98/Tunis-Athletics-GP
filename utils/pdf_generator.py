@@ -129,7 +129,7 @@ class PDFGenerator:
         return gender
 
     def create_track_event_table(self, results, game):
-        headers = ['Rank', 'lane', 'SDMS', 'First Name', 'Last Name', 'Gender', 'NPC', 'Class', 'Electronic']
+        headers = ['Rank', 'Lane', 'SDMS', 'First Name', 'Last Name', 'Gender', 'NPC', 'Class', 'Electronic']
 
         if game.get('wpa_points', False):
             headers.append('WPA Points')
@@ -146,7 +146,7 @@ class PDFGenerator:
                 result['athlete_gender'] or '',
                 result['npc'] or '',
                 result.get('athlete_class', '').split(',')[0] if result.get('athlete_class') else '',
-                result['value'] or ''
+                Config.format_time(result['value'], True) or ''
             ]
 
             if game.get('wpa_points', False):
@@ -180,7 +180,9 @@ class PDFGenerator:
         if game['event'] in Config.get_weight_field_events():
             headers.append('Weight')
 
-        headers.extend(['R1/P1', 'Class', 'Performance'])
+        if game['event'] in Config.get_r1_qualifying_classes():
+            headers.append('R1/P1')
+        headers.extend(['Class', 'Performance'])
 
         if game.get('wpa_points', False):
             headers.append('WPA Points')
@@ -204,12 +206,14 @@ class PDFGenerator:
                 row.append(weight_val)
 
             total_finalists = len([r for r in results if r.get('final_order')])
-            r1_order = f"{result['final_order']}/{total_finalists}" if result.get('final_order') else ''
-            row.append(r1_order)
+            if game['event'] in Config.get_r1_qualifying_classes():
+                total_finalists = len([r for r in results if r.get('final_order')])
+                r1_order = f"{result['final_order']}/{total_finalists}" if result.get('final_order') else ''
+                row.append(r1_order)
 
             row.extend([
                 result.get('athlete_class', '').split(',')[0] if result.get('athlete_class') else '',
-                result['value'] or ''
+                Config.format_distance(result['value']) or ''
             ])
 
             if game.get('wpa_points', False):
@@ -456,22 +460,22 @@ class PDFGenerator:
         return buffer
 
     def create_combined_results_table(self, combined_results, game):
-        headers = ['Rank', 'Heat', 'SDMS', 'First Name', 'Last Name', 'NPC', 'Class', 'Performance']
+        headers = ['Rank', 'Heat', 'Wind', 'SDMS', 'First Name', 'Last Name', 'NPC', 'Class', 'Performance']
         if game.get('wpa_points', False):
             headers.append('WPA Points')
 
         data = [headers]
-
         for result in combined_results:
             row = [
                 str(result.get('rank', '')),
                 f"Heat {result.get('heat_number', '')}",
+                f"{Config.format_wind(result.get('wind_velocity', ''))} m/s" if result.get('wind_velocity') else '',
                 str(result['athlete_sdms']),
                 result['firstname'] or '',
                 result['lastname'] or '',
                 result['npc'] or '',
                 result.get('athlete_class', '').split(',')[0] if result.get('athlete_class') else '',
-                result['value'] or ''
+                Config.format_time(result['value'], True) or ''
             ]
 
             if game.get('wpa_points', False):

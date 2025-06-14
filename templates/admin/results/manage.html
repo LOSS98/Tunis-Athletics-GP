@@ -229,11 +229,6 @@
                     <i class="fas fa-sort-amount-up"></i> Recalc HJ
                 </button>
                 {% endif %}
-                <a href="{{ url_for('admin.generate_game_pdf', game_id=game.id) }}"
-                   class="bg-red-500 text-white px-3 py-1 rounded text-sm hover:bg-red-600"
-                   title="Generate PDF Results" target="_blank">
-                    <i class="fas fa-file-pdf"></i> PDF
-                </a>
             </div>
         </div>
     </div>
@@ -630,6 +625,9 @@
                 <button type="submit" class="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600">
                     <i class="fas fa-plus mr-2"></i>Add Result
                 </button>
+                <a href="{{ url_for('admin.game_startlist', id=game.id) }}" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
+                    <i class="fas fa-list mr-2"></i>Manage Startlist
+                </a>
             </div>
         </form>
     </div>

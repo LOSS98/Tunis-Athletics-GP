@@ -43,7 +43,6 @@ class Config:
 
     @staticmethod
     def get_r1_qualifying_classes():
-        print("Loading R1 qualifying classes...")
         try:
             from database.config_manager import ConfigManager
             return ConfigManager.get_config_tags('r1_qualifying_classes')
@@ -195,7 +194,12 @@ class Config:
         if not wind_value:
             return "0.00"
         try:
-            return f"{float(wind_value):.2f}"
+            if float(wind_value) > 0:
+                return f"+{float(wind_value):.2f}"
+            elif float(wind_value) < 0:
+                return f"{float(wind_value):.2f}"
+            else:
+                return f"{float(wind_value):.2f}"
         except:
             return str(wind_value)
 
