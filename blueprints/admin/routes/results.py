@@ -1313,19 +1313,48 @@ def register_routes(bp):
                 pbs_found = 0
 
                 for result in results:
+                    # Debug: Print the result structure
+                    print(f"Result keys: {result.keys()}")
+                    print(f"Result data: {result}")
+
                     athlete = Athlete.get_by_sdms(result['athlete_sdms'])
                     if athlete:
                         game = Game.get_by_id(game_id)
                         athlete_class = get_matching_class(athlete, game)
                         if athlete_class:
-                            created_records, created_pbs = check_for_records_and_pbs_improved(result, athlete, game,
-                                                                                              athlete_class)
-                            records_found += created_records
-                            pbs_found += created_pbs
+                            # Check what time-related fields exist
+                            time_field = None
+                            time_value = None
+
+                            # Common time field names
+                            possible_time_fields = ['time', 'result_time', 'performance', 'result', 'score']
+
+                            for field in possible_time_fields:
+                                if field in result:
+                                    time_field = field
+                                    time_value = result[field]
+                                    break
+
+                            if time_field and time_value:
+                                print(f"Found time field '{time_field}' with value: {time_value}")
+
+                                # Convert time string to seconds if needed
+                                processed_result = result.copy()
+                                if isinstance(time_value, str):
+                                    processed_result[time_field] = time_string_to_seconds(time_value)
+
+                                created_records, created_pbs = check_for_records_and_pbs_improved(
+                                    processed_result, athlete, game, athlete_class
+                                )
+                                records_found += created_records
+                                pbs_found += created_pbs
+                            else:
+                                print(f"No time field found in result: {result}")
 
                 message = f'Game marked as OFFICIAL. Found {records_found} new records and {pbs_found} personal bests.'
             else:
                 message = 'Game results marked as UNOFFICIAL'
+
             return jsonify({
                 'success': True,
                 'message': message,
@@ -1336,6 +1365,24 @@ def register_routes(bp):
         except Exception as e:
             print(f"Error toggling game official status: {e}")
             return jsonify({'success': False, 'error': str(e)}), 500
+
+def time_string_to_seconds(time_str):
+    """Convert time string (MM:SS.ss or SS.ss) to total seconds as float."""
+    if not time_str or time_str == '':
+        return None
+
+    try:
+        # Handle both MM:SS.ss and SS.ss formats
+        if ':' in time_str:
+            parts = time_str.split(':')
+            minutes = int(parts[0])
+            seconds = float(parts[1])
+            return minutes * 60 + seconds
+        else:
+            # Just seconds
+            return float(time_str)
+    except (ValueError, IndexError):
+        return None
 
 
 def update_final_order_after_three_attempts(game_id):
