@@ -346,7 +346,6 @@ def register_routes(bp):
             value = request.form.get('value', '').strip() if request.form.get('value') else ''
             weight_raw = request.form.get('weight')
             weight = weight_raw.strip() if weight_raw else None
-            record = request.form.get('record', '').strip()
 
             attempts = []
             wind_attempts = []
@@ -1101,7 +1100,6 @@ def register_routes(bp):
             if not game:
                 return jsonify({'error': 'Game not found'}), 404
             data = request.json
-            record = data.get('record')
             weight = data.get('weight')
             guide_sdms = data.get('guide_sdms')
             athlete = Athlete.get_by_sdms(result['athlete_sdms'])
@@ -1138,11 +1136,9 @@ def register_routes(bp):
                                   best_attempt=f"{max_height:.2f}",
                                   raza_score=best_raza_score,
                                   raza_score_precise=best_raza_score_precise,
-                                  record=record,
                                   guide_sdms=guide_sdms)
                 else:
-                    Result.update(result_id, value='NH', best_attempt=None, raza_score=0, raza_score_precise=0.0,
-                                  record=record, guide_sdms=guide_sdms)
+                    Result.update(result_id, value='NH', best_attempt=None, raza_score=0, raza_score_precise=0.0, guide_sdms=guide_sdms)
             else:
                 # Other field events (code existant)
                 attempts_data = data.get('attempts', {})
@@ -1196,7 +1192,6 @@ def register_routes(bp):
                                   best_attempt=f"{best_performance:.2f}",
                                   raza_score=max_raza_score,
                                   raza_score_precise=max_raza_score_precise,
-                                  record=record,
                                   weight=weight,
                                   guide_sdms=guide_sdms)
             return jsonify({'success': True, 'message': 'Attempts updated successfully'})

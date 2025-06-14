@@ -1072,15 +1072,6 @@
                         <input type="hidden" id="editGuideSdms">
                         <div id="editSelectedGuide" class="text-xs text-gray-500"></div>
                     </div>
-                    <div class="mb-4">
-                        <label class="block text-sm font-medium mb-2">Record</label>
-                        <select id="editRecord" class="w-40 px-3 py-2 border rounded-lg focus:outline-none focus:border-blue-500">
-                            <option value="">None</option>
-                            {% for record in config.RECORD_TYPES %}
-                            <option value="{{ record }}">{{ record }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
                     <div class="flex justify-end space-x-4">
                         <button type="button" onclick="closeEditAttemptsModal()"
                                 class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600">
