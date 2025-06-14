@@ -1,8 +1,12 @@
 import traceback
+from datetime import datetime
+
 from flask import render_template, redirect, url_for, flash, request, jsonify, send_file
+from flask_login import current_user
+
 from config import Config
 from utils.pdf_generator import PDFGenerator
-from ..auth import admin_required, loc_required
+from ..auth import admin_required, loc_required, technical_delegate_required
 from ..forms import GameForm, PDFUploadForm
 from database.models import Game, Result, Attempt, StartList
 from utils.helpers import save_uploaded_file
@@ -724,3 +728,32 @@ def register_routes(bp):
         except Exception as e:
             print(f"Error deleting results PDF: {e}")
             return jsonify({'error': str(e)}), 500
+
+    @bp.route('/games/<int:id>/toggle-publish-startlist', methods=['POST'])
+    @technical_delegate_required
+    def toggle_publish_startlist(id):
+        new_status = Game.toggle_publish_startlist(id)
+        status_text = 'published' if new_status else 'unpublished'
+        flash(f'Startlist {status_text} successfully', 'success')
+        return redirect(url_for('admin.game_startlist', id=id))
+
+    @bp.route('/games/<int:game_id>/toggle-corrected', methods=['POST'])
+    @technical_delegate_required
+    def toggle_game_corrected(game_id):
+        try:
+            new_status = Game.toggle_corrected_status(game_id, current_user.id)
+            if new_status:
+                message = 'Game marked as CORRECTED'
+            else:
+                message = 'Game correction status removed'
+
+            return jsonify({
+                'success': True,
+                'message': message,
+                'corrected': new_status,
+                'corrected_by': current_user.username if new_status else None,
+                'corrected_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S') if new_status else None
+            })
+        except Exception as e:
+            print(f"Error toggling game corrected status: {e}")
+            return jsonify({'success': False, 'error': str(e)}), 500

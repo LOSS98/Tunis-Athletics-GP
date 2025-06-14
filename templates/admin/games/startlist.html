@@ -8,6 +8,15 @@
             <span class="bg-amber-100 text-amber-500 px-2 py-1 rounded-full text-xs font-medium">
                 #{{ game.id }}
             </span>
+            {% if game.get('startlist_published') %}
+                <span class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-medium ml-2">
+                    <i class="fas fa-eye mr-1"></i>Startlist PUBLISHED
+                </span>
+            {% else %}
+                <span class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm font-medium ml-2">
+                    <i class="fas fa-eye-slash mr-1"></i>Startlist UNPUBLISHED
+                </span>
+            {% endif %}
         </h3>
         <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mt-3 text-sm">
             <div><span class="font-semibold">Event:</span> {{ game.event }}</div>
@@ -293,6 +302,18 @@
         <i class="fas fa-arrow-left mr-2"></i>Back to Games
     </a>
     <div class="flex gap-2">
+        {% if current_user.is_technical_delegate() %}
+        <form method="POST" action="{{ url_for('admin.toggle_publish_startlist', id=game.id) }}" class="inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit"
+                    class="{% if game.get('startlist_published') %}bg-red-600 hover:bg-red-700{% else %}bg-green-600 hover:bg-green-700{% endif %} text-white px-4 py-2 rounded-lg text-sm font-medium"
+                    title="{% if game.get('startlist_published') %}Unpublish startlist{% else %}Publish startlist{% endif %}"
+                    onclick="return confirm('{% if game.get('startlist_published') %}Unpublish{% else %}Publish{% endif %} this startlist?')">
+                <i class="fas fa-{% if game.get('startlist_published') %}eye-slash{% else %}eye{% endif %} mr-1"></i>
+                {% if game.get('startlist_published') %}Unpublish Startlist{% else %}Publish Startlist{% endif %}
+            </button>
+        </form>
+        {% endif %}
         <a href="{{ url_for('admin.game_results', id=game.id) }}" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
             <i class="fas fa-medal mr-2"></i>Manage Results
         </a>

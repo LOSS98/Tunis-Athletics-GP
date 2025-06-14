@@ -164,7 +164,7 @@
                             </td>
                             <td class="px-4 py-4 text-center">
                                 <div class="flex flex-col gap-1">
-                                    {% if game.has_startlist %}
+                                    {% if game.has_startlist and game.startlist_published %}
                                         <a href="{{ url_for('public.game_startlist_detail', id=game.id) }}"
                                            class="text-blue-600 hover:text-blue-800 text-xs font-medium">
                                             <i class="fas fa-list mr-1"></i>Start List

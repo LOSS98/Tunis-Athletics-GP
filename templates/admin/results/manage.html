@@ -121,6 +121,15 @@
                             <i class="fas fa-clock mr-1"></i>UNOFFICIAL
                         </span>
                     {% endif %}
+                    {% if game.corrected %}
+                        <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-medium ml-2">
+                            <i class="fas fa-check-double mr-1"></i>CORRECTED
+                        </span>
+                    {% else %}
+                        <span class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm font-medium ml-2">
+                            <i class="fas fa-edit mr-1"></i>NOT CORRECTED
+                        </span>
+                    {% endif %}
                 </h3>
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-3 text-sm">
                     <div><span class="font-semibold">Event:</span> {{ game.event }}</div>
@@ -151,9 +160,12 @@
                 <div class="mt-2 text-sm text-green-700 bg-green-50 px-3 py-2 rounded">
                     <i class="fas fa-info-circle mr-1"></i>
                     <strong>Officialized:</strong> {{ game.official_date.strftime('%Y-%m-%d %H:%M:%S') }}
-                    {% if game.official_by_username %}
-                        by <strong>{{ game.official_by_username }}</strong>
-                    {% endif %}
+                </div>
+                {% endif %}
+                {% if game.corrected and game.corrected_date %}
+                <div class="mt-2 text-sm text-purple-700 bg-purple-50 px-3 py-2 rounded">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    <strong>Corrected:</strong> {{ game.corrected_date.strftime('%Y-%m-%d %H:%M:%S') }}
                 </div>
                 {% endif %}
             </div>
@@ -177,18 +189,24 @@
                         <option value="cancelled" {% if game.status == 'cancelled' %}selected{% endif %}>Cancelled</option>
                     </select>
                 </form>
-                {% if current_user.has_loc_privileges() %}
                 <button onclick="togglePublish({{ game.id }}, event)"
                         class="px-3 py-1 rounded text-white text-sm {% if game.published %}bg-red-500 hover:bg-red-600{% else %}bg-green-500 hover:bg-green-600{% endif %}">
                     {% if game.published %}Unpublish{% else %}Publish{% endif %}
                 </button>
-                {% endif %}
                 {% if current_user.is_technical_delegate() %}
                 <button onclick="toggleGameOfficial({{ game.id }})"
                         class="{% if game.official %}bg-red-600 hover:bg-red-700{% else %}bg-green-600 hover:bg-green-700{% endif %} text-white px-4 py-2 rounded text-sm font-medium"
                         title="{% if game.official %}Mark game as unofficial{% else %}Mark game as official{% endif %}">
-                    <i class="fas fa-{% if game.official %}times{% else %}stamp{% endif %} mr-1"></i>
+                    <i class="fas fa-{% if game.official %}times{% else %}{% endif %} mr-1"></i>
                     {% if game.official %}Mark UNOFFICIAL{% else %}Mark OFFICIAL{% endif %}
+                </button>
+                {% endif %}
+                {% if current_user.is_technical_delegate() %}
+                <button onclick="toggleGameCorrected({{ game.id }})"
+                        class="{% if game.corrected %}bg-red-600 hover:bg-red-700{% else %}bg-purple-600 hover:bg-purple-700{% endif %} text-white px-4 py-2 rounded text-sm font-medium"
+                        title="{% if game.corrected %}Mark game as not corrected{% else %}Mark game as corrected{% endif %}">
+                    <i class="fas fa-{% if game.corrected %}times{% else %}check-double{% endif %} mr-1"></i>
+                    {% if game.corrected %}Mark NOT CORRECTED{% else %}Mark CORRECTED{% endif %}
                 </button>
                 {% endif %}
                 {% if current_user.is_technical_delegate() %}
@@ -1238,6 +1256,39 @@ function rankHeatGroup(heatGroupId) {
             showNotification('Error ranking combined results', 'error');
         });
     }
+}
+
+function toggleGameCorrected(gameId) {
+    const confirmMessage = 'Are you sure you want to change the corrected status of this entire game?';
+    if (!confirm(confirmMessage)) {
+        return;
+    }
+
+    const button = event.target.closest('button');
+    setLoadingState(button, true);
+
+    fetch(`/admin/games/${gameId}/toggle-corrected`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCSRFToken(),
+        },
+    })
+    .then((response) => response.json())
+    .then((data) => {
+        if (data.success) {
+            showNotification(data.message, 'success');
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showNotification('Error: ' + (data.error || 'Unknown error'), 'error');
+            setLoadingState(button, false);
+        }
+    })
+    .catch((error) => {
+        console.error('Error:', error);
+        showNotification('Error changing corrected status', 'error');
+        setLoadingState(button, false);
+    });
 }
 </script>
 <script src="{{ url_for('static', filename='js/manage_results.js') }}"></script>

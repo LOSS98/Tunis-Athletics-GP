@@ -21,7 +21,7 @@
 <!-- PDF Download Section -->
 <div class="mb-6">
     {% set startlist_pdf = game.manual_startlist_pdf or game.generated_startlist_pdf %}
-    {% if startlist_pdf %}
+    {% if startlist_pdf and game.startlist_published %}
     <div class="flex flex-wrap gap-4">
         <a href="{% if game.manual_startlist_pdf %}{{ url_for('public.serve_pdf', pdf_type='manual_startlists', filename=game.manual_startlist_pdf) }}{% else %}{{ url_for('public.serve_pdf', pdf_type='generated_startlists', filename=game.generated_startlist_pdf) }}{% endif %}"
            target="_blank"
@@ -72,7 +72,7 @@
 {% endif %}
 
 <!-- Start List Table (reste identique) -->
-{% if startlist %}
+{% if startlist and game.startlist_published %}
 <div class="bg-white rounded-lg shadow overflow-hidden">
     <div class="p-6 border-b bg-gray-50">
         <h2 class="text-xl font-bold">Athletes ({{ startlist|length }})</h2>
@@ -137,7 +137,7 @@
     <i class="fas fa-clock text-4xl text-yellow-600 mb-4"></i>
     <h3 class="text-lg font-semibold text-yellow-900">Start List Not Yet Available</h3>
     <p class="text-yellow-700 mt-2">The start list for this event will be published closer to the competition time.</p>
-    {% if startlist_pdf %}
+    {% if startlist_pdf and game.startlist_published %}
     <div class="mt-4">
         <a href="{% if game.manual_startlist_pdf %}{{ url_for('public.serve_pdf', pdf_type='manual_startlists', filename=game.manual_startlist_pdf) }}{% else %}{{ url_for('public.serve_pdf', pdf_type='generated_startlists', filename=game.generated_startlist_pdf) }}{% endif %}"
            target="_blank"

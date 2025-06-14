@@ -214,6 +214,7 @@ class Game:
         for game in games:
             game['classes_list'] = [c.strip() for c in game['classes'].split(',')]
             game['genders_list'] = [g.strip() for g in game['genders'].split(',')]
+            game['startlist_published'] = game.get('startlist_published', False)
             game_day = game['day']
 
             try:
@@ -351,3 +352,30 @@ class Game:
             OR manual_results_pdf IS NOT NULL
             ORDER BY day, time
         """, fetch=True)
+
+    @staticmethod
+    def toggle_publish_startlist(id):
+        current = execute_one("SELECT startlist_published FROM games WHERE id = %s", (id,))
+        if current:
+            new_status = not current.get('startlist_published', False)
+            execute_query("UPDATE games SET startlist_published = %s WHERE id = %s", (new_status, id))
+            return new_status
+        return False
+
+    @staticmethod
+    def toggle_corrected_status(id, user_id):
+        current = execute_one("SELECT corrected FROM games WHERE id = %s", (id,))
+        if current:
+            new_status = not current.get('corrected', False)
+            if new_status:
+                execute_query(
+                    "UPDATE games SET corrected = %s, corrected_by = %s, corrected_date = CURRENT_TIMESTAMP WHERE id = %s",
+                    (new_status, user_id, id)
+                )
+            else:
+                execute_query(
+                    "UPDATE games SET corrected = %s, corrected_by = NULL, corrected_date = NULL WHERE id = %s",
+                    (new_status, id)
+                )
+            return new_status
+        return False
