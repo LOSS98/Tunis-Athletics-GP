@@ -1,4 +1,5 @@
 import io
+import pytz
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -45,7 +46,8 @@ class NumberedCanvas(canvas.Canvas):
         self.drawRightString(width - 10 * mm, 15 * mm, f"Page {page_num} of {total_pages}")
 
         # Date de génération
-        self.drawString(10 * mm, 15 * mm, f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+        tunis_tz = pytz.timezone('Africa/Tunis')
+        self.drawString(10 * mm, 15 * mm, f"Generated: {datetime.now(tunis_tz).strftime('%Y-%m-%d %H:%M')}")
 
 
 class PDFGenerator:

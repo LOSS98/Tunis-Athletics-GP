@@ -1,4 +1,5 @@
 import traceback
+import pytz
 from datetime import datetime, date
 from flask import render_template, redirect, url_for, flash, request, jsonify
 from flask_login import current_user
@@ -1390,13 +1391,13 @@ def register_routes(bp):
                 message = f'Game marked as OFFICIAL. Found {records_found} new records and {pbs_found} personal bests.'
             else:
                 message = 'Game results marked as UNOFFICIAL'
-
+            tunis_tz = pytz.timezone('Africa/Tunis')
             return jsonify({
                 'success': True,
                 'message': message,
                 'official': new_status,
                 'official_by': current_user.username if new_status else None,
-                'official_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S') if new_status else None
+                'official_date': datetime.now(tunis_tz).strftime('%Y-%m-%d %H:%M:%S') if new_status else None
             })
         except Exception as e:
             print(f"Error toggling game official status: {e}")

@@ -6,11 +6,14 @@ from werkzeug.utils import secure_filename
 from config import Config
 from flask import current_app
 import uuid
+import pytz
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in Config.ALLOWED_EXTENSIONS
 def generate_filename(original_filename):
     ext = original_filename.rsplit('.', 1)[1].lower()
-    timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+    tunis_tz = pytz.timezone('Africa/Tunis')
+    timestamp = datetime.now(tunis_tz).strftime('%Y%m%d_%H%M%S')
     random_string = str(uuid.uuid4())[:8]
     return f"{timestamp}_{random_string}.{ext}"
 def save_uploaded_file(file, subfolder):

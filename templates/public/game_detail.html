@@ -134,11 +134,11 @@
         <h2 class="text-xl font-bold text-purple-900">
             <i class="fas fa-trophy mr-2"></i>Final Combined Results
             {% if game.official %}
-                <span class="ml-2 text-sm bg-green-100 text-green-800 px-2 py-1 rounded"
+                <span class="ml-2 text-sm bg-green-100 text-green-800 px-2 py-1 rounded inline-block"
                       title="{% if game.official_date %}Officialized on {{ game.official_date.strftime('%Y-%m-%d at %H:%M') }}{% if game.official_by_username %} by {{ game.official_by_username }}{% endif %}{% endif %}">
                     <i class="fas fa-stamp mr-1"></i>Official
                     {% if game.official_date %}
-                        <div class="text-xs mt-1 opacity-75">{{ game.official_date.strftime('%d/%m %H:%M') }}</div>
+                        <span class="block text-xs opacity-75">{{ game.official_date.strftime('%d/%m %H:%M') }}</span>
                     {% endif %}
                 </span>
             {% else %}
@@ -147,11 +147,11 @@
                 </span>
             {% endif %}
             {% if game.corrected %}
-                <span class="ml-2 text-sm bg-purple-100 text-purple-800 px-2 py-1 rounded"
+                <span class="ml-2 text-sm bg-purple-100 text-purple-800 px-2 py-1 rounded inline-block"
                       title="{% if game.corrected_date %}Corrected on {{ game.corrected_date.strftime('%Y-%m-%d at %H:%M') }}{% if game.corrected_by_username %} by {{ game.corrected_by_username }}{% endif %}{% endif %}">
                     <i class="fas fa-check-double mr-1"></i>Corrected
                     {% if game.corrected_date %}
-                        <div class="text-xs mt-1 opacity-75">{{ game.corrected_date.strftime('%d/%m %H:%M') }}</div>
+                        <span class="block text-xs opacity-75">{{ game.corrected_date.strftime('%d/%m %H:%M') }}</span>
                     {% endif %}
                 </span>
             {% endif %}
@@ -564,11 +564,11 @@
                 </span>
             {% endif %}
             {% if game.official %}
-                <span class="ml-2 text-sm bg-green-100 text-green-800 px-2 py-1 rounded"
+                <span class="ml-2 text-sm bg-green-100 text-green-800 px-2 py-1 rounded inline-block"
                       title="{% if game.official_date %}Officialized on {{ game.official_date.strftime('%Y-%m-%d at %H:%M') }}{% if game.official_by_username %} by {{ game.official_by_username }}{% endif %}{% endif %}">
                     <i class="fas fa-stamp mr-1"></i>Official
                     {% if game.official_date %}
-                        <div class="text-xs mt-1 opacity-75">{{ game.official_date.strftime('%d/%m %H:%M') }}</div>
+                        <span class="block text-xs opacity-75">{{ game.official_date.strftime('%d/%m %H:%M') }}</span>
                     {% endif %}
                 </span>
             {% else %}
@@ -577,11 +577,11 @@
                 </span>
             {% endif %}
             {% if game.corrected %}
-                <span class="ml-2 text-sm bg-purple-100 text-purple-800 px-2 py-1 rounded"
+                <span class="ml-2 text-sm bg-purple-100 text-purple-800 px-2 py-1 rounded inline-block"
                       title="{% if game.corrected_date %}Corrected on {{ game.corrected_date.strftime('%Y-%m-%d at %H:%M') }}{% if game.corrected_by_username %} by {{ game.corrected_by_username }}{% endif %}{% endif %}">
                     <i class="fas fa-check-double mr-1"></i>Corrected
                     {% if game.corrected_date %}
-                        <div class="text-xs mt-1 opacity-75">{{ game.corrected_date.strftime('%d/%m %H:%M') }}</div>
+                        <span class="block text-xs opacity-75">{{ game.corrected_date.strftime('%d/%m %H:%M') }}</span>
                     {% endif %}
                 </span>
             {% endif %}

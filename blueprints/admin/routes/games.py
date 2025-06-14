@@ -1,6 +1,6 @@
 import traceback
 from datetime import datetime
-
+import pytz
 from flask import render_template, redirect, url_for, flash, request, jsonify, send_file
 from flask_login import current_user
 
@@ -747,12 +747,14 @@ def register_routes(bp):
             else:
                 message = 'Game correction status removed'
 
+            tunis_tz = pytz.timezone('Africa/Tunis')
+
             return jsonify({
                 'success': True,
                 'message': message,
                 'corrected': new_status,
                 'corrected_by': current_user.username if new_status else None,
-                'corrected_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S') if new_status else None
+                'corrected_date': datetime.now(tunis_tz).strftime('%Y-%m-%d %H:%M:%S') if new_status else None
             })
         except Exception as e:
             print(f"Error toggling game corrected status: {e}")

@@ -6,6 +6,8 @@ from blueprints.admin import admin_bp
 from blueprints.public import public_bp
 from database.db_manager import init_db
 from datetime import datetime
+import pytz
+
 import os
 def create_app():
     app = Flask(__name__,
@@ -13,6 +15,7 @@ def create_app():
                 static_url_path='/static',
                 template_folder='templates')
     app.config.from_object(Config)
+    app.config['TIMEZONE'] = pytz.timezone('Africa/Tunis')
     csrf = CSRFProtect(app)
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'startlists'), exist_ok=True)
@@ -32,6 +35,7 @@ def create_app():
     def inject_template_vars():
         from flask_wtf.csrf import generate_csrf
         from utils.helpers import get_pending_records_count, get_pending_personal_bests_count
+        tunis_tz = pytz.timezone('Africa/Tunis')
         class TemplateConfig:
             def __init__(self):
                 pass
@@ -103,9 +107,11 @@ def create_app():
                 return Config.format_weight(weight_value)
             UPLOAD_FOLDER = Config.UPLOAD_FOLDER
             RAZA_TABLE_PATH = Config.RAZA_TABLE_PATH
+
         return {
             'config': TemplateConfig(),
-            'current_date': datetime.now().strftime('%B %d, %Y'),
+            'current_date': datetime.now(tunis_tz).strftime('%B %d, %Y'),
+            'current_datetime': datetime.now(tunis_tz).strftime('%Y-%m-%d %H:%M'),
             'csrf_token': generate_csrf,
             'get_pending_records_count': get_pending_records_count,
             'get_pending_personal_bests_count': get_pending_personal_bests_count,
