@@ -141,9 +141,14 @@ class Result:
             use_wpa_points = game.get('wpa_points', False)
             special_values = Config.get_result_special_values()
 
+            # Séparer les résultats valides des valeurs spéciales
             valid_results = []
+            special_results = []
+
             for result in results:
-                if result['value'] not in special_values:
+                if result['value'] in special_values:
+                    special_results.append(result)
+                else:
                     if is_field:
                         attempts = execute_query("""
                             SELECT value, height FROM attempts 
@@ -155,6 +160,7 @@ class Result:
                             result['high_jump_stats'] = Result.calculate_high_jump_stats(attempts,
                                                                                          float(result['value']))
                         else:
+                            # Pour les autres épreuves de terrain, collecter tous les essais valides
                             all_attempts = []
                             for attempt in attempts:
                                 val = attempt['value']
@@ -164,59 +170,94 @@ class Result:
                                         all_attempts.append(attempt_float)
                                     except (ValueError, TypeError):
                                         pass
-                            all_attempts.sort(reverse=True)
+                            all_attempts.sort(reverse=True)  # Tri décroissant (meilleur en premier)
                             result['sorted_attempts'] = all_attempts
 
                     valid_results.append(result)
 
             if not valid_results:
+                # Si aucun résultat valide, marquer tous les résultats spéciaux avec rang "-"
+                for result in special_results:
+                    execute_query("UPDATE results SET rank = %s WHERE id = %s", ('-', result['id']))
                 return True
 
             def get_sort_key(result):
-                if is_high_jump:
+                if use_wpa_points:
+                    # Utiliser RAZA score au lieu des performances brutes
+                    if result.get('raza_score_precise'):
+                        primary = -float(result['raza_score_precise'])  # Négatif car plus haut = meilleur
+                    elif result.get('raza_score'):
+                        primary = -float(result['raza_score'])
+                    else:
+                        primary = float('inf')  # Pas de score = dernière position
+                    return (primary,)
+
+                elif is_high_jump:
                     try:
                         max_height = float(result['value'])
                         hj_stats = result.get('high_jump_stats', {})
-                        primary = -max_height
+                        primary = -max_height  # Négatif car plus haut = meilleur
                         failures_at_max = hj_stats.get('failures_at_max_height', 999)
                         total_failures = hj_stats.get('total_failures', 999)
                         return (primary, failures_at_max, total_failures)
                     except (ValueError, TypeError):
                         return (float('inf'), 999, 999)
 
-                if use_wpa_points and result.get('raza_score_precise'):
-                    primary = -float(result['raza_score_precise'])
-                elif use_wpa_points and result.get('raza_score'):
-                    primary = -float(result['raza_score'])
-                else:
+                elif is_track:
+                    # Piste : temps le plus rapide (plus petit = meilleur)
                     try:
-                        if is_track:
-                            primary = float(result['value'])
-                        else:
-                            primary = -float(result['value'])
+                        primary = float(result['value'])
+                        return (primary,)
                     except (ValueError, TypeError):
-                        primary = float('inf') if is_track else float('-inf')
+                        return (float('inf'),)
 
-                tie_breakers = []
-                if is_field and not is_high_jump and 'sorted_attempts' in result:
-                    attempts = result['sorted_attempts']
-                    for i in range(6):
-                        if i < len(attempts):
-                            tie_breakers.append(-attempts[i])
-                        else:
-                            tie_breakers.append(float('inf'))
+                elif is_field:
+                    # Autres épreuves de terrain : meilleure performance puis tie-breakers
+                    try:
+                        primary = -float(result['value'])  # Négatif car plus grand = meilleur
+                    except (ValueError, TypeError):
+                        primary = float('inf')
 
-                return (primary, *tie_breakers)
+                    tie_breakers = []
+                    if 'sorted_attempts' in result:
+                        attempts = result['sorted_attempts']
+                        for i in range(6):  # Jusqu'à 6 essais
+                            if i < len(attempts):
+                                tie_breakers.append(-attempts[i])  # Négatif car plus grand = meilleur
+                            else:
+                                tie_breakers.append(float('inf'))  # Pas d'essai = pénalité
 
+                    return (primary, *tie_breakers)
+
+                # Par défaut
+                return (float('inf'),)
+
+            # Trier les résultats selon les critères
             valid_results.sort(key=get_sort_key)
 
-            for i, result in enumerate(valid_results):
-                rank = i + 1
-                execute_query("UPDATE results SET rank = %s WHERE id = %s", (str(rank), result['id']))
+            # NOUVELLE LOGIQUE DE CLASSEMENT AVEC GESTION DES ÉGALITÉS
+            current_rank = 1
+            previous_sort_key = None
+            athletes_at_current_rank = 0
 
-            for result in results:
-                if result['value'] in special_values:
-                    execute_query("UPDATE results SET rank = %s WHERE id = %s", ('-', result['id']))
+            for result in valid_results:
+                current_sort_key = get_sort_key(result)
+
+                # Si la performance/critères sont différents de la précédente
+                if previous_sort_key is not None and current_sort_key != previous_sort_key:
+                    current_rank += athletes_at_current_rank
+                    athletes_at_current_rank = 1
+                else:
+                    athletes_at_current_rank += 1
+
+                # Assigner le rang
+                execute_query("UPDATE results SET rank = %s WHERE id = %s", (str(current_rank), result['id']))
+
+                previous_sort_key = current_sort_key
+
+            # Traiter les valeurs spéciales (DNS, DNF, DQ, NM)
+            for result in special_results:
+                execute_query("UPDATE results SET rank = %s WHERE id = %s", ('-', result['id']))
 
             return True
 

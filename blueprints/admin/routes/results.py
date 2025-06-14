@@ -984,23 +984,60 @@ def register_routes(bp):
             if not game or game['event'] not in ['Long Jump', 'Triple Jump', 'Shot Put', 'Discus Throw',
                                                  'Javelin Throw', 'Club Throw']:
                 return jsonify({'error': 'Invalid game or not a qualifying field event'}), 400
-            # Get all results with at least 3 attempts
+
+            # Get all results with at least 3 attempts and their attempts
             results = execute_query("""
-                SELECT r.*, a.gender, a.class,
-                       (SELECT MAX(CAST(att.value AS FLOAT)) 
-                        FROM attempts att 
-                        WHERE att.result_id = r.id 
-                        AND att.attempt_number <= 3 
-                        AND att.value NOT IN %s) as best_of_three
+                SELECT r.*, a.gender, a.class, a.firstname, a.lastname
                 FROM results r
                 JOIN athletes a ON r.athlete_sdms = a.sdms
                 WHERE r.game_id = %s
                 AND (SELECT COUNT(*) FROM attempts att WHERE att.result_id = r.id AND att.attempt_number <= 3) >= 3
-                ORDER BY best_of_three DESC NULLS LAST
-            """, (tuple(Config.get_result_special_values()), game_id,), fetch=True)
-            total_athletes = len(results)
-            if total_athletes == 0:
+            """, (game_id,), fetch=True)
+
+            if not results:
                 return jsonify({'error': "No athletes with 3 valid attempts found."}), 400
+
+            special_values = Config.get_result_special_values()
+
+            # Pour chaque résultat, récupérer les 3 premiers essais et calculer les tie-breakers
+            for result in results:
+                attempts = execute_query("""
+                    SELECT value FROM attempts 
+                    WHERE result_id = %s AND attempt_number <= 3
+                    ORDER BY attempt_number
+                """, (result['id'],), fetch=True)
+
+                # Convertir les essais en valeurs numériques
+                valid_attempts = []
+                for attempt in attempts:
+                    val = attempt['value']
+                    if val and str(val).strip() not in special_values:
+                        try:
+                            valid_attempts.append(float(val))
+                        except (ValueError, TypeError):
+                            pass
+
+                # Trier les essais par ordre décroissant (meilleur en premier)
+                valid_attempts.sort(reverse=True)
+
+                # Stocker les tie-breakers (jusqu'à 3 essais)
+                result['best_of_three'] = valid_attempts[0] if valid_attempts else 0.0
+                result['second_best'] = valid_attempts[1] if len(valid_attempts) > 1 else 0.0
+                result['third_best'] = valid_attempts[2] if len(valid_attempts) > 2 else 0.0
+
+            # Fonction de tri avec tie-breakers
+            def get_sort_key(result):
+                return (
+                    -result['best_of_three'],  # Meilleur essai (négatif car on veut décroissant)
+                    -result['second_best'],  # 2ème meilleur essai
+                    -result['third_best']  # 3ème meilleur essai
+                )
+
+            # Trier les résultats selon les critères de tie-breaking
+            results.sort(key=get_sort_key)
+
+            total_athletes = len(results)
+
             # Dynamic selection: min 3, max 8, or all if less than 8
             if total_athletes <= 3:
                 selected_count = total_athletes
@@ -1008,28 +1045,45 @@ def register_routes(bp):
                 selected_count = total_athletes  # All advance if 8 or less
             else:
                 selected_count = 8  # Top 8 if more than 8
+
             # Select finalists (reverse order for final round)
             finalists = results[:selected_count]
             finalists.reverse()  # Reverse order: worst to best for final round
+
             # Update final_order for finalists
             for i, result in enumerate(finalists):
                 execute_query(
                     "UPDATE results SET final_order = %s WHERE id = %s",
                     (i + 1, result['id'])
                 )
+
             # Clear final_order for non-finalists
             for result in results[selected_count:]:
                 execute_query(
                     "UPDATE results SET final_order = NULL WHERE id = %s",
                     (result['id'],)
                 )
+
+            # Message détaillé avec les performances
             message = f'{selected_count}/{total_athletes} athletes selected for final round.'
             if selected_count > 1:
-                message += f' Order: {finalists[0]["athlete_sdms"]} (1st) to {finalists[-1]["athlete_sdms"]} ({selected_count}th)'
+                first_finalist = finalists[0]
+                last_finalist = finalists[-1]
+                message += f' Order: {first_finalist["firstname"]} {first_finalist["lastname"]} ({first_finalist["best_of_three"]:.2f}m, 1st) to {last_finalist["firstname"]} {last_finalist["lastname"]} ({last_finalist["best_of_three"]:.2f}m, {selected_count}th)'
+
+            # Log des tie-breakers pour debug si nécessaire
+            print(f"Final selection for game {game_id}:")
+            for i, finalist in enumerate(finalists):
+                print(
+                    f"  {i + 1}. {finalist['firstname']} {finalist['lastname']}: {finalist['best_of_three']:.2f} / {finalist['second_best']:.2f} / {finalist['third_best']:.2f}")
+
             return jsonify({
                 'success': True,
-                'message': message
+                'message': message,
+                'finalists': len(finalists),
+                'total_athletes': total_athletes
             })
+
         except Exception as e:
             print(f"Error in auto_rank_round1: {e}")
             traceback.print_exc()
@@ -1307,13 +1361,11 @@ def register_routes(bp):
         try:
             new_status = Game.toggle_official_status(game_id, current_user.id)
             if new_status:
-                # Check all results for records and PBs
                 results = Result.get_all(game_id=game_id)
                 records_found = 0
                 pbs_found = 0
 
                 for result in results:
-                    # Debug: Print the result structure
                     print(f"Result keys: {result.keys()}")
                     print(f"Result data: {result}")
 
@@ -1322,11 +1374,9 @@ def register_routes(bp):
                         game = Game.get_by_id(game_id)
                         athlete_class = get_matching_class(athlete, game)
                         if athlete_class:
-                            # Check what time-related fields exist
                             time_field = None
                             time_value = None
 
-                            # Common time field names
                             possible_time_fields = ['time', 'result_time', 'performance', 'result', 'score']
 
                             for field in possible_time_fields:
@@ -1338,7 +1388,6 @@ def register_routes(bp):
                             if time_field and time_value:
                                 print(f"Found time field '{time_field}' with value: {time_value}")
 
-                                # Convert time string to seconds if needed
                                 processed_result = result.copy()
                                 if isinstance(time_value, str):
                                     processed_result[time_field] = time_string_to_seconds(time_value)
@@ -1367,19 +1416,16 @@ def register_routes(bp):
             return jsonify({'success': False, 'error': str(e)}), 500
 
 def time_string_to_seconds(time_str):
-    """Convert time string (MM:SS.ss or SS.ss) to total seconds as float."""
     if not time_str or time_str == '':
         return None
 
     try:
-        # Handle both MM:SS.ss and SS.ss formats
         if ':' in time_str:
             parts = time_str.split(':')
             minutes = int(parts[0])
             seconds = float(parts[1])
             return minutes * 60 + seconds
         else:
-            # Just seconds
             return float(time_str)
     except (ValueError, IndexError):
         return None

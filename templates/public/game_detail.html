@@ -41,11 +41,6 @@
            target="_blank"
            class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600">
             <i class="fas fa-file-download mr-2"></i>Download Start List
-            {% if game.manual_startlist_pdf %}
-                <span class="ml-2 text-xs bg-blue-400 px-2 py-1 rounded">Official</span>
-            {% else %}
-                <span class="ml-2 text-xs bg-blue-400 px-2 py-1 rounded">Generated</span>
-            {% endif %}
         </a>
     {% endif %}
 
@@ -56,11 +51,6 @@
            target="_blank"
            class="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600">
             <i class="fas fa-file-download mr-2"></i>Download Results PDF
-            {% if game.manual_results_pdf %}
-                <span class="ml-2 text-xs bg-green-400 px-2 py-1 rounded">Official</span>
-            {% else %}
-                <span class="ml-2 text-xs bg-green-400 px-2 py-1 rounded">Generated</span>
-            {% endif %}
         </a>
     {% endif %}
 
@@ -94,11 +84,6 @@
             <h3 class="text-lg font-bold">
                 <i class="fas fa-file-pdf text-blue-500 mr-2"></i>
                 Start List PDF
-                {% if game.manual_startlist_pdf %}
-                    <span class="text-sm bg-orange-100 text-orange-800 px-2 py-1 rounded ml-2">Official Upload</span>
-                {% else %}
-                    <span class="text-sm bg-blue-100 text-blue-800 px-2 py-1 rounded ml-2">Auto-Generated</span>
-                {% endif %}
             </h3>
             <button onclick="toggleStartlistPdf()" class="text-gray-500 hover:text-gray-700">
                 <i class="fas fa-times"></i>
