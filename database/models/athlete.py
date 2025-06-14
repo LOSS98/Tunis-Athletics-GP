@@ -165,7 +165,7 @@ class Athlete:
         if athlete:
             # Personal Bests
             pb_query = """
-            SELECT event, athlete_class, gender, performance, location, record_date, approved
+            SELECT event, athlete_class, performance, location, record_date, approved
             FROM personal_bests
             WHERE sdms = %s AND approved = TRUE
             ORDER BY record_date DESC
