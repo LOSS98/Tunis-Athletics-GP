@@ -65,10 +65,83 @@
     </div>
 
     <div class="lg:col-span-2">
-        <!-- Personal Bests -->
+        <!-- World Records et Area Records -->
+        {% if athlete.world_records or athlete.area_records %}
         <div class="bg-white rounded-lg shadow p-6 mb-6">
             <h3 class="text-xl font-bold mb-4">
-                <i class="fas fa-trophy text-yellow-500 mr-2"></i>
+                <i class="fas fa-crown text-yellow-500 mr-2"></i>
+                World & Area Records
+            </h3>
+
+            {% if athlete.world_records %}
+            <div class="mb-6">
+                <h4 class="text-lg font-semibold mb-3 text-yellow-600">
+                    <i class="fas fa-globe mr-2"></i>World Records
+                </h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {% for wr in athlete.world_records %}
+                    <div class="border-2 border-yellow-200 rounded-lg p-4 bg-yellow-50">
+                        <div class="flex justify-between items-start mb-2">
+                            <h5 class="font-semibold text-lg">{{ wr.event }}</h5>
+                            <span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-sm">{{ wr.athlete_class }} {{ wr.gender }}</span>
+                        </div>
+                        {% if wr.event in config.TRACK_EVENTS %}
+                        <div class="text-2xl font-bold text-yellow-600 mb-2">{{ config.format_time(wr.performance, True) }}</div>
+                        {% else %}
+                        <div class="text-2xl font-bold text-yellow-600 mb-2">{{ config.format_distance(wr.performance) }} m</div>
+                        {% endif %}
+                        <div class="text-sm text-gray-600">
+                            <div><i class="fas fa-map-marker-alt mr-1"></i>{{ wr.location }}</div>
+                            <div><i class="fas fa-calendar mr-1"></i>{{ wr.record_date.strftime('%Y-%m-%d') }}</div>
+                            {% if wr.made_in_competition %}
+                            <div><i class="fas fa-trophy mr-1"></i>Competition Record</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            {% if athlete.area_records %}
+            <div>
+                <h4 class="text-lg font-semibold mb-3 text-purple-600">
+                    <i class="fas fa-map mr-2"></i>Area Records
+                </h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {% for ar in athlete.area_records %}
+                    <div class="border-2 border-purple-200 rounded-lg p-4 bg-purple-50">
+                        <div class="flex justify-between items-start mb-2">
+                            <h5 class="font-semibold text-lg">{{ ar.event }}</h5>
+                            <div class="text-right">
+                                <span class="px-2 py-1 bg-purple-100 text-purple-800 rounded text-sm">{{ ar.athlete_class }} {{ ar.gender }}</span>
+                                <div class="text-xs text-purple-600 mt-1">{{ ar.region_name }} ({{ ar.region_code }})</div>
+                            </div>
+                        </div>
+                        {% if ar.event in config.TRACK_EVENTS %}
+                        <div class="text-2xl font-bold text-purple-600 mb-2">{{ config.format_time(ar.performance, True) }}</div>
+                        {% else %}
+                        <div class="text-2xl font-bold text-purple-600 mb-2">{{ config.format_distance(ar.performance) }} m</div>
+                        {% endif %}
+                        <div class="text-sm text-gray-600">
+                            <div><i class="fas fa-map-marker-alt mr-1"></i>{{ ar.location }}</div>
+                            <div><i class="fas fa-calendar mr-1"></i>{{ ar.record_date.strftime('%Y-%m-%d') }}</div>
+                            {% if ar.made_in_competition %}
+                            <div><i class="fas fa-trophy mr-1"></i>Competition Record</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Personal Bests - section existante à adapter -->
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <h3 class="text-xl font-bold mb-4">
+                <i class="fas fa-trophy text-green-500 mr-2"></i>
                 Personal Bests
             </h3>
             {% if athlete.personal_bests %}
@@ -77,7 +150,7 @@
                 <div class="border rounded-lg p-4 hover:bg-gray-50">
                     <div class="flex justify-between items-start mb-2">
                         <h4 class="font-semibold text-lg">{{ pb.event }}</h4>
-                        <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm">{{ pb.athlete_class }}</span>
+                        <span class="px-2 py-1 bg-blue-100 text-blue-800 rounded text-sm">{{ pb.athlete_class }} {{ pb.gender }}</span>
                     </div>
                     {% if pb.event in config.TRACK_EVENTS %}
                     <div class="text-2xl font-bold text-green-600 mb-2">{{ config.format_time(pb.performance, True) }}</div>
@@ -96,19 +169,26 @@
             {% endif %}
         </div>
 
-        <!-- Competition History -->
+        <!-- Competition History - mise à jour pour inclure les indicateurs de records -->
         <div class="bg-white rounded-lg shadow p-6">
             <h3 class="text-xl font-bold mb-4">
                 <i class="fas fa-calendar text-blue-500 mr-2"></i>
-                Related results
+                Competition Results
             </h3>
             {% if athlete.competitions %}
             <div class="space-y-4">
                 {% for comp in athlete.competitions %}
-                <div class="border rounded-lg p-4 hover:bg-gray-50">
+                <div class="border rounded-lg p-4 hover:bg-gray-50 {% if comp.has_record %}bg-yellow-50 border-yellow-200{% endif %}">
                     <div class="flex justify-between items-start mb-2">
                         <div>
-                            <h4 class="font-semibold text-lg">{{ comp.event }} - {{ config.format_gender_for_display(comp.genders)}}</h4>
+                            <h4 class="font-semibold text-lg flex items-center">
+                                {{ comp.event }} - {{ config.format_gender_for_display(comp.genders)}}
+                                {% if comp.has_record %}
+                                    <span class="ml-2 px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs">
+                                        <i class="fas fa-crown mr-1"></i>Record Set
+                                    </span>
+                                {% endif %}
+                            </h4>
                             <p class="text-gray-600">{{ comp.classes }}</p>
                             <p class="text-sm text-gray-500">Day {{ comp.day }} at {{ comp.time }}</p>
                         </div>
@@ -129,9 +209,6 @@
                             <div class="font-semibold text-lg">{{ config.format_time(comp.value, True) }}</div>
                             {% else %}
                             <div class="font-semibold text-lg">{{ config.format_distance(comp.value) }} m</div>
-                            {% endif %}
-                            {% if comp.record %}
-                                <span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs">{{ comp.record }}</span>
                             {% endif %}
                         </div>
                     </div>

@@ -546,16 +546,6 @@
                         </select>
                     </div>
                 {% endif %}
-                <!-- Record -->
-                <div>
-                    <label class="block text-gray-700 text-sm font-bold mb-2">Record</label>
-                    <select name="record" class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500">
-                        <option value="">None</option>
-                        {% for record in config.RECORD_TYPES %}
-                            <option value="{{ record }}">{{ record }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
                 <!-- Weight (Weight Field Events Only) -->
                 {% if game.event in config.WEIGHT_FIELD_EVENTS %}
                 <div>
@@ -883,11 +873,44 @@
                     </td>
                     {% endif %}
                     <td class="px-4 py-4">
-                        {% if result.record %}
-                            <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                                <i class="fas fa-trophy mr-1"></i>{{ result.record }}
-                            </span>
-                        {% endif %}
+                        <div class="flex flex-wrap gap-1">
+                            {% if result.is_world_record %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                                             {% if result.wr_approved %}bg-yellow-100 text-yellow-800{% else %}bg-orange-100 text-orange-800{% endif %}">
+                                    <i class="fas fa-globe mr-1"></i>
+                                    WR
+                                    {% if not result.wr_approved %}
+                                        <i class="fas fa-clock ml-1" title="Pending approval"></i>
+                                    {% endif %}
+                                </span>
+                            {% endif %}
+
+                            {% if result.is_area_record %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                                             {% if result.ar_approved %}bg-purple-100 text-purple-800{% else %}bg-orange-100 text-orange-800{% endif %}">
+                                    <i class="fas fa-map mr-1"></i>
+                                    AR ({{ result.ar_region }})
+                                    {% if not result.ar_approved %}
+                                        <i class="fas fa-clock ml-1" title="Pending approval"></i>
+                                    {% endif %}
+                                </span>
+                            {% endif %}
+
+                            {% if result.is_personal_best %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                                             {% if result.pb_approved %}bg-green-100 text-green-800{% else %}bg-orange-100 text-orange-800{% endif %}">
+                                    <i class="fas fa-user mr-1"></i>
+                                    PB
+                                    {% if not result.pb_approved %}
+                                        <i class="fas fa-clock ml-1" title="Pending approval"></i>
+                                    {% endif %}
+                                </span>
+                            {% endif %}
+
+                            {% if not result.is_world_record and not result.is_area_record and not result.is_personal_best %}
+                                <span class="text-gray-400">-</span>
+                            {% endif %}
+                        </div>
                     </td>
                     <td class="px-4 py-4">
                         <button onclick="deleteResult({{ result.id }})" class="text-red-600 hover:text-red-900" title="Delete Result">

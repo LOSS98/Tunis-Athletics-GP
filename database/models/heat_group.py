@@ -31,19 +31,110 @@ class HeatGroup:
 
     @staticmethod
     def get_combined_results(heat_group_id):
-        return execute_query("""
-            SELECT r.*, a.firstname, a.lastname, a.npc, a.gender as athlete_gender, a.class as athlete_class,
+        query = """
+            SELECT r.*, a.firstname, a.lastname, a.npc, a.gender as athlete_gender, 
+                   a.class as athlete_class,
                    g.firstname AS guide_firstname, g.lastname AS guide_lastname,
-                   gm.heat_number, gm.event, gm.id as game_id, gm.wind_velocity
+                   gm.classes as game_classes, gm.event as game_event,
+                   gm.wind_velocity, gm.id as game_id,
+
+                   -- Heat information
+                   CASE 
+                       WHEN gm.id = (SELECT MIN(id) FROM games WHERE heat_group_id = %s) THEN 1
+                       WHEN gm.id = (SELECT MAX(id) FROM games WHERE heat_group_id = %s) THEN 2
+                       ELSE 1
+                   END as heat_number,
+
+                   -- Check for World Record
+                   CASE WHEN EXISTS (
+                       SELECT 1 FROM world_records wr 
+                       WHERE wr.sdms = r.athlete_sdms 
+                       AND wr.event = gm.event 
+                       AND wr.athlete_class = ANY(string_to_array(a.class, ','))
+                       AND wr.gender = a.gender
+                       AND wr.record_type = 'WR'
+                       AND wr.competition_id = r.game_id
+                   ) THEN TRUE ELSE FALSE END as is_world_record,
+
+                   -- Check WR approval status
+                   (SELECT wr.approved FROM world_records wr 
+                    WHERE wr.sdms = r.athlete_sdms AND wr.event = gm.event 
+                    AND wr.athlete_class = ANY(string_to_array(a.class, ','))
+                    AND wr.gender = a.gender
+                    AND wr.record_type = 'WR' AND wr.competition_id = r.game_id
+                    LIMIT 1) as wr_approved,
+
+                   -- Check for Area Record
+                   CASE WHEN EXISTS (
+                       SELECT 1 FROM world_records wr 
+                       JOIN npcs n ON wr.npc = n.code
+                       WHERE wr.sdms = r.athlete_sdms 
+                       AND wr.event = gm.event 
+                       AND wr.athlete_class = ANY(string_to_array(a.class, ','))
+                       AND wr.gender = a.gender
+                       AND wr.record_type = 'AR'
+                       AND wr.competition_id = r.game_id
+                   ) THEN TRUE ELSE FALSE END as is_area_record,
+
+                   -- Get AR region and approval status
+                   (SELECT n.region_code FROM world_records wr 
+                    JOIN npcs n ON wr.npc = n.code
+                    WHERE wr.sdms = r.athlete_sdms AND wr.event = gm.event 
+                    AND wr.athlete_class = ANY(string_to_array(a.class, ','))
+                    AND wr.gender = a.gender
+                    AND wr.record_type = 'AR' AND wr.competition_id = r.game_id
+                    LIMIT 1) as ar_region,
+
+                   (SELECT wr.approved FROM world_records wr 
+                    WHERE wr.sdms = r.athlete_sdms AND wr.event = gm.event 
+                    AND wr.athlete_class = ANY(string_to_array(a.class, ','))
+                    AND wr.gender = a.gender
+                    AND wr.record_type = 'AR' AND wr.competition_id = r.game_id
+                    LIMIT 1) as ar_approved,
+
+                   -- Check for Personal Best
+                   CASE WHEN EXISTS (
+                       SELECT 1 FROM personal_bests pb 
+                       WHERE pb.sdms = r.athlete_sdms 
+                       AND pb.event = gm.event 
+                       AND pb.athlete_class = ANY(string_to_array(a.class, ','))
+                       AND pb.gender = a.gender
+                       AND pb.competition_id = r.game_id
+                   ) THEN TRUE ELSE FALSE END as is_personal_best,
+
+                   -- Check PB approval status
+                   (SELECT pb.approved FROM personal_bests pb 
+                    WHERE pb.sdms = r.athlete_sdms AND pb.event = gm.event 
+                    AND pb.athlete_class = ANY(string_to_array(a.class, ','))
+                    AND pb.gender = a.gender
+                    AND pb.competition_id = r.game_id
+                    LIMIT 1) as pb_approved
+
             FROM results r
             JOIN athletes a ON r.athlete_sdms = a.sdms
             LEFT JOIN athletes g ON r.guide_sdms = g.sdms
             JOIN games gm ON r.game_id = gm.id
-            WHERE gm.heat_group_id = %s AND r.value NOT IN ('DNS', 'DNF', 'DQ', 'NM')
+            WHERE gm.heat_group_id = %s
             ORDER BY 
-                CASE WHEN r.value ~ '^[0-9]+\.?[0-9]*$' THEN CAST(r.value AS FLOAT) ELSE 999999 END,
-                r.value
-        """, (heat_group_id,), fetch=True)
+                CASE WHEN r.rank ~ '^[0-9]+' THEN CAST(r.rank AS INTEGER) ELSE 999 END,
+                r.rank
+        """
+
+        results = execute_query(query, (heat_group_id, heat_group_id, heat_group_id), fetch=True)
+
+        # Process athlete classes
+        for result in results:
+            if result['athlete_class']:
+                result['athlete_classes'] = [c.strip() for c in result['athlete_class'].split(',')]
+            else:
+                result['athlete_classes'] = []
+
+            if result.get('game_classes'):
+                result['game_classes_list'] = [c.strip() for c in result['game_classes'].split(',')]
+            else:
+                result['game_classes_list'] = []
+
+        return results
 
     @staticmethod
     def rank_combined_results(heat_group_id):

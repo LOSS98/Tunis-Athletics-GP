@@ -16,9 +16,76 @@ class Result:
                     params.append(value)
 
         query = f"""
-            SELECT r.*, a.firstname, a.lastname, a.npc, a.gender as athlete_gender, a.class as athlete_class,
+            SELECT r.*, a.firstname, a.lastname, a.npc, a.gender as athlete_gender, 
+                   a.class as athlete_class,
                    g.firstname AS guide_firstname, g.lastname AS guide_lastname,
-                   gm.classes as game_classes
+                   gm.classes as game_classes, gm.event as game_event,
+
+                   -- Check for World Record
+                   CASE WHEN EXISTS (
+                       SELECT 1 FROM world_records wr 
+                       WHERE wr.sdms = r.athlete_sdms 
+                       AND wr.event = gm.event 
+                       AND wr.athlete_class = ANY(string_to_array(a.class, ','))
+                       AND wr.gender = a.gender
+                       AND wr.record_type = 'WR'
+                       AND wr.competition_id = r.game_id
+                   ) THEN TRUE ELSE FALSE END as is_world_record,
+
+                   -- Check WR approval status
+                   (SELECT wr.approved FROM world_records wr 
+                    WHERE wr.sdms = r.athlete_sdms AND wr.event = gm.event 
+                    AND wr.athlete_class = ANY(string_to_array(a.class, ','))
+                    AND wr.gender = a.gender
+                    AND wr.record_type = 'WR' AND wr.competition_id = r.game_id
+                    LIMIT 1) as wr_approved,
+
+                   -- Check for Area Record
+                   CASE WHEN EXISTS (
+                       SELECT 1 FROM world_records wr 
+                       JOIN npcs n ON wr.npc = n.code
+                       WHERE wr.sdms = r.athlete_sdms 
+                       AND wr.event = gm.event 
+                       AND wr.athlete_class = ANY(string_to_array(a.class, ','))
+                       AND wr.gender = a.gender
+                       AND wr.record_type = 'AR'
+                       AND wr.competition_id = r.game_id
+                   ) THEN TRUE ELSE FALSE END as is_area_record,
+
+                   -- Get AR region and approval status
+                   (SELECT n.region_code FROM world_records wr 
+                    JOIN npcs n ON wr.npc = n.code
+                    WHERE wr.sdms = r.athlete_sdms AND wr.event = gm.event 
+                    AND wr.athlete_class = ANY(string_to_array(a.class, ','))
+                    AND wr.gender = a.gender
+                    AND wr.record_type = 'AR' AND wr.competition_id = r.game_id
+                    LIMIT 1) as ar_region,
+
+                   (SELECT wr.approved FROM world_records wr 
+                    WHERE wr.sdms = r.athlete_sdms AND wr.event = gm.event 
+                    AND wr.athlete_class = ANY(string_to_array(a.class, ','))
+                    AND wr.gender = a.gender
+                    AND wr.record_type = 'AR' AND wr.competition_id = r.game_id
+                    LIMIT 1) as ar_approved,
+
+                   -- Check for Personal Best
+                   CASE WHEN EXISTS (
+                       SELECT 1 FROM personal_bests pb 
+                       WHERE pb.sdms = r.athlete_sdms 
+                       AND pb.event = gm.event 
+                       AND pb.athlete_class = ANY(string_to_array(a.class, ','))
+                       AND pb.gender = a.gender
+                       AND pb.competition_id = r.game_id
+                   ) THEN TRUE ELSE FALSE END as is_personal_best,
+
+                   -- Check PB approval status
+                   (SELECT pb.approved FROM personal_bests pb 
+                    WHERE pb.sdms = r.athlete_sdms AND pb.event = gm.event 
+                    AND pb.athlete_class = ANY(string_to_array(a.class, ','))
+                    AND pb.gender = a.gender
+                    AND pb.competition_id = r.game_id
+                    LIMIT 1) as pb_approved
+
             FROM results r
             JOIN athletes a ON r.athlete_sdms = a.sdms
             LEFT JOIN athletes g ON r.guide_sdms = g.sdms

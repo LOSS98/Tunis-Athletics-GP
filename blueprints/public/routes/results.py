@@ -73,6 +73,7 @@ def register_routes(bp):
                     has_r1_qualifying = True
                     break
         finalists_count = len([r for r in results if r.get('final_order')])
+        print(results)
 
         return render_template('public/game_detail.html',
                                game=game,

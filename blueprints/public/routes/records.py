@@ -1,4 +1,6 @@
 from flask import render_template, request
+
+from config import config
 from database.models import WorldRecord, Region
 
 
@@ -40,5 +42,6 @@ def register_routes(bp):
             world_records=world_records,
             region_records=region_records,
             regions=regions,
-            search=search
+            search=search,
+            config=config
         )

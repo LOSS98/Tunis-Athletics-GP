@@ -143,6 +143,7 @@
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Medal</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Final Rank</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Heat</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Wind</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SDMS</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">NPC</th>
@@ -157,23 +158,54 @@
                 {% for result in combined_results %}
                 <tr class="hover:bg-gray-50 {% if result.game_id == game.id %}bg-purple-50{% endif %}">
                     <td class="px-6 py-4 whitespace-nowrap">
-                        {% if result.rank == 1 %}
+                        {% if result.rank == '1' %}
                             <span class="text-3xl">🥇</span>
-                        {% elif result.rank == 2 %}
+                        {% elif result.rank == '2' %}
                             <span class="text-3xl">🥈</span>
-                        {% elif result.rank == 3 %}
+                        {% elif result.rank == '3' %}
                             <span class="text-3xl">🥉</span>
                         {% endif %}
-                        {% if result.record %}
-                            <span class="ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                                {{ result.record }}
-                            </span>
-                        {% endif %}
+                        <div class="flex flex-wrap gap-1 mt-1">
+                            {% if result.is_world_record %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                                             {% if result.wr_approved %}bg-yellow-100 text-yellow-800{% else %}bg-orange-100 text-orange-800{% endif %}">
+                                    <i class="fas fa-globe mr-1"></i>WR
+                                    {% if not result.wr_approved %}
+                                        <i class="fas fa-clock ml-1" title="Pending approval"></i>
+                                    {% endif %}
+                                </span>
+                            {% endif %}
+
+                            {% if result.is_area_record %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                                             {% if result.ar_approved %}bg-purple-100 text-purple-800{% else %}bg-orange-100 text-orange-800{% endif %}">
+                                    <i class="fas fa-map mr-1"></i>AR ({{ result.ar_region }})
+                                    {% if not result.ar_approved %}
+                                        <i class="fas fa-clock ml-1" title="Pending approval"></i>
+                                    {% endif %}
+                                </span>
+                            {% endif %}
+
+                            {% if result.is_personal_best %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                                             {% if result.pb_approved %}bg-green-100 text-green-800{% else %}bg-orange-100 text-orange-800{% endif %}">
+                                    <i class="fas fa-user mr-1"></i>PB
+                                    {% if not result.pb_approved %}
+                                        <i class="fas fa-clock ml-1" title="Pending approval"></i>
+                                    {% endif %}
+                                </span>
+                            {% endif %}
+                        </div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap font-semibold">{{ result.rank }}</td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <span class="bg-purple-100 text-purple-800 px-2 py-1 rounded text-sm">
                             Heat {{ result.heat_number }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="bg-purple-100 text-purple-800 px-2 py-1 rounded text-sm">
+                            {{ config.format_wind(result.wind_velocity) }} m/s
                         </span>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
@@ -568,11 +600,37 @@
                         {% elif rank == '3' %}
                             <span class="text-3xl">🥉</span>
                         {% endif %}
-                        {% if result.record %}
-                            <span class="ml-2 px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">
-                                {{ result.record }}
-                            </span>
-                        {% endif %}
+                        <div class="flex flex-wrap gap-1 mt-1">
+                            {% if result.is_world_record %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                                             {% if result.wr_approved %}bg-yellow-100 text-yellow-800{% else %}bg-orange-100 text-orange-800{% endif %}">
+                                    <i class="fas fa-globe mr-1"></i>WR
+                                    {% if not result.wr_approved %}
+                                        <i class="fas fa-clock ml-1" title="Pending approval"></i>
+                                    {% endif %}
+                                </span>
+                            {% endif %}
+
+                            {% if result.is_area_record %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                                             {% if result.ar_approved %}bg-purple-100 text-purple-800{% else %}bg-orange-100 text-orange-800{% endif %}">
+                                    <i class="fas fa-map mr-1"></i>AR ({{ result.ar_region }})
+                                    {% if not result.ar_approved %}
+                                        <i class="fas fa-clock ml-1" title="Pending approval"></i>
+                                    {% endif %}
+                                </span>
+                            {% endif %}
+
+                            {% if result.is_personal_best %}
+                                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full
+                                             {% if result.pb_approved %}bg-green-100 text-green-800{% else %}bg-orange-100 text-orange-800{% endif %}">
+                                    <i class="fas fa-user mr-1"></i>PB
+                                    {% if not result.pb_approved %}
+                                        <i class="fas fa-clock ml-1" title="Pending approval"></i>
+                                    {% endif %}
+                                </span>
+                            {% endif %}
+                        </div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap font-semibold">{{ rank or result.rank }}</td>
                     <td class="px-6 py-4 whitespace-nowrap">

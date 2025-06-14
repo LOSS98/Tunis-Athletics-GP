@@ -163,24 +163,47 @@ class Athlete:
         athlete = execute_one(query, (sdms,))
 
         if athlete:
+            # Personal Bests
             pb_query = """
-            SELECT event, athlete_class, performance, location, record_date
+            SELECT event, athlete_class, gender, performance, location, record_date, approved
             FROM personal_bests
-            WHERE sdms = %s
+            WHERE sdms = %s AND approved = TRUE
             ORDER BY record_date DESC
             """
             athlete['personal_bests'] = execute_query(pb_query, (sdms,), fetch=True)
 
+            # World Records et Area Records
+            records_query = """
+            SELECT wr.*, n.name as npc_name, r.name as region_name
+            FROM world_records wr
+            LEFT JOIN npcs n ON wr.npc = n.code
+            LEFT JOIN regions r ON n.region_code = r.code
+            WHERE wr.sdms = %s AND wr.approved = TRUE
+            ORDER BY wr.record_type, wr.record_date DESC
+            """
+            athlete['records'] = execute_query(records_query, (sdms,), fetch=True)
+
+            # Séparer WR et AR
+            athlete['world_records'] = [r for r in athlete['records'] if r['record_type'] == 'WR']
+            athlete['area_records'] = [r for r in athlete['records'] if r['record_type'] == 'AR']
+
+            # Competitions (résultats)
             comp_query = """
             SELECT DISTINCT g.id, g.event, g.genders, g.classes, g.day, g.time,
-                   g.status, g.published, r.rank, r.value, r.record
+                   g.status, g.published, r.rank, r.value,
+                   -- Check if this result established any records
+                   CASE WHEN EXISTS (
+                       SELECT 1 FROM world_records wr 
+                       WHERE wr.sdms = r.athlete_sdms AND wr.competition_id = g.id
+                   ) THEN TRUE ELSE FALSE END as has_record
             FROM games g
             JOIN results r ON g.id = r.game_id
-            WHERE r.athlete_sdms = %s
+            WHERE r.athlete_sdms = %s AND g.published = TRUE
             ORDER BY g.day DESC, g.time DESC
             """
             athlete['competitions'] = execute_query(comp_query, (sdms,), fetch=True)
 
+            # Startlists à venir
             upcoming_query = """
             SELECT DISTINCT g.id, g.event, g.genders, g.classes, g.day, g.time,
                    g.status, s.lane_order

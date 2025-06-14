@@ -108,8 +108,7 @@ def calculate_and_store_raza(athlete, game, performance_value, specific_class=No
     return raza_score, raza_score_precise
 
 
-def check_for_records_and_pbs_improved(result, athlete, game, athlete_class):
-    """Improved function to check for records and personal bests with multi-class support"""
+def check_for_records_and_pbs(result, athlete, game, athlete_class):
     if not game.get('official'):
         return 0, 0
 
@@ -142,13 +141,14 @@ def check_for_records_and_pbs_improved(result, athlete, game, athlete_class):
     return records_created, pbs_created
 
 
+# Dans results/routes.py
 def check_and_create_wr(athlete, event, athlete_class, performance_value, performance_float, game):
     """Check and create World Record if applicable"""
     # Check existing approved WR
-    existing_wr = WorldRecord.check_existing_record(event, athlete_class, 'WR')
+    existing_wr = WorldRecord.check_existing_record(event, athlete_class, 'WR', athlete['gender'])
 
     # Check pending WR
-    pending_wr = WorldRecord.get_pending_for_event_class(event, athlete_class, 'WR')
+    pending_wr = WorldRecord.get_pending_for_event_class(event, athlete_class, 'WR', athlete['gender'])
 
     is_new_record = False
 
@@ -165,6 +165,7 @@ def check_and_create_wr(athlete, event, athlete_class, performance_value, perfor
             sdms=athlete['sdms'],
             event=event,
             athlete_class=athlete_class,
+            gender=athlete['gender'],  # Ajout du genre
             performance=performance_value,
             location='Tunis, Tunisia',
             npc=athlete['npc'],
@@ -172,13 +173,12 @@ def check_and_create_wr(athlete, event, athlete_class, performance_value, perfor
             record_date=date.today(),
             record_type='WR',
             made_in_competition=True,
-            competition_id=game['id'],
+            competition_id=game['id'],  # Ajout du game_id
             approved=False
         )
         return True
 
     return False
-
 
 def check_and_create_ar(athlete, event, athlete_class, performance_value, performance_float, game):
     """Check and create Area Record if applicable"""
@@ -186,11 +186,11 @@ def check_and_create_ar(athlete, event, athlete_class, performance_value, perfor
     if not region_code:
         return False
 
-    # Check existing approved AR for this region
-    existing_ar = WorldRecord.check_existing_record(event, athlete_class, 'AR', athlete['npc'])
+    # Check existing approved AR for this region and gender
+    existing_ar = WorldRecord.check_existing_record(event, athlete_class, 'AR', athlete['gender'], athlete['npc'])
 
-    # Check pending AR for this region
-    pending_ar = WorldRecord.get_pending_for_event_class_region(event, athlete_class, 'AR', region_code)
+    # Check pending AR for this region and gender
+    pending_ar = WorldRecord.get_pending_for_event_class_region(event, athlete_class, 'AR', athlete['gender'], region_code)
 
     is_new_record = False
 
@@ -207,6 +207,7 @@ def check_and_create_ar(athlete, event, athlete_class, performance_value, perfor
             sdms=athlete['sdms'],
             event=event,
             athlete_class=athlete_class,
+            gender=athlete['gender'],  # Ajout du genre
             performance=performance_value,
             location='Tunis, Tunisia',
             npc=athlete['npc'],
@@ -214,21 +215,20 @@ def check_and_create_ar(athlete, event, athlete_class, performance_value, perfor
             record_date=date.today(),
             record_type='AR',
             made_in_competition=True,
-            competition_id=game['id'],
+            competition_id=game['id'],  # Ajout du game_id
             approved=False
         )
         return True
 
     return False
 
-
 def check_and_create_pb(athlete, event, athlete_class, performance_value, performance_float, game):
     """Check and create Personal Best if applicable"""
     # Check existing approved PB
-    existing_pb = PersonalBest.check_existing_pb(athlete['sdms'], event, athlete_class)
+    existing_pb = PersonalBest.check_existing_pb(athlete['sdms'], event, athlete_class, athlete['gender'])
 
     # Check pending PB
-    pending_pb = PersonalBest.get_pending_for_athlete(athlete['sdms'], event, athlete_class)
+    pending_pb = PersonalBest.get_pending_for_athlete(athlete['sdms'], event, athlete_class, athlete['gender'])
 
     is_new_pb = False
 
@@ -245,11 +245,12 @@ def check_and_create_pb(athlete, event, athlete_class, performance_value, perfor
             sdms=athlete['sdms'],
             event=event,
             athlete_class=athlete_class,
+            gender=athlete['gender'],  # Ajout du genre
             performance=performance_value,
             location='Tunis, Tunisia',
             record_date=date.today(),
             made_in_competition=True,
-            competition_id=game['id'],
+            competition_id=game['id'],  # Ajout du game_id
             approved=False
         )
         return True
@@ -1392,7 +1393,7 @@ def register_routes(bp):
                                 if isinstance(time_value, str):
                                     processed_result[time_field] = time_string_to_seconds(time_value)
 
-                                created_records, created_pbs = check_for_records_and_pbs_improved(
+                                created_records, created_pbs = check_for_records_and_pbs(
                                     processed_result, athlete, game, athlete_class
                                 )
                                 records_found += created_records
@@ -1500,4 +1501,4 @@ def process_result_for_records(result_id):
 
     athlete_class = get_matching_class(athlete, game)
     if athlete_class:
-        check_for_records_and_pbs_improved(result, athlete, game, athlete_class)
+        check_for_records_and_pbs(result, athlete, game, athlete_class)

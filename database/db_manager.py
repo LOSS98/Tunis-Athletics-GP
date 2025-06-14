@@ -200,6 +200,7 @@ def init_db():
             sdms INTEGER,
             event VARCHAR(100) NOT NULL,
             athlete_class VARCHAR(10) NOT NULL,
+            gender VARCHAR(10) NOT NULL,
             performance VARCHAR(20) NOT NULL,
             location VARCHAR(100) NOT NULL,
             npc VARCHAR(3),
@@ -216,13 +217,15 @@ def init_db():
             FOREIGN KEY (npc) REFERENCES npcs(code) ON DELETE SET NULL,
             FOREIGN KEY (region_code) REFERENCES regions(code) ON DELETE SET NULL,
             FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL,
-            FOREIGN KEY (competition_id) REFERENCES games(id) ON DELETE SET NULL
+            FOREIGN KEY (competition_id) REFERENCES games(id) ON DELETE SET NULL,
+            UNIQUE (event, athlete_class, gender, record_type, npc)
         )""",
         """CREATE TABLE IF NOT EXISTS personal_bests (
             id SERIAL PRIMARY KEY,
             sdms INTEGER NOT NULL,
             event VARCHAR(100) NOT NULL,
             athlete_class VARCHAR(10) NOT NULL,
+            gender VARCHAR(10) NOT NULL,
             performance VARCHAR(20) NOT NULL,
             location VARCHAR(100) NOT NULL,
             record_date DATE NOT NULL,
@@ -233,10 +236,9 @@ def init_db():
             competition_id INTEGER,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (sdms) REFERENCES athletes(sdms) ON DELETE CASCADE,
-            FOREIGN KEY (npc) REFERENCES npcs(code) ON DELETE RESTRICT,
             FOREIGN KEY (approved_by) REFERENCES users(id) ON DELETE SET NULL,
             FOREIGN KEY (competition_id) REFERENCES games(id) ON DELETE SET NULL,
-            UNIQUE (sdms, event, athlete_class)
+            UNIQUE (sdms, event, athlete_class, gender)
         )""",
         """CREATE TABLE IF NOT EXISTS competition_config (
             id SERIAL PRIMARY KEY,

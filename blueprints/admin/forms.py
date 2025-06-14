@@ -81,25 +81,44 @@ class AthleteForm(FlaskForm):
         invalid_classes = [c for c in classes if c not in valid_classes]
         if invalid_classes:
             raise ValidationError(f'Invalid classes: {", ".join(invalid_classes)}')
+
+
 class WorldRecordForm(FlaskForm):
     sdms = IntegerField('SDMS (optional)', validators=[Optional()])
     event = SelectField('Event', validators=[DataRequired()])
     athlete_class = SelectField('Class', validators=[DataRequired()])
+    gender = SelectField('Gender', validators=[DataRequired()],
+                         choices=[('Male', 'Male'), ('Female', 'Female')])
     performance = StringField('Performance', validators=[DataRequired(), Length(max=20)])
     location = StringField('Location', validators=[DataRequired(), Length(max=100)])
     npc = StringField('NPC Code', validators=[Optional(), Length(min=3, max=3)])
+    region_code = SelectField('Region', validators=[Optional()])
     record_date = DateField('Record Date', validators=[DataRequired()])
     record_type = SelectField('Record Type', choices=[('WR', 'World Record'), ('AR', 'Area Record')],
                               validators=[DataRequired()])
     made_in_competition = BooleanField('Made in this competition')
+
     def __init__(self, *args, **kwargs):
         super(WorldRecordForm, self).__init__(*args, **kwargs)
+
+        # Events
         field_events = get_config_choices('field_events', [])
         track_events = get_config_choices('track_events', [])
-        all_events = field_events + track_events
+        all_events = sorted(field_events + track_events)
         self.event.choices = [(e, e) for e in all_events]
+
+        # Classes
         classes = get_config_choices('classes', [])
         self.athlete_class.choices = [(c, c) for c in classes]
+
+        # Regions
+        try:
+            from database.models import Region
+            regions = Region.get_all()
+            self.region_code.choices = [('', 'Select a region')] + [(r['code'], r['name']) for r in regions]
+        except:
+            self.region_code.choices = [('', 'Select a region')]
+
 class PersonalBestForm(FlaskForm):
     sdms = IntegerField('SDMS', validators=[DataRequired()])
     event = SelectField('Event', validators=[DataRequired()])
@@ -108,6 +127,7 @@ class PersonalBestForm(FlaskForm):
     location = StringField('Location', validators=[DataRequired(), Length(max=100)])
     record_date = DateField('Record Date', validators=[DataRequired()])
     made_in_competition = BooleanField('Made in this competition')
+
     def __init__(self, *args, **kwargs):
         super(PersonalBestForm, self).__init__(*args, **kwargs)
         field_events = get_config_choices('field_events', [])
@@ -116,6 +136,13 @@ class PersonalBestForm(FlaskForm):
         self.event.choices = [(e, e) for e in all_events]
         classes = get_config_choices('classes', [])
         self.athlete_class.choices = [(c, c) for c in classes]
+
+    def validate_sdms(self, field):
+        from database.models.personal_best import PersonalBest
+        athlete = PersonalBest.get_athlete_info(field.data)
+        if not athlete:
+            raise ValidationError('Athlete with this SDMS does not exist in the system')
+
 class AttemptForm(FlaskForm):
     value = StringField('Value', validators=[Optional()])
 class ResultForm(FlaskForm):

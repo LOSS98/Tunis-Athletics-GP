@@ -31,6 +31,7 @@
                     <th class="px-4 py-2 text-left">Athlete</th>
                     <th class="px-4 py-2 text-left">Event</th>
                     <th class="px-4 py-2 text-left">Class</th>
+                    <th class="px-4 py-2 text-left">Gender</th>
                     <th class="px-4 py-2 text-left">Performance</th>
                     <th class="px-4 py-2 text-left">Date</th>
                     <th class="px-4 py-2 text-left">Actions</th>
@@ -42,6 +43,7 @@
                     <td class="px-4 py-2">{{ pb.lastname }} {{ pb.firstname }}</td>
                     <td class="px-4 py-2">{{ pb.event }}</td>
                     <td class="px-4 py-2">{{ pb.athlete_class }}</td>
+                    <td class="px-4 py-2">{{ pb.gender }}</td>
                     <td class="px-4 py-2 font-bold">{{ pb.performance }}</td>
                     <td class="px-4 py-2">{{ pb.record_date.strftime('%Y-%m-%d') }}</td>
                     <td class="px-4 py-2">
@@ -84,6 +86,7 @@
                     <th class="px-6 py-3 text-left">Athlete</th>
                     <th class="px-6 py-3 text-left">Event</th>
                     <th class="px-6 py-3 text-left">Class</th>
+                    <th class="px-6 py-3 text-left">Gender</th>
                     <th class="px-6 py-3 text-left">Performance</th>
                     <th class="px-6 py-3 text-left">Location</th>
                     <th class="px-6 py-3 text-left">Date</th>
@@ -100,6 +103,7 @@
                     <td class="px-6 py-4">
                         <span class="px-2 py-1 text-xs bg-gray-100 text-gray-800 rounded">{{ pb.athlete_class }}</span>
                     </td>
+                    <td class="px-6 py-4 font-medium">{{ pb.gender }}</td>
                     <td class="px-6 py-4 font-bold text-lg">{{ pb.performance }}</td>
                     <td class="px-6 py-4">{{ pb.location }}</td>
                     <td class="px-6 py-4">{{ pb.record_date.strftime('%Y-%m-%d') }}</td>

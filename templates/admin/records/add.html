@@ -1,7 +1,7 @@
 {% extends "admin/base_admin.html" %}
 {% block page_title %}Add World/Area Record{% endblock %}
 {% block content %}
-<div class="max-w-2xl mx-auto">
+<div class="max-w-4xl mx-auto">
     <div class="mb-6">
         <div class="flex items-center justify-between">
             <h2 class="text-2xl font-bold">Add World/Area Record</h2>
@@ -11,6 +11,7 @@
         </div>
         <p class="text-gray-600 mt-2">Manually add a world or area record performance</p>
     </div>
+
     <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
         <div class="flex items-center">
             <i class="fas fa-exclamation-circle text-red-600 mr-2"></i>
@@ -21,204 +22,608 @@
             This action will immediately approve the record upon submission.
         </p>
     </div>
-    <form method="POST" class="bg-white rounded-lg shadow p-6">
-        {{ form.hidden_tag() }}
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Athlete SDMS (Optional) -->
-            <div class="md:col-span-2">
-                <label class="block text-gray-700 text-sm font-bold mb-2">
-                    Athlete SDMS <span class="text-gray-500">(Optional)</span>
-                </label>
-                {{ form.sdms(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500", placeholder="Enter SDMS number if athlete is in system") }}
-                {% if form.sdms.errors %}
-                    <div class="text-red-500 text-sm mt-1">
-                        {% for error in form.sdms.errors %}
-                            <p>{{ error }}</p>
-                        {% endfor %}
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2">
+            <form method="POST" id="record-form" class="bg-white rounded-lg shadow p-6">
+                {{ form.hidden_tag() }}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Athlete SDMS with Search -->
+                    <div class="md:col-span-2 relative">
+                        <label for="sdms-input" class="block text-gray-700 text-sm font-bold mb-2">
+                            Athlete SDMS <span class="text-gray-500">(Optional)</span>
+                        </label>
+                        {{ form.sdms(class="form-input w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500", placeholder="Enter SDMS number or athlete name", id="sdms-input", autocomplete="off") }}
+                        {% if form.sdms.errors %}
+                            <div class="text-red-500 text-sm mt-1" role="alert">
+                                {% for error in form.sdms.errors %}
+                                    <p>{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div id="athlete-suggestions" class="absolute z-10 w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto hidden"></div>
+                        <div id="sdms-validation" class="mt-2" role="alert" aria-live="polite"></div>
+                        <p class="text-sm text-gray-600 mt-1">Leave empty if athlete is not in the system, or search by name/SDMS</p>
                     </div>
-                {% endif %}
-                <p class="text-sm text-gray-600 mt-1">Leave empty if athlete is not in the system</p>
-            </div>
-            <!-- Event -->
-            <div>
-                <label class="block text-gray-700 text-sm font-bold mb-2">
-                    Event <span class="text-red-500">*</span>
-                </label>
-                {{ form.event(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
-                {% if form.event.errors %}
-                    <div class="text-red-500 text-sm mt-1">
-                        {% for error in form.event.errors %}
-                            <p>{{ error }}</p>
-                        {% endfor %}
+
+                    <!-- Event -->
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">
+                            Event <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.event(class="form-input w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500") }}
+                        {% if form.event.errors %}
+                            <div class="text-red-500 text-sm mt-1">
+                                {% for error in form.event.errors %}
+                                    <p>{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
                     </div>
-                {% endif %}
-            </div>
-            <!-- Class -->
-            <div>
-                <label class="block text-gray-700 text-sm font-bold mb-2">
-                    Classification <span class="text-red-500">*</span>
-                </label>
-                {{ form.athlete_class(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
-                {% if form.athlete_class.errors %}
-                    <div class="text-red-500 text-sm mt-1">
-                        {% for error in form.athlete_class.errors %}
-                            <p>{{ error }}</p>
-                        {% endfor %}
+
+                    <!-- Class -->
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">
+                            Classification <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.athlete_class(class="form-input w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500") }}
+                        {% if form.athlete_class.errors %}
+                            <div class="text-red-500 text-sm mt-1">
+                                {% for error in form.athlete_class.errors %}
+                                    <p>{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
                     </div>
-                {% endif %}
-            </div>
-            <!-- Performance -->
-            <div>
-                <label class="block text-gray-700 text-sm font-bold mb-2">
-                    Performance <span class="text-red-500">*</span>
-                </label>
-                {{ form.performance(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500", placeholder="e.g., 10.50 or 1:23.45") }}
-                {% if form.performance.errors %}
-                    <div class="text-red-500 text-sm mt-1">
-                        {% for error in form.performance.errors %}
-                            <p>{{ error }}</p>
-                        {% endfor %}
+
+                    <!-- Gender -->
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">
+                            Gender <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.gender(class="form-input w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500", id="gender-select") }}
+                        {% if form.gender.errors %}
+                            <div class="text-red-500 text-sm mt-1">
+                                {% for error in form.gender.errors %}
+                                    <p>{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div id="gender-validation" class="mt-1" role="alert" aria-live="polite"></div>
                     </div>
-                {% endif %}
-                <p class="text-sm text-gray-600 mt-1">Time format: MM:SS.SS or distance in meters</p>
-            </div>
-            <!-- Location -->
-            <div>
-                <label class="block text-gray-700 text-sm font-bold mb-2">
-                    Location <span class="text-red-500">*</span>
-                </label>
-                {{ form.location(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500", placeholder="e.g., Paris, France") }}
-                {% if form.location.errors %}
-                    <div class="text-red-500 text-sm mt-1">
-                        {% for error in form.location.errors %}
-                            <p>{{ error }}</p>
-                        {% endfor %}
+
+                    <!-- Performance -->
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">
+                            Performance <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.performance(class="form-input w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500", placeholder="e.g., 10.50 or 1:23.45", id="performance-input") }}
+                        {% if form.performance.errors %}
+                            <div class="text-red-500 text-sm mt-1">
+                                {% for error in form.performance.errors %}
+                                    <p>{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div id="performance-validation" class="mt-1" role="alert" aria-live="polite"></div>
+                        <p class="text-sm text-gray-600 mt-1">Time format: MM:SS.SS or distance in meters</p>
                     </div>
-                {% endif %}
-            </div>
-            <!-- NPC Code -->
-            <div>
-                <label class="block text-gray-700 text-sm font-bold mb-2">
-                    NPC Code <span class="text-gray-500">(Optional)</span>
-                </label>
-                {{ form.npc(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500", placeholder="e.g., TUN", style="text-transform: uppercase", maxlength="3") }}
-                {% if form.npc.errors %}
-                    <div class="text-red-500 text-sm mt-1">
-                        {% for error in form.npc.errors %}
-                            <p>{{ error }}</p>
-                        {% endfor %}
+
+                    <!-- Location -->
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">
+                            Location <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.location(class="form-input w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500", placeholder="e.g., Paris, France") }}
+                        {% if form.location.errors %}
+                            <div class="text-red-500 text-sm mt-1">
+                                {% for error in form.location.errors %}
+                                    <p>{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
                     </div>
-                {% endif %}
-                <p class="text-sm text-gray-600 mt-1">3-letter NPC code (auto-filled if athlete SDMS provided)</p>
-            </div>
-            <!-- Region -->
-            <div>
-                <label class="block text-gray-700 text-sm font-bold mb-2">
-                    Region <span class="text-gray-500">(Optional)</span>
-                </label>
-                {{ form.region_code(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
-                {% if form.region_code.errors %}
-                    <div class="text-red-500 text-sm mt-1">
-                        {% for error in form.region_code.errors %}
-                            <p>{{ error }}</p>
-                        {% endfor %}
+
+                    <!-- NPC Code -->
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">
+                            NPC Code <span class="text-gray-500">(Optional)</span>
+                        </label>
+                        {{ form.npc(class="form-input w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500", placeholder="e.g., TUN", style="text-transform: uppercase", maxlength="3", id="npc-input") }}
+                        {% if form.npc.errors %}
+                            <div class="text-red-500 text-sm mt-1">
+                                {% for error in form.npc.errors %}
+                                    <p>{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <p class="text-sm text-gray-600 mt-1">3-letter NPC code (auto-filled if athlete selected)</p>
                     </div>
-                {% endif %}
-                <p class="text-sm text-gray-600 mt-1">Required for Area Records (auto-filled if athlete SDMS provided)</p>
-            </div>
-            <!-- Record Type -->
-            <div>
-                <label class="block text-gray-700 text-sm font-bold mb-2">
-                    Record Type <span class="text-red-500">*</span>
-                </label>
-                {{ form.record_type(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
-                {% if form.record_type.errors %}
-                    <div class="text-red-500 text-sm mt-1">
-                        {% for error in form.record_type.errors %}
-                            <p>{{ error }}</p>
-                        {% endfor %}
+
+                    <!-- Region -->
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2" id="region-label">
+                            Region <span class="text-gray-500">(Optional)</span>
+                        </label>
+                        {{ form.region_code(class="form-input w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500", id="region-select") }}
+                        {% if form.region_code.errors %}
+                            <div class="text-red-500 text-sm mt-1">
+                                {% for error in form.region_code.errors %}
+                                    <p>{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <p class="text-sm text-gray-600 mt-1">Required for Area Records (auto-filled if athlete selected)</p>
                     </div>
-                {% endif %}
-            </div>
-            <!-- Record Date -->
-            <div>
-                <label class="block text-gray-700 text-sm font-bold mb-2">
-                    Date Achieved <span class="text-red-500">*</span>
-                </label>
-                {{ form.record_date(class="w-full px-3 py-2 border rounded-lg focus:outline-none focus:border-red-500") }}
-                {% if form.record_date.errors %}
-                    <div class="text-red-500 text-sm mt-1">
-                        {% for error in form.record_date.errors %}
-                            <p>{{ error }}</p>
-                        {% endfor %}
+
+                    <!-- Record Type -->
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">
+                            Record Type <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.record_type(class="form-input w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500", id="record-type-select") }}
+                        {% if form.record_type.errors %}
+                            <div class="text-red-500 text-sm mt-1">
+                                {% for error in form.record_type.errors %}
+                                    <p>{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
                     </div>
-                {% endif %}
-            </div>
-            <!-- Made in Competition -->
-            <div class="md:col-span-2">
-                <label class="flex items-center">
-                    {{ form.made_in_competition(class="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded") }}
-                    <span class="ml-2 text-gray-700">{{ form.made_in_competition.label.text }}</span>
-                </label>
-                <p class="text-sm text-gray-600 mt-1">Check if this record was achieved in this competition</p>
-            </div>
+
+                    <!-- Record Date -->
+                    <div>
+                        <label class="block text-gray-700 text-sm font-bold mb-2">
+                            Date Achieved <span class="text-red-500">*</span>
+                        </label>
+                        {{ form.record_date(class="form-input w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500") }}
+                        {% if form.record_date.errors %}
+                            <div class="text-red-500 text-sm mt-1">
+                                {% for error in form.record_date.errors %}
+                                    <p>{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Made in Competition -->
+                    <div class="md:col-span-2">
+                        <label class="flex items-center">
+                            {{ form.made_in_competition(class="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded") }}
+                            <span class="ml-2 text-gray-700">{{ form.made_in_competition.label.text }}</span>
+                        </label>
+                        <p class="text-sm text-gray-600 mt-1">Check if this record was achieved in this competition</p>
+                    </div>
+                </div>
+
+                <div class="mt-8 flex justify-end space-x-4">
+                    <a href="{{ url_for('admin.records_list') }}" class="bg-gray-500 text-white px-6 py-2 rounded hover:bg-gray-600 transition-colors">
+                        Cancel
+                    </a>
+                    <button type="submit" id="submit-btn" class="bg-red-500 text-white px-6 py-2 rounded hover:bg-red-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors">
+                        <i class="fas fa-trophy mr-2"></i>Add Record
+                    </button>
+                </div>
+            </form>
         </div>
-        <div class="mt-8 flex justify-end space-x-4">
-            <a href="{{ url_for('admin.records_list') }}" class="bg-gray-500 text-white px-6 py-2 rounded hover:bg-gray-600">
-                Cancel
-            </a>
-            <button type="submit" class="bg-red-500 text-white px-6 py-2 rounded hover:bg-red-600">
-                <i class="fas fa-trophy mr-2"></i>Add Record
-            </button>
-        </div>
-    </form>
-    <!-- Help Section -->
-    <div class="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h4 class="font-bold text-blue-900 mb-2">
-            <i class="fas fa-question-circle mr-2"></i>Record Entry Guidelines
-        </h4>
-        <div class="text-sm text-blue-800 space-y-2">
-            <p><strong>World Records (WR):</strong> Best performance globally in the event/class combination</p>
-            <p><strong>Area Records (AR):</strong> Best performance within a continental region (requires region selection)</p>
-            <p><strong>Athlete SDMS:</strong> If the athlete is in the system, their NPC and region will be auto-filled</p>
-            <p><strong>Manual Entry:</strong> For athletes not in the system, manually enter NPC and region information</p>
-            <p><strong>Verification:</strong> Ensure all information is accurate as records are immediately approved</p>
-            <p><strong>Performance Format:</strong> Use standard formats (MM:SS.SS for times, meters for distances)</p>
+
+        <div class="lg:col-span-1">
+            <div id="athlete-info-panel" class="bg-white rounded-lg shadow p-6 mb-6 hidden">
+                <h3 class="text-lg font-bold mb-4 text-green-800">
+                    <i class="fas fa-user-check mr-2"></i>Selected Athlete
+                </h3>
+                <div id="athlete-details"></div>
+                <div id="athlete-classes" class="mt-4"></div>
+                <div id="athlete-events" class="mt-4"></div>
+            </div>
+
+            <!-- Help Section -->
+            <div class="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 class="font-bold text-blue-900 mb-2">
+                    <i class="fas fa-question-circle mr-2"></i>Record Entry Guidelines
+                </h4>
+                <div class="text-sm text-blue-800 space-y-2">
+                    <p><strong>World Records (WR):</strong> Best performance globally in the event/class combination</p>
+                    <p><strong>Area Records (AR):</strong> Best performance within a continental region (requires region selection)</p>
+                    <p><strong>Athlete Search:</strong> Start typing name or SDMS to auto-fill athlete information</p>
+                    <p><strong>Manual Entry:</strong> For athletes not in the system, manually enter all information</p>
+                    <p><strong>Verification:</strong> Ensure all information is accurate as records are immediately approved</p>
+                    <p><strong>Performance Format:</strong> Use standard formats (MM:SS.SS for times, meters for distances)</p>
+                </div>
+            </div>
         </div>
     </div>
 </div>
+
 <script>
+// Configuration from server
+const APP_CONFIG = {
+    trackEvents: {{ config.TRACK_EVENTS | tojson }},
+    fieldEvents: {{ config.FIELD_EVENTS | tojson }},
+    classes: {{ config.CLASSES | tojson }},
+    specialValues: {{ config.RESULT_SPECIAL_VALUES | tojson }}
+};
+
+let currentAthlete = null;
+let debounceTimer = null;
+
+// Error handling
+function fetchWithErrorHandling(url, options = {}) {
+    return fetch(url, options)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .catch(error => {
+            console.error('Fetch error:', error);
+            throw error;
+        });
+}
+
 document.addEventListener('DOMContentLoaded', function() {
-    const sdmsInput = document.getElementById('sdms');
-    const npcInput = document.getElementById('npc');
-    const regionSelect = document.getElementById('region_code');
-    const recordTypeSelect = document.getElementById('record_type');
-    // Auto-uppercase NPC code
+    const sdmsInput = document.getElementById('sdms-input');
+    const genderSelect = document.getElementById('gender-select');
+    const npcInput = document.getElementById('npc-input');
+    const regionSelect = document.getElementById('region-select');
+    const recordTypeSelect = document.getElementById('record-type-select');
+    const performanceInput = document.getElementById('performance-input');
+    const eventSelect = document.getElementById('event');
+    const submitBtn = document.getElementById('submit-btn');
+
+    // Initialize
+    setupAthleteAutocomplete();
+
+    // Event listeners
+    sdmsInput.addEventListener('input', handleAthleteSearch);
+    sdmsInput.addEventListener('blur', function() {
+        setTimeout(() => {
+            document.getElementById('athlete-suggestions').classList.add('hidden');
+        }, 200);
+    });
+
     npcInput.addEventListener('input', function() {
         this.value = this.value.toUpperCase();
     });
-    // Show/hide region requirement based on record type
-    recordTypeSelect.addEventListener('change', function() {
-        const regionGroup = regionSelect.closest('div');
-        const regionLabel = regionGroup.querySelector('label');
-        if (this.value === 'AR') {
+
+    recordTypeSelect.addEventListener('change', handleRecordTypeChange);
+    eventSelect.addEventListener('change', validatePerformanceFormat);
+    performanceInput.addEventListener('input', debounceValidatePerformance);
+
+    // Form submission
+    document.getElementById('record-form').addEventListener('submit', handleFormSubmit);
+
+    function setupAthleteAutocomplete() {
+        sdmsInput.parentNode.style.position = 'relative';
+    }
+
+    function handleAthleteSearch() {
+        clearTimeout(debounceTimer);
+        const query = this.value.trim();
+
+        if (query.length < 2) {
+            clearAthleteInfo();
+            document.getElementById('athlete-suggestions').classList.add('hidden');
+            return;
+        }
+
+        debounceTimer = setTimeout(() => searchAthletes(query), 300);
+    }
+
+    function searchAthletes(query) {
+        showValidationMessage('sdms-validation', 'info', 'Searching athletes...', 'fas fa-spinner fa-spin');
+
+        fetchWithErrorHandling(`/admin/api/athletes/search?q=${encodeURIComponent(query)}`)
+            .then(athletes => {
+                if (athletes && athletes.length > 0) {
+                    // If searching by SDMS and exact match found, select automatically
+                    if (/^\d+$/.test(query)) {
+                        const exactMatch = athletes.find(a => a.sdms.toString() === query);
+                        if (exactMatch) {
+                            selectAthlete(exactMatch);
+                            return;
+                        }
+                    }
+
+                    displayAthleteSuggestions(athletes);
+                    showValidationMessage('sdms-validation', 'success',
+                        `Found ${athletes.length} athlete${athletes.length > 1 ? 's' : ''}`, 'fas fa-search');
+                } else {
+                    displayAthleteSuggestions([]);
+                    showValidationMessage('sdms-validation', 'warning',
+                        'No athletes found matching your search', 'fas fa-search');
+                }
+            })
+            .catch(error => {
+                console.error('Search error:', error);
+                displayAthleteSuggestions([]);
+                showValidationMessage('sdms-validation', 'error',
+                    'Error searching athletes. Please try again.', 'fas fa-exclamation-triangle');
+            });
+    }
+
+    function displayAthleteSuggestions(athletes) {
+        const suggestionsDiv = document.getElementById('athlete-suggestions');
+
+        if (!athletes || athletes.length === 0) {
+            suggestionsDiv.innerHTML = '<div class="p-3 text-gray-500 text-sm">No athletes found</div>';
+            suggestionsDiv.classList.remove('hidden');
+            return;
+        }
+
+        suggestionsDiv.innerHTML = athletes.slice(0, 10).map(athlete => `
+            <div class="suggestion-item p-3 hover:bg-gray-100 cursor-pointer border-b border-gray-200 last:border-b-0"
+                 data-athlete='${JSON.stringify(athlete)}'>
+                <div class="font-medium">${athlete.firstname} ${athlete.lastname}</div>
+                <div class="text-sm text-gray-600">
+                    SDMS: ${athlete.sdms} | ${athlete.npc} | ${athlete.gender}
+                    ${athlete.registered_events ? ` | Events: ${athlete.registered_events}` : ''}
+                </div>
+                ${athlete.class ? `<div class="text-xs text-blue-600">Classes: ${athlete.class}</div>` : ''}
+            </div>
+        `).join('');
+
+        // Add click handlers
+        suggestionsDiv.querySelectorAll('.suggestion-item').forEach(item => {
+            item.addEventListener('click', function() {
+                const athlete = JSON.parse(this.dataset.athlete);
+                selectAthlete(athlete);
+            });
+        });
+
+        suggestionsDiv.classList.remove('hidden');
+    }
+
+    function selectAthlete(athlete) {
+        sdmsInput.value = athlete.sdms;
+        document.getElementById('athlete-suggestions').classList.add('hidden');
+        currentAthlete = athlete;
+
+        // Auto-fill fields
+        genderSelect.value = athlete.gender;
+        npcInput.value = athlete.npc;
+
+        // Set region if available
+        if (athlete.region_code) {
+            regionSelect.value = athlete.region_code;
+        }
+
+        displayAthleteInfo(athlete);
+
+        showValidationMessage('sdms-validation', 'success',
+            `✓ ${athlete.firstname} ${athlete.lastname} selected - fields auto-filled`,
+            'fas fa-check-circle');
+
+        // Validate gender match
+        showValidationMessage('gender-validation', 'success',
+            `✓ Gender set to ${athlete.gender}`, 'fas fa-check-circle');
+    }
+
+    function displayAthleteInfo(athlete) {
+        document.getElementById('athlete-details').innerHTML = `
+            <div class="space-y-2">
+                <div class="flex justify-between">
+                    <span class="font-medium">Name:</span>
+                    <span>${athlete.firstname} ${athlete.lastname}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="font-medium">Gender:</span>
+                    <span>${athlete.gender}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="font-medium">NPC:</span>
+                    <span>${athlete.npc}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="font-medium">SDMS:</span>
+                    <span>${athlete.sdms}</span>
+                </div>
+            </div>
+        `;
+
+        const classesList = athlete.classes_list || (athlete.class ? athlete.class.split(',').map(c => c.trim()) : []);
+        if (classesList.length > 0) {
+            document.getElementById('athlete-classes').innerHTML = `
+                <div class="bg-blue-50 p-3 rounded">
+                    <span class="font-medium text-blue-800">Valid Classes:</span>
+                    <div class="flex flex-wrap gap-1 mt-2">
+                        ${classesList.map(cls =>
+                            `<span class="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">${cls}</span>`
+                        ).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        if (athlete.registered_events) {
+            document.getElementById('athlete-events').innerHTML = `
+                <div class="bg-green-50 p-3 rounded">
+                    <span class="font-medium text-green-800">Registered Events:</span>
+                    <div class="text-sm text-green-700 mt-1">${athlete.registered_events}</div>
+                </div>
+            `;
+        }
+
+        document.getElementById('athlete-info-panel').classList.remove('hidden');
+        document.getElementById('athlete-info-panel').classList.add('slide-in-right');
+    }
+
+    function handleRecordTypeChange() {
+        const regionLabel = document.getElementById('region-label');
+        const isAreaRecord = this.value === 'AR';
+
+        if (isAreaRecord) {
             regionLabel.innerHTML = 'Region <span class="text-red-500">*</span>';
             regionSelect.required = true;
         } else {
             regionLabel.innerHTML = 'Region <span class="text-gray-500">(Optional)</span>';
             regionSelect.required = false;
         }
-    });
-    // Trigger initial state
-    recordTypeSelect.dispatchEvent(new Event('change'));
-    // Auto-populate athlete info when SDMS is entered
-    sdmsInput.addEventListener('blur', function() {
-        const sdms = this.value;
-        if (sdms) {
-            // You could add an AJAX call here to fetch athlete info
-            console.log('Looking up athlete with SDMS:', sdms);
+    }
+
+    function debounceValidatePerformance() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(validatePerformanceFormat, 500);
+    }
+
+    function validatePerformanceFormat() {
+        const event = eventSelect.value;
+        const performance = performanceInput.value.trim();
+
+        if (!event || !performance) return true;
+
+        // Check if it's a special value
+        if (APP_CONFIG.specialValues.includes(performance.toUpperCase())) {
+            showValidationMessage('performance-validation', 'info',
+                `Special value: ${performance.toUpperCase()}`, 'fas fa-info-circle');
+            return true;
         }
-    });
+
+        // Determine event type and validate format
+        let isValid = true;
+        let formatMessage = '';
+
+        if (APP_CONFIG.trackEvents.some(e => event.includes(e))) {
+            // Track events - time format
+            isValid = /^(\d{1,2}:)?\d{1,2}\.\d{2,3}$/.test(performance);
+            formatMessage = 'Use format MM:SS.SS or SS.SS for track events';
+        } else if (APP_CONFIG.fieldEvents.some(e => event.includes(e))) {
+            // Field events - distance format
+            if (['High Jump', 'Pole Vault'].some(e => event.includes(e))) {
+                isValid = /^\d+\.\d{2}$/.test(performance);
+                formatMessage = 'Use format X.XX (meters) for height events';
+            } else {
+                isValid = /^\d+\.\d{2}$/.test(performance);
+                formatMessage = 'Use format XX.XX (meters) for distance/throwing events';
+            }
+        }
+
+        if (!isValid && formatMessage) {
+            showValidationMessage('performance-validation', 'warning',
+                `Invalid format. ${formatMessage}`, 'fas fa-exclamation-triangle');
+            return false;
+        } else if (performance) {
+            showValidationMessage('performance-validation', 'success',
+                '✓ Valid performance format', 'fas fa-check-circle');
+        }
+
+        return true;
+    }
+
+    function showValidationMessage(elementId, type, message, iconClass) {
+        const element = document.getElementById(elementId);
+        if (!element) return;
+
+        const colors = {
+            success: 'text-green-600 bg-green-50 border-green-200',
+            error: 'text-red-600 bg-red-50 border-red-200',
+            warning: 'text-yellow-600 bg-yellow-50 border-yellow-200',
+            info: 'text-blue-600 bg-blue-50 border-blue-200'
+        };
+
+        element.innerHTML = `
+            <div class="flex items-center p-2 rounded border ${colors[type]} fade-in">
+                <i class="${iconClass} mr-2"></i>
+                <span class="text-sm">${message}</span>
+            </div>
+        `;
+    }
+
+    function clearAthleteInfo() {
+        currentAthlete = null;
+        document.getElementById('athlete-info-panel').classList.add('hidden');
+        document.getElementById('sdms-validation').innerHTML = '';
+        document.getElementById('gender-validation').innerHTML = '';
+    }
+
+    function handleFormSubmit(e) {
+        if (recordTypeSelect.value === 'AR' && !regionSelect.value) {
+            e.preventDefault();
+            alert('Region is required for Area Records.');
+            regionSelect.focus();
+            return;
+        }
+
+        if (!validatePerformanceFormat()) {
+            e.preventDefault();
+            alert('Please enter a valid performance format.');
+            performanceInput.focus();
+            return;
+        }
+
+        submitBtn.disabled = true;
+        submitBtn.classList.add('btn-loading');
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Adding Record...';
+    }
+
+    // Initialize record type change handler
+    handleRecordTypeChange.call(recordTypeSelect);
 });
 </script>
+
+<style>
+.hidden {
+    display: none !important;
+}
+
+.form-input:focus {
+    @apply ring-2 ring-red-500 ring-opacity-50 border-red-500;
+}
+
+.btn-loading {
+    @apply opacity-75 cursor-not-allowed;
+}
+
+.slide-in-right {
+    animation: slideInRight 0.3s ease-out forwards;
+}
+
+.fade-in {
+    animation: fadeIn 0.2s ease-in forwards;
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.transition-colors {
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+#athlete-suggestions {
+    max-height: 300px;
+    z-index: 50;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+.suggestion-item {
+    transition: background-color 0.15s ease;
+}
+
+.suggestion-item:hover {
+    background-color: #f3f4f6;
+}
+
+.fa-spin {
+    animation: fa-spin 2s infinite linear;
+}
+
+@keyframes fa-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(359deg); }
+}
+</style>
 {% endblock %}

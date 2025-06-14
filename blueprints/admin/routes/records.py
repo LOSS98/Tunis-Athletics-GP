@@ -20,29 +20,33 @@ def register_routes(bp):
     @bp.route('/records/add', methods=['GET', 'POST'])
     @technical_delegate_required
     def record_add():
+        from config import config
         form = WorldRecordForm()
+
         if form.validate_on_submit():
             athlete = None
             if form.sdms.data:
                 athlete = Athlete.get_by_sdms(form.sdms.data)
                 if not athlete:
                     flash('Athlete not found', 'danger')
-                    return render_template('admin/records/add.html', form=form)
+                    return render_template('admin/records/add.html', form=form, config=config)
 
             data = {
                 'sdms': form.sdms.data,
                 'event': form.event.data,
                 'athlete_class': form.athlete_class.data,
+                'gender': form.gender.data,
                 'performance': form.performance.data,
                 'location': form.location.data,
                 'npc': form.npc.data or (athlete['npc'] if athlete else None),
-                'region_code': form.region_code.data or (athlete['region_code'] if athlete else None),
+                'region_code': form.region_code.data or (athlete.get('region_code') if athlete else None),
                 'record_date': form.record_date.data,
                 'record_type': form.record_type.data,
                 'made_in_competition': form.made_in_competition.data,
                 'approved': True,
                 'approved_by': current_user.id
             }
+
             try:
                 WorldRecord.create(**data)
                 flash('Record added successfully', 'success')
@@ -50,7 +54,7 @@ def register_routes(bp):
             except Exception as e:
                 flash(f'Error adding record: {str(e)}', 'danger')
 
-        return render_template('admin/records/add.html', form=form)
+        return render_template('admin/records/add.html', form=form, config=config)
 
     @bp.route('/records/<int:record_id>/approve', methods=['POST'])
     @technical_delegate_required
@@ -105,28 +109,57 @@ def register_routes(bp):
     @technical_delegate_required
     def personal_best_add():
         form = PersonalBestForm()
-        if form.validate_on_submit():
-            athlete = Athlete.get_by_sdms(form.sdms.data)
-            if not athlete:
-                flash('Athlete not found', 'danger')
-                return render_template('admin/records/add_pb.html', form=form)
 
-            data = {
-                'sdms': form.sdms.data,
-                'event': form.event.data,
-                'athlete_class': form.athlete_class.data,
-                'performance': form.performance.data,
-                'location': form.location.data,
-                'record_date': form.record_date.data,
-                'made_in_competition': form.made_in_competition.data,
-                'approved': True,
-                'approved_by': current_user.id
-            }
+        if form.validate_on_submit():
             try:
-                PersonalBest.create(**data)
-                flash('Personal best added successfully', 'success')
-                return redirect(url_for('admin.personal_bests_list'))
+                # Vérifier que l'athlète existe
+                athlete = PersonalBest.get_athlete_info(form.sdms.data)
+                if not athlete:
+                    flash('Athlete with this SDMS does not exist in the system', 'danger')
+                    return render_template('admin/records/add_pb.html', form=form)
+
+                # Vérifier si c'est une amélioration
+                is_better, existing_pb = PersonalBest.check_for_better_performance(
+                    form.sdms.data,
+                    form.event.data,
+                    form.athlete_class.data,
+                    form.performance.data
+                )
+
+                if existing_pb and not is_better:
+                    flash(
+                        f'Performance {form.performance.data} is not better than existing PB: {existing_pb["performance"]}',
+                        'warning'
+                    )
+                    return render_template('admin/records/add_pb.html', form=form, athlete=athlete)
+
+                # Créer les données (sans gender car il sera récupéré automatiquement)
+                data = {
+                    'sdms': form.sdms.data,
+                    'event': form.event.data,
+                    'athlete_class': form.athlete_class.data,
+                    'performance': form.performance.data,
+                    'location': form.location.data,
+                    'record_date': form.record_date.data,
+                    'made_in_competition': form.made_in_competition.data,
+                    'approved': True,
+                    'approved_by': current_user.id
+                }
+
+                pb_id = PersonalBest.create(**data)
+
+                if pb_id:
+                    flash(
+                        f'Personal Best added successfully for {athlete["firstname"]} {athlete["lastname"]} '
+                        f'({athlete["gender"]}) - {form.performance.data}',
+                        'success'
+                    )
+                    return redirect(url_for('admin.personal_bests_list'))
+                else:
+                    flash('Error creating personal best', 'danger')
+
             except Exception as e:
+                print(f"Error adding personal best: {e}")
                 flash(f'Error adding personal best: {str(e)}', 'danger')
 
         return render_template('admin/records/add_pb.html', form=form)
@@ -193,7 +226,7 @@ def register_routes(bp):
                     # Get the athlete's class that matches the game
                     athlete_class = get_matching_class(athlete, game)
                     if athlete_class:
-                        created_records, created_pbs = check_for_records_and_pbs_improved(result, athlete, game,
+                        created_records, created_pbs = check_for_records_and_pbs(result, athlete, game,
                                                                                           athlete_class)
                         records_found += created_records
                         pbs_found += created_pbs
@@ -223,7 +256,7 @@ def get_matching_class(athlete, game):
     return athlete_classes[0] if athlete_classes else None
 
 
-def check_for_records_and_pbs_improved(result, athlete, game, athlete_class):
+def check_for_records_and_pbs(result, athlete, game, athlete_class):
     """Improved function to check for records and personal bests with multi-class support"""
     if not game.get('official'):
         return 0, 0
