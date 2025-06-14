@@ -74,7 +74,6 @@ class Result:
                        WHERE pb.sdms = r.athlete_sdms 
                        AND pb.event = gm.event 
                        AND pb.athlete_class = ANY(string_to_array(a.class, ','))
-                       AND pb.gender = a.gender
                        AND pb.competition_id = r.game_id
                    ) THEN TRUE ELSE FALSE END as is_personal_best,
 
@@ -82,7 +81,6 @@ class Result:
                    (SELECT pb.approved FROM personal_bests pb 
                     WHERE pb.sdms = r.athlete_sdms AND pb.event = gm.event 
                     AND pb.athlete_class = ANY(string_to_array(a.class, ','))
-                    AND pb.gender = a.gender
                     AND pb.competition_id = r.game_id
                     LIMIT 1) as pb_approved
 
