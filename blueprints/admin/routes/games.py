@@ -91,14 +91,6 @@ def register_routes(bp):
                 'published': form.published.data,
                 'wpa_points': form.wpa_points.data
             }
-            if form.start_file.data:
-                filename = save_uploaded_file(form.start_file.data, 'startlists')
-                if filename:
-                    data['start_file'] = filename
-            if form.result_file.data:
-                filename = save_uploaded_file(form.result_file.data, 'results')
-                if filename:
-                    data['result_file'] = filename
             if form.photo_finish.data:
                 filename = save_uploaded_file(form.photo_finish.data, 'photo_finish')
                 if filename:
