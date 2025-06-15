@@ -195,7 +195,9 @@ class Game:
                 WHERE a.gender != g2.genders OR 
                       NOT EXISTS (
                           SELECT 1 FROM unnest(string_to_array(a.class, ',')) as ac(class_name)
-                          WHERE trim(ac.class_name) = ANY(string_to_array(g2.classes, ','))
+                          WHERE trim(ac.class_name) = ANY(
+                              SELECT trim(unnest(string_to_array(g2.classes, ',')))
+                          )
                       )
                 UNION
                 SELECT s.game_id FROM startlist s
@@ -204,10 +206,11 @@ class Game:
                 WHERE a.gender != g2.genders OR 
                       NOT EXISTS (
                           SELECT 1 FROM unnest(string_to_array(a.class, ',')) as ac(class_name)
-                          WHERE trim(ac.class_name) = ANY(string_to_array(g2.classes, ','))
+                          WHERE trim(ac.class_name) = ANY(
+                              SELECT trim(unnest(string_to_array(g2.classes, ',')))
+                          )
                       )
-            ) alerts ON g.id = alerts.game_id
-        """, fetch=True)
+            ) alerts ON g.id = alerts.game_id""", fetch=True)
 
         alert_game_ids = {alert['id'] for alert in alert_games}
 
