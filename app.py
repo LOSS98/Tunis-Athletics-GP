@@ -6,12 +6,17 @@ from blueprints.admin import admin_bp
 from blueprints.public import public_bp
 from database.db_manager import init_db
 from datetime import datetime
+import time
 import os
 def create_app():
     app = Flask(__name__,
                 static_folder='static',
                 static_url_path='/static',
                 template_folder='templates')
+
+    os.environ['TZ'] = 'Africa/Tunis'
+    time.tzset()
+    app.config['SECRET_KEY'] = Config.SECRET_KEY
     app.config.from_object(Config)
     csrf = CSRFProtect(app)
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
